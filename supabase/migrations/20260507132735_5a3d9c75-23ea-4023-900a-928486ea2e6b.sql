@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS habit_categories_user_name_key ON public.habit_categories (user_id, name);

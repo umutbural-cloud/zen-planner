@@ -1,0 +1,1 @@
+UPDATE public.habits SET time_of_day = 'noon' WHERE time_of_day = 'afternoon';
