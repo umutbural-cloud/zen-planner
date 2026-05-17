@@ -21,11 +21,22 @@ export const useNotebooks = () => {
 
   useEffect(() => { fetchNotebooks(); }, [fetchNotebooks]);
 
-  const createNotebook = async (name: string, parentId?: string | null) => {
+  const createNotebook = async (
+    name: string,
+    parentId?: string | null,
+    options?: Partial<Pick<Notebook, "icon" | "icon_color" | "position">>
+  ) => {
     if (!user) return null;
     const { data, error } = await supabase
       .from("notebooks" as any)
-      .insert({ name, parent_id: parentId ?? null, user_id: user.id, icon: "book-open" } as any)
+      .insert({
+        name,
+        parent_id: parentId ?? null,
+        user_id: user.id,
+        icon: options?.icon ?? "book-open",
+        icon_color: options?.icon_color ?? null,
+        position: options?.position ?? 0,
+      } as any)
       .select()
       .single();
     if (!error && data) {

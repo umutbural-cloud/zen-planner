@@ -1,5 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, ChevronRight, FileText, Trash2 } from "lucide-react";
+import { Plus, ChevronRight, FileText, Trash2, GripVertical } from "lucide-react";
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useNotebookNotes } from "../hooks/useNotebookNotes";
 import type { NotebookNote } from "../types";
 import RichNoteEditor from "./RichNoteEditor";
@@ -16,16 +31,33 @@ const PageRow = ({
   onAddChild: (parentId: string) => void;
   onDelete: (id: string) => void;
 }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: note.id });
   const [open, setOpen] = useState(true);
   const childOf = (id: string) => allNotes.filter((n) => n.parent_note_id === id);
   const active = selectedId === note.id;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.55 : 1,
+    paddingLeft: `${6 + depth * 12}px`,
+  };
   return (
     <>
       <div
+        ref={setNodeRef}
+        style={style}
         className={`group flex items-center gap-1 px-1.5 py-1 rounded-sm cursor-pointer text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"}`}
-        style={{ paddingLeft: `${6 + depth * 12}px` }}
         onClick={() => onSelect(note.id)}
       >
+        <button
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100"
+          title="Sırala"
+        >
+          <GripVertical className="h-3 w-3" />
+        </button>
         <button onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }} className="shrink-0">
           <ChevronRight className={`h-3 w-3 transition-transform ${open ? "rotate-90" : ""} ${children.length === 0 ? "opacity-20" : ""}`} />
         </button>
@@ -36,17 +68,22 @@ const PageRow = ({
           <button onClick={(e) => { e.stopPropagation(); onDelete(note.id); }} className="hover:text-destructive" title="Sil"><Trash2 className="h-3 w-3" /></button>
         </div>
       </div>
-      {open && children.map((c) => (
-        <PageRow key={c.id} note={c} children={childOf(c.id)} allNotes={allNotes} depth={depth + 1}
-          selectedId={selectedId} onSelect={onSelect} onAddChild={onAddChild} onDelete={onDelete} />
-      ))}
+      {open && (
+        <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          {children.map((c) => (
+            <PageRow key={c.id} note={c} children={childOf(c.id)} allNotes={allNotes} depth={depth + 1}
+              selectedId={selectedId} onSelect={onSelect} onAddChild={onAddChild} onDelete={onDelete} />
+          ))}
+        </SortableContext>
+      )}
     </>
   );
 };
 
 const RichNotesPanel = ({ notebookId }: { notebookId: string }) => {
-  const { notes, loading, createNote, updateNote, deleteNote } = useNotebookNotes(notebookId, "rich");
+  const { notes, loading, createNote, updateNote, deleteNote, reorderNotes } = useNotebookNotes(notebookId, "rich");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // Auto-select first note
   useEffect(() => {
@@ -62,6 +99,23 @@ const RichNotesPanel = ({ notebookId }: { notebookId: string }) => {
   const handleCreate = async (parentId?: string) => {
     const created = await createNote({ type: "rich", title: "", content: { type: "doc", content: [{ type: "paragraph" }] }, parent_note_id: parentId ?? null });
     if (created) setSelectedId(created.id);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeNote = notes.find((note) => note.id === active.id);
+    const overNote = notes.find((note) => note.id === over.id);
+    if (!activeNote || !overNote || activeNote.parent_note_id !== overNote.parent_note_id) return;
+
+    const siblings = notes.filter((note) => note.parent_note_id === activeNote.parent_note_id);
+    const oldIndex = siblings.findIndex((note) => note.id === active.id);
+    const newIndex = siblings.findIndex((note) => note.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const ordered = arrayMove(siblings, oldIndex, newIndex);
+    await reorderNotes(ordered.map((note) => note.id));
   };
 
   // local title state to avoid lag
@@ -93,10 +147,14 @@ const RichNotesPanel = ({ notebookId }: { notebookId: string }) => {
         {roots.length === 0 && (
           <div className="text-[11px] text-muted-foreground/60 font-light px-1.5 py-2">Henüz sayfa yok</div>
         )}
-        {roots.map((n) => (
-          <PageRow key={n.id} note={n} children={childOf(n.id)} allNotes={notes} depth={0}
-            selectedId={selectedId} onSelect={setSelectedId} onAddChild={handleCreate} onDelete={deleteNote} />
-        ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={roots.map((n) => n.id)} strategy={verticalListSortingStrategy}>
+            {roots.map((n) => (
+              <PageRow key={n.id} note={n} children={childOf(n.id)} allNotes={notes} depth={0}
+                selectedId={selectedId} onSelect={setSelectedId} onAddChild={handleCreate} onDelete={deleteNote} />
+            ))}
+          </SortableContext>
+        </DndContext>
         <button onClick={() => handleCreate()}
           className="w-full mt-2 flex items-center gap-1.5 px-2 py-1.5 rounded-sm text-xs text-muted-foreground/70 hover:bg-accent/40 hover:text-foreground font-light">
           <Plus className="h-3 w-3" /> Yeni sayfa

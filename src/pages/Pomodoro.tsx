@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePomodoro, formatMMSS } from "@/hooks/usePomodoro";
 import { useTheme } from "@/hooks/useTheme";
@@ -31,12 +32,14 @@ type Session = {
   category_id: string | null;
 };
 
+type PomodoroSessionUpdate = Database["public"]["Tables"]["pomodoro_sessions"]["Update"];
+
 
 const Pomodoro = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projects, createProject, updateProject, deleteProject } = useProjects();
-  const { section, selectedProjectId, view, selectedNotebookId, setSection, setSelectedProjectId, setView, setSelectedNotebookId } = usePageState();
+  const { section, selectedProjectId, view, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { theme, toggle: toggleTheme } = useTheme();
   const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, reset, skipBreak } = usePomodoro();
   const { categories, create: createCategory, update: updateCategory, remove: removeCategory } = usePomodoroCategories();
@@ -69,7 +72,11 @@ const Pomodoro = () => {
     setNotifPerm(result);
     if (result === "granted") {
       toast.success("Bildirimler açıldı. Pomodoro bittiğinde haber vereceğiz.");
-      try { new Notification("Keikaku", { body: "Bildirimler aktif." }); } catch {}
+      try {
+        new Notification("Keikaku", { body: "Bildirimler aktif." });
+      } catch {
+        toast("Bildirim gösterimi tarayıcı tarafından engellendi.");
+      }
     } else {
       toast.error("Bildirim izni reddedildi.");
     }
@@ -98,7 +105,7 @@ const Pomodoro = () => {
       .eq("user_id", user.id)
       .order("started_at", { ascending: false })
       .limit(500);
-    setSessions((data as any) || []);
+    setSessions((data || []) as Session[]);
   };
 
   useEffect(() => {
@@ -178,7 +185,8 @@ const Pomodoro = () => {
 
   const updateSessionCategory = async (id: string, category_id: string | null) => {
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, category_id } : s)));
-    await supabase.from("pomodoro_sessions").update({ category_id } as any).eq("id", id);
+    const payload: PomodoroSessionUpdate = { category_id };
+    await supabase.from("pomodoro_sessions").update(payload).eq("id", id);
   };
 
   const deleteSession = async (id: string) => {
@@ -205,9 +213,9 @@ const Pomodoro = () => {
       kind: "work",
       note: addNote || null,
       category_id: addCategoryId,
-    } as any).select().single();
+    }).select().single();
     if (error) { toast.error("Eklenemedi."); return; }
-    setSessions((arr) => [data as any, ...arr].sort((a, b) => b.started_at.localeCompare(a.started_at)));
+    setSessions((arr) => [data as Session, ...arr].sort((a, b) => b.started_at.localeCompare(a.started_at)));
     setShowAddForm(false);
     setAddNote("");
     toast.success("Çalışma eklendi.");
@@ -244,6 +252,7 @@ const Pomodoro = () => {
           selectedView={view}
           section={section}
           selectedNotebookId={selectedNotebookId}
+          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
           onSelect={handleSidebarSelect}
           onCreate={handleSidebarCreate}
           onDelete={handleSidebarDelete}
@@ -253,7 +262,8 @@ const Pomodoro = () => {
           onSelectJournal={() => { setSection("journal"); navigate("/"); }}
           onSelectHabits={() => { setSection("habits"); navigate("/"); }}
           onSelectRetreat={() => { setSection("retreat"); navigate("/"); }}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSection("notebook"); navigate("/"); }}
+          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); navigate("/"); }}
+          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); navigate("/"); }}
         />
 
         <div className="flex-1 flex flex-col min-w-0">

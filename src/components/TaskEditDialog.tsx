@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
-import { Trash2, Package, Plus, Check, X } from "lucide-react";
+import { Trash2, Package, Plus, Check, X, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useTasks, Task } from "@/hooks/useTasks";
+import { useTasks, Task, TaskColor, TaskKind } from "@/hooks/useTasks";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { useBacklog } from "@/hooks/useBacklog";
 import { colorHex } from "@/hooks/useHabitCategories";
+import { TASK_COLORS, colorClasses } from "@/lib/taskColors";
 import { toast } from "sonner";
 
 type Props = {
@@ -17,10 +18,37 @@ type Props = {
   projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tasksOverride?: Task[];
+  onUpdateTask?: (id: string, updates: Partial<Task>) => Promise<unknown> | unknown;
+  onDeleteTask?: (id: string) => Promise<unknown> | unknown;
+  onCreateTask?: (task: {
+    title: string;
+    parent_block_id?: string | null;
+  }) => Promise<unknown> | unknown;
 };
 
-const TaskEditDialog = ({ task, projectId, open, onOpenChange }: Props) => {
-  const { tasks, updateTask, deleteTask, createTask } = useTasks(projectId);
+const TaskColorPicker = ({ value, onChange }: { value: TaskColor; onChange: (c: TaskColor) => void }) => (
+  <div className="flex items-center gap-1.5">
+    {TASK_COLORS.map((c) => (
+      <button
+        key={c.value}
+        type="button"
+        onClick={() => onChange(c.value)}
+        title={c.label}
+        className={`h-5 w-5 rounded-full border transition-all ${colorClasses(c.value, "swatch")} ${
+          value === c.value ? "ring-2 ring-foreground/60 ring-offset-1 ring-offset-background scale-110" : "opacity-70 hover:opacity-100"
+        }`}
+      />
+    ))}
+  </div>
+);
+
+const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, onUpdateTask, onDeleteTask, onCreateTask }: Props) => {
+  const { tasks: hookTasks, updateTask: hookUpdateTask, deleteTask: hookDeleteTask, createTask: hookCreateTask } = useTasks(projectId);
+  const tasks = tasksOverride || hookTasks;
+  const updateTask = onUpdateTask || hookUpdateTask;
+  const deleteTask = onDeleteTask || hookDeleteTask;
+  const createTask = onCreateTask || hookCreateTask;
   const { categories } = usePomodoroCategories();
   const { createItem: createBacklog } = useBacklog();
 
@@ -31,6 +59,8 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange }: Props) => {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [color, setColor] = useState<TaskColor>("gray");
+  const [kind, setKind] = useState<TaskKind>("task");
   const [newSubtitle, setNewSubtitle] = useState("");
 
   useEffect(() => {
@@ -41,7 +71,9 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange }: Props) => {
     setEndDate(task.end_date || "");
     setStartTime(task.start_time?.slice(0, 5) || "");
     setEndTime(task.end_time?.slice(0, 5) || "");
-    setCategoryId((task as any).category_id || null);
+    setCategoryId(task.category_id || null);
+    setColor((task.color || "gray") as TaskColor);
+    setKind((task.kind || "task") as TaskKind);
   }, [task]);
 
   if (!task) return null;
@@ -59,7 +91,9 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange }: Props) => {
       start_time: startTime || null,
       end_time: endTime || null,
       category_id: categoryId,
-    } as any);
+      color,
+      kind,
+    });
     onOpenChange(false);
   };
 
@@ -69,7 +103,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange }: Props) => {
   };
 
   const handleSendToBacklog = async () => {
-    await createBacklog({ title: task.title } as any);
+    await createBacklog({ title: task.title });
     await deleteTask(task.id);
     toast.success("Heybeye gönderildi");
     onOpenChange(false);
@@ -137,6 +171,32 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange }: Props) => {
                 ))}
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] text-muted-foreground mb-1.5 tracking-wide">Renk</div>
+              <TaskColorPicker value={color} onChange={setColor} />
+            </div>
+            <div>
+              <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Tip</div>
+              <div className="flex border border-border/60 rounded-sm overflow-hidden text-xs">
+                <button
+                  type="button"
+                  onClick={() => setKind("task")}
+                  className={`flex-1 px-2 py-1.5 ${kind === "task" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
+                >
+                  Görev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKind("timebox")}
+                  className={`flex-1 px-2 py-1.5 flex items-center justify-center gap-1 ${kind === "timebox" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50"}`}
+                >
+                  <Timer className="h-3 w-3" /> Time-box
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

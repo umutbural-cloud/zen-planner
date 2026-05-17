@@ -64,9 +64,23 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
     debounceRef.current = window.setTimeout(() => flush(v), 500);
   };
 
+  const handleRowClick = () => {
+    if (subtasks.length === 0) onOpen(task);
+  };
+
+  const handleRowDoubleClick = () => {
+    if (subtasks.length > 0) setExpanded((current) => !current);
+  };
+
   return (
     <>
-      <TableRow ref={setNodeRef} style={style} className="group cursor-pointer" onClick={() => onOpen(task)}>
+      <TableRow
+        ref={setNodeRef}
+        style={style}
+        className={`group cursor-pointer ${expanded && subtasks.length > 0 ? "border-b-0" : ""}`}
+        onClick={handleRowClick}
+        onDoubleClick={handleRowDoubleClick}
+      >
         <TableCell className="py-1 px-1 sm:px-2 w-7 sm:w-8" onClick={(e) => e.stopPropagation()}>
           <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground touch-none">
             <GripVertical className="h-3.5 w-3.5" />
@@ -135,32 +149,47 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
         </TableCell>
       </TableRow>
 
-      {expanded && subtasks.map((s) => (
-        <TableRow key={s.id} className="group bg-card/20">
-          <TableCell className="py-1 px-1 sm:px-2 w-7 sm:w-8"></TableCell>
-          <TableCell className="py-1 px-1 sm:px-2 w-8 sm:w-10">
-            <Checkbox
-              checked={s.status === "done"}
-              onCheckedChange={(c) => onUpdate(s.id, { status: c ? "done" : "todo" })}
-            />
-          </TableCell>
-          <TableCell className="text-sm font-light px-1 sm:px-2 py-1">
-            <div className="flex items-center gap-2 pl-6">
-              <span className={`text-xs ${s.status === "done" ? "line-through text-muted-foreground" : ""}`}>
-                {s.title}
-              </span>
+      {expanded && subtasks.length > 0 && (
+        <TableRow className="bg-card/10 hover:bg-card/10">
+          <TableCell colSpan={4} className="px-0 py-0">
+            <div className="ml-[2.75rem] sm:ml-[3.25rem] mr-2 mb-1 border-l border-border/70 pl-2">
+              <div className="space-y-0.5 py-0.5">
+                {subtasks.map((s) => (
+                  <div
+                    key={s.id}
+                    className="group/subtask flex min-h-7 items-center gap-2 rounded-sm px-1.5 py-0.5 text-sm hover:bg-accent/40"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen(s);
+                    }}
+                  >
+                    <span className="h-px w-2.5 shrink-0 bg-border/80" aria-hidden="true" />
+                    <Checkbox
+                      checked={s.status === "done"}
+                      onClick={(e) => e.stopPropagation()}
+                      onCheckedChange={(c) => onUpdate(s.id, { status: c ? "done" : "todo" })}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className={`min-w-0 flex-1 truncate text-xs font-light ${s.status === "done" ? "line-through text-muted-foreground" : ""}`}>
+                      {s.title}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(s.id);
+                      }}
+                      className="p-1 text-muted-foreground opacity-100 transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover/subtask:opacity-100"
+                      title="Sil"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </TableCell>
-          <TableCell className="w-14 sm:w-16 px-1 sm:px-2 py-1 text-right">
-            <button
-              onClick={() => onDelete(s.id)}
-              className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </TableCell>
         </TableRow>
-      ))}
+      )}
     </>
   );
 };

@@ -9,11 +9,13 @@ type PageState = {
   view: ViewKey;
   journalDate: string;
   selectedNotebookId: string | null;
+  selectedKnowledgeNoteId: string | null;
   setSection: (s: Section) => void;
   setSelectedProjectId: (id: string | null) => void;
   setView: (v: ViewKey) => void;
   setJournalDate: (d: string) => void;
   setSelectedNotebookId: (id: string | null) => void;
+  setSelectedKnowledgeNoteId: (id: string | null) => void;
 };
 
 const Ctx = createContext<PageState | null>(null);
@@ -23,10 +25,11 @@ export const PageStateProvider = ({ children }: { children: ReactNode }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [view, setView] = useState<ViewKey>("table");
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
+  const [selectedKnowledgeNoteId, setSelectedKnowledgeNoteId] = useState<string | null>(null);
   const [journalDate, setJournalDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
   return (
-    <Ctx.Provider value={{ section, selectedProjectId, view, journalDate, selectedNotebookId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId }}>
+    <Ctx.Provider value={{ section, selectedProjectId, view, journalDate, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId }}>
       {children}
     </Ctx.Provider>
   );

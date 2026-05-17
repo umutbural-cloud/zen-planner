@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Package, Trash, Settings, Repeat, Check, Clock, Wind, BookOpen, StickyNote } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Package, Trash, Settings, Repeat, Check, Clock, Wind, type LucideIcon } from "lucide-react";
 import { useSidebarPreferences } from "@/hooks/useSidebarPreferences";
 import { useModuleLabels } from "@/hooks/useModuleLabels";
 import { HABIT_ICON_GROUPS, getHabitIcon } from "@/lib/habitIcons";
@@ -31,7 +31,7 @@ import NotebookSidebarTree from "@/features/knowledge/components/NotebookSidebar
 
 
 
-const VIEW_META: Record<ViewKey, { label: string; jp: string; icon: any }> = {
+const VIEW_META: Record<ViewKey, { label: string; jp: string; icon: LucideIcon }> = {
   notes: { label: "Notlar", jp: "ノート", icon: FileText },
   table: { label: "Tablo", jp: "表", icon: TableIcon },
   gantt: { label: "Gantt", jp: "ガント", icon: GanttChart },
@@ -48,6 +48,7 @@ type Props = {
   selectedView: ViewKey;
   section: Section;
   selectedNotebookId: string | null;
+  selectedKnowledgeNoteId: string | null;
   onSelect: (id: string, view?: ViewKey) => void;
   onCreate: (name: string, parentId?: string) => void;
   onDelete: (id: string) => void;
@@ -58,6 +59,11 @@ type Props = {
   onSelectHabits: () => void;
   onSelectRetreat: () => void;
   onSelectNotebook: (notebookId: string) => void;
+  onSelectKnowledgeNote: (noteId: string | null) => void;
+};
+
+type ProjectWithKind = Project & {
+  kind?: string;
 };
 
 export const ProjectIconPicker = ({
@@ -356,116 +362,7 @@ const ProjectItem = ({
   );
 };
 
-const KnowledgeItem = ({
-  project,
-  children,
-  selectedId,
-  section,
-  onSelect,
-  onDelete,
-  onUpdateProject,
-  onAddSub,
-  depth = 0,
-}: {
-  project: Project;
-  children: Project[];
-  selectedId: string | null;
-  section: Section;
-  onSelect: (id: string, view?: ViewKey) => void;
-  onDelete: (id: string) => void;
-  onUpdateProject: (id: string, updates: { name?: string; emoji?: string; icon?: string | null; icon_color?: string | null; enabled_views?: ViewKey[] }) => void;
-  onAddSub: (parentId: string) => void;
-  depth?: number;
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [renameValue, setRenameValue] = useState(project.name);
-  const isSelected = section === "project" && selectedId === project.id;
-  const hasChildren = children.length > 0;
-
-  const commitRename = () => {
-    const v = renameValue.trim();
-    if (v && v !== project.name) onUpdateProject(project.id, { name: v });
-    setRenaming(false);
-  };
-
-  return (
-    <>
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          onClick={() => { if (!renaming) onSelect(project.id, "notes"); }}
-          className={`group/item text-sm font-light ${isSelected ? "bg-accent text-accent-foreground" : ""}`}
-          style={{ paddingLeft: `${8 + depth * 16}px` }}
-        >
-          {hasChildren ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-              className="shrink-0 mr-0.5"
-            >
-              <ChevronRight className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
-            </button>
-          ) : (
-            <span className="w-3 mr-0.5" />
-          )}
-          <ProjectIconPicker
-            icon={project.icon || "book-open"}
-            iconColor={project.icon_color}
-            onChange={(updates) => onUpdateProject(project.id, updates)}
-          />
-          {renaming ? (
-            <Input
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitRename();
-                if (e.key === "Escape") { setRenameValue(project.name); setRenaming(false); }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-              className="h-6 ml-1.5 text-xs bg-transparent px-1 py-0 flex-1"
-            />
-          ) : (
-            <span
-              className="truncate flex-1 ml-1.5"
-              onDoubleClick={(e) => { e.stopPropagation(); setRenameValue(project.name); setRenaming(true); }}
-            >
-              {project.name}
-            </span>
-          )}
-          <div className="flex gap-0.5 opacity-0 group-hover/item:opacity-100 shrink-0">
-            <button onClick={(e) => { e.stopPropagation(); setRenameValue(project.name); setRenaming(true); }} className="text-muted-foreground hover:text-foreground" title="Yeniden adlandır">
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onAddSub(project.id); }} className="text-muted-foreground hover:text-foreground" title="Alt defter">
-              <Plus className="h-3 w-3" />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onDelete(project.id); }} className="text-muted-foreground hover:text-destructive" title="Sil">
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-
-      {expanded && children.map((child) => (
-        <KnowledgeItem
-          key={child.id}
-          project={child}
-          children={[]}
-          selectedId={selectedId}
-          section={section}
-          onSelect={onSelect}
-          onDelete={onDelete}
-          onUpdateProject={onUpdateProject}
-          onAddSub={onAddSub}
-          depth={depth + 1}
-        />
-      ))}
-    </>
-  );
-};
-
-const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, onSelect, onCreate, onDelete, onUpdateProject, onSelectBacklog, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook }: Props) => {
+const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, selectedKnowledgeNoteId, onSelect, onCreate, onDelete, onUpdateProject, onSelectBacklog, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook, onSelectKnowledgeNote }: Props) => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { prefs, setItem } = useSidebarPreferences();
@@ -477,7 +374,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newModuleOpen, setNewModuleOpen] = useState(false);
 
-  const MODULE_OPTIONS: { key: "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" | "retreat"; label: string; icon: any }[] = [
+  const MODULE_OPTIONS: { key: "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" | "retreat"; label: string; icon: LucideIcon }[] = [
     { key: "backlog", label: moduleLabel("backlog"), icon: Package },
     { key: "journal", label: moduleLabel("journal"), icon: FileText },
     { key: "habits", label: moduleLabel("habits"), icon: Repeat },
@@ -506,7 +403,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
     setAddingParentId(null);
   };
 
-  const projectKind = (p: Project) => (p as any).kind || "project";
+  const projectKind = (p: Project) => (p as ProjectWithKind).kind || "project";
   const rootProjects = projects.filter((p) => !p.parent_id && projectKind(p) === "project");
   const getChildren = (parentId: string) => projects.filter((p) => p.parent_id === parentId);
 
@@ -682,7 +579,9 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
           <SidebarGroupContent>
             <NotebookSidebarTree
               selectedNotebookId={section === "notebook" ? selectedNotebookId : null}
+              selectedKnowledgeNoteId={section === "notebook" ? selectedKnowledgeNoteId : null}
               onSelectNotebook={onSelectNotebook}
+              onSelectKnowledgeNote={onSelectKnowledgeNote}
             />
           </SidebarGroupContent>
         </SidebarGroup>

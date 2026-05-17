@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, GripVertical, ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, GripVertical, ArrowRight, ChevronDown, ChevronRight, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,7 @@ const SortableCard = ({ task, subtasks, onUpdate, onOpen, categoryDot }: {
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const [expanded, setExpanded] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -56,11 +57,19 @@ const SortableCard = ({ task, subtasks, onUpdate, onOpen, categoryDot }: {
 
   const handleAdvance = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (completing) return;
     const next = NEXT_STATUS[task.status];
-    if (next) onUpdate(task.id, { status: next });
+    if (!next) return;
+    if (task.status === "in_progress") {
+      setCompleting(true);
+      window.setTimeout(() => onUpdate(task.id, { status: next }), 240);
+      return;
+    }
+    onUpdate(task.id, { status: next });
   };
 
   const canAdvance = NEXT_STATUS[task.status] !== null;
+  const isCompletable = task.status === "in_progress";
   const doneCount = subtasks.filter((s) => s.status === "done").length;
 
   return (
@@ -68,7 +77,7 @@ const SortableCard = ({ task, subtasks, onUpdate, onOpen, categoryDot }: {
       ref={setNodeRef}
       style={style}
       onClick={() => onOpen(task)}
-      className="group border border-border/60 rounded-sm p-3 bg-card/50 hover:bg-card transition-colors cursor-pointer"
+      className={`group border border-border/60 rounded-sm p-3 bg-card/50 hover:bg-card transition-colors cursor-pointer ${completing ? "kanban-complete-card" : ""}`}
     >
       <div className="flex items-start gap-2">
         <button
@@ -129,10 +138,10 @@ const SortableCard = ({ task, subtasks, onUpdate, onOpen, categoryDot }: {
         {canAdvance && (
           <button
             onClick={handleAdvance}
-            title="Sonraki aşamaya geçir"
-            className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground shrink-0 p-1 -m-1"
+            title={isCompletable ? "Tamamla" : "Sonraki aşamaya geçir"}
+            className={`shrink-0 p-1 -m-1 text-muted-foreground transition-all duration-150 hover:text-foreground sm:opacity-0 sm:group-hover:opacity-100 ${isCompletable ? "hover:scale-105" : ""} ${completing ? "kanban-complete-icon opacity-100 text-foreground" : ""}`}
           >
-            <ArrowRight className="h-4 w-4" />
+            {isCompletable ? <Check className="h-4 w-4" strokeWidth={2.5} /> : <ArrowRight className="h-4 w-4" />}
           </button>
         )}
       </div>

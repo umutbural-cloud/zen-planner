@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -10,6 +10,7 @@ export type PomodoroSession = {
   duration_seconds: number;
   kind: "work" | "break";
   note: string | null;
+  task_id: string | null;
 };
 
 export const usePomodoroSessions = (rangeStart: Date, rangeEnd: Date) => {
@@ -20,7 +21,7 @@ export const usePomodoroSessions = (rangeStart: Date, rangeEnd: Date) => {
   const startIso = rangeStart.toISOString();
   const endIso = rangeEnd.toISOString();
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     if (!user) { setSessions([]); setLoading(false); return; }
     const { data } = await supabase
       .from("pomodoro_sessions")
@@ -31,16 +32,16 @@ export const usePomodoroSessions = (rangeStart: Date, rangeEnd: Date) => {
       .order("started_at", { ascending: true });
     setSessions((data as PomodoroSession[]) || []);
     setLoading(false);
-  };
+  }, [user, startIso, endIso]);
 
-  useEffect(() => { fetchSessions(); }, [user, startIso, endIso]);
+  useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   // Refresh when a new session is saved elsewhere
   useEffect(() => {
     const onSaved = () => fetchSessions();
     window.addEventListener("pomodoro:session-saved", onSaved);
     return () => window.removeEventListener("pomodoro:session-saved", onSaved);
-  }, [user, startIso, endIso]);
+  }, [fetchSessions]);
 
   return { sessions, loading, refetch: fetchSessions };
 };

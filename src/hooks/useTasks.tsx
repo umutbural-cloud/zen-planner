@@ -100,13 +100,28 @@ export const useTasks = (projectId: string | null) => {
       const becameUndone = before && before.status === "done" && task.status !== "done";
       if (user && (becameDone || becameUndone)) {
         try {
-          // Always remove any prior auto-created session for this task to keep stats accurate
-          await supabase.from("pomodoro_sessions").delete().eq("task_id", task.id);
-          if (becameDone && task.start_date && task.end_date && task.start_date === task.end_date && task.start_time && task.end_time) {
+          // Only touch the auto-created "calendar block" session.
+          // Do NOT delete user-created sessions tied to this task (that would erase history).
+          if (task.start_date && task.end_date && task.start_date === task.end_date && task.start_time && task.end_time) {
             const startISO = new Date(`${task.start_date}T${task.start_time}`).toISOString();
             const endISO = new Date(`${task.end_date}T${task.end_time}`).toISOString();
             const dur = Math.max(0, Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000));
+
+            // Remove any prior auto-created session for the same exact time range.
+            // This keeps toggling done/undone idempotent without nuking unrelated sessions.
             if (dur > 0) {
+              await supabase
+                .from("pomodoro_sessions")
+                .delete()
+                .eq("task_id", task.id)
+                .eq("kind", "work")
+                .eq("started_at", startISO)
+                .eq("ended_at", endISO)
+                .eq("duration_seconds", dur)
+                .eq("note", task.title);
+            }
+
+            if (becameDone && dur > 0) {
               await supabase.from("pomodoro_sessions").insert({
                 user_id: user.id,
                 started_at: startISO,

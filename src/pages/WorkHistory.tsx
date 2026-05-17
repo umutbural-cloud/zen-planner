@@ -21,6 +21,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePageState } from "@/hooks/usePageState";
 import { useProjects } from "@/hooks/useProjects";
@@ -40,6 +41,13 @@ type Session = {
   kind: "work" | "break";
   note: string | null;
   category_id: string | null;
+};
+
+type PomodoroSessionRow = Database["public"]["Tables"]["pomodoro_sessions"]["Row"];
+type ChartTooltipPayload = {
+  payload?: {
+    sec?: number;
+  };
 };
 
 const formatDur = (sec: number) => {
@@ -71,7 +79,7 @@ const WorkHistory = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projects, createProject, updateProject, deleteProject } = useProjects();
-  const { section, selectedProjectId, view, selectedNotebookId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId } = usePageState();
+  const { section, selectedProjectId, view, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { categories } = usePomodoroCategories();
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -163,7 +171,7 @@ const WorkHistory = () => {
         .eq("kind", "work")
         .order("started_at", { ascending: false })
         .limit(5000);
-      setSessions((data as any) || []);
+      setSessions(((data || []) as PomodoroSessionRow[]) as Session[]);
     })();
   }, [user]);
 
@@ -390,6 +398,7 @@ const WorkHistory = () => {
           selectedView={view}
           section={section}
           selectedNotebookId={selectedNotebookId}
+          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
           onSelect={handleSidebarSelect}
           onCreate={handleSidebarCreate}
           onDelete={(id) => deleteProject(id)}
@@ -399,7 +408,8 @@ const WorkHistory = () => {
           onSelectJournal={() => { setSection("journal"); navigate("/"); }}
           onSelectHabits={() => { setSection("habits"); navigate("/"); }}
           onSelectRetreat={() => { setSection("retreat"); navigate("/"); }}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSection("notebook"); navigate("/"); }}
+          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); navigate("/"); }}
+          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); navigate("/"); }}
         />
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -598,7 +608,10 @@ const WorkHistory = () => {
                             borderRadius: 2,
                           }}
                           labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(v: any, _name, p: any) => [formatDurShort((p?.payload?.sec ?? 0) as number), "Çalışma"]}
+                          formatter={(_value: unknown, _name: unknown, payload: ChartTooltipPayload) => [
+                            formatDurShort(payload.payload?.sec ?? 0),
+                            "Çalışma",
+                          ]}
                         />
                         <Line
                           type="monotone"

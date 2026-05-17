@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid } from "lucide-react";
+import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid, type LucideIcon } from "lucide-react";
 import AppSidebar, { ProjectIconPicker } from "@/components/AppSidebar";
 import NotesView from "@/components/NotesView";
 import TableView from "@/components/TableView";
@@ -23,7 +23,7 @@ import { useStartupPage } from "@/hooks/useStartupPage";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const VIEWS: { id: ViewKey; label: string; jp: string; icon: any }[] = [
+const VIEWS: { id: ViewKey; label: string; jp: string; icon: LucideIcon }[] = [
   { id: "notes", label: "Notlar", jp: "ノート", icon: FileText },
   { id: "table", label: "Tablo", jp: "表", icon: TableIcon },
   { id: "gantt", label: "Gantt", jp: "ガント", icon: GanttChart },
@@ -38,7 +38,7 @@ const Index = () => {
   const { projects, loading, createProject, updateProject, deleteProject } = useProjects();
   const { undo, redo, canUndo, canRedo } = useUndo();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { section, selectedProjectId, view, journalDate, selectedNotebookId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId } = usePageState();
+  const { section, selectedProjectId, view, journalDate, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { startup } = useStartupPage();
   const { loading: settingsLoading } = useUserSettings();
   const navigate = useNavigate();
@@ -143,6 +143,7 @@ const Index = () => {
           selectedView={view}
           section={section}
           selectedNotebookId={selectedNotebookId}
+          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
           onSelect={handleSelect}
           onCreate={handleCreate}
           onDelete={handleDelete}
@@ -152,7 +153,8 @@ const Index = () => {
           onSelectJournal={() => setSection("journal")}
           onSelectHabits={() => setSection("habits")}
           onSelectRetreat={() => setSection("retreat")}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSection("notebook"); }}
+          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); }}
+          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); }}
         />
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -307,7 +309,13 @@ const Index = () => {
             )}
             {section === "habits" && <HabitsView />}
             {section === "retreat" && <InzivaView />}
-            {section === "notebook" && selectedNotebookId && <NotebookView notebookId={selectedNotebookId} />}
+            {section === "notebook" && (
+              <NotebookView
+                noteId={selectedKnowledgeNoteId}
+                selectedNotebookId={selectedNotebookId}
+                onClearSelection={() => setSelectedKnowledgeNoteId(null)}
+              />
+            )}
             {section === "project" && (
               !selectedProject ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
