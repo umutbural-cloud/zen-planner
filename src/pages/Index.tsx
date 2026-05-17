@@ -127,11 +127,11 @@ const Index = () => {
   const handleDelete = async (id: string) => {
     await deleteProject(id);
     if (selectedProjectId === id) {
-      const def = projects.find((p) => p.is_default && p.id !== id);
-      if (def) {
-        setSelectedProjectId(def.id);
+      const nextProject = projects.find((p) => p.id !== id && p.parent_id !== id);
+      if (nextProject) {
+        setSelectedProjectId(nextProject.id);
         setSection("project");
-        const pvs = (def.enabled_views?.length ? def.enabled_views : ["table", "notes"]) as ViewKey[];
+        const pvs = (nextProject.enabled_views?.length ? nextProject.enabled_views : ["table", "notes"]) as ViewKey[];
         setView(pvs[0]);
       } else {
         setSelectedProjectId(null);

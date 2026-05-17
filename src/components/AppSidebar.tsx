@@ -251,11 +251,9 @@ const ProjectItem = ({
             <button onClick={(e) => { e.stopPropagation(); onAddSub(project.id); }} className="text-muted-foreground hover:text-foreground" title="Alt proje">
               <Plus className="h-3 w-3" />
             </button>
-            {!project.is_default && (
-              <button onClick={(e) => { e.stopPropagation(); onDelete(project.id); }} className="text-muted-foreground hover:text-destructive" title="Sil">
-                <Trash2 className="h-3 w-3" />
-              </button>
-            )}
+            <button onClick={(e) => { e.stopPropagation(); onDelete(project.id); }} className="text-muted-foreground hover:text-destructive" title="Sil">
+              <Trash2 className="h-3 w-3" />
+            </button>
           </div>
         </SidebarMenuButton>
       </SidebarMenuItem>
