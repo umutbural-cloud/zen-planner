@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Clock, Play, Pause, Check, RotateCcw, SkipForward } from "lucide-react";
+import { Clock, Play, Pause, Check, SkipForward } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePomodoro, formatMMSS } from "@/hooks/usePomodoro";
 
 const PomodoroSidebarWidget = () => {
   const navigate = useNavigate();
-  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, reset, skipBreak } = usePomodoro();
+  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak } = usePomodoro();
 
   const isRunning = phase === "running";
   const isPaused = phase === "paused";
@@ -102,9 +102,11 @@ const PomodoroSidebarWidget = () => {
                   <button onClick={start} title="Başlat" className="p-1 rounded-sm hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
                     <Play className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={reset} title="Sıfırla" className="p-1 rounded-sm hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-                    <RotateCcw className="h-3.5 w-3.5" />
-                  </button>
+                  {isBreak && (
+                    <button onClick={skipBreak} title="Molayı atla" className="p-1 rounded-sm hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                      <SkipForward className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </>
               )}
             </div>

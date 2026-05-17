@@ -15,7 +15,9 @@ const read = (): UiScale => {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === "large" || v === "xlarge" || v === "normal") return v;
-  } catch {}
+  } catch {
+    // localStorage can be unavailable in private browsing or restricted embeds.
+  }
   return "normal";
 };
 
@@ -33,7 +35,11 @@ export const useUiScale = () => {
   }, []);
 
   const setScale = useCallback((next: UiScale) => {
-    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Persistence is optional; keep the in-memory scale change.
+    }
     window.dispatchEvent(new Event(EVENT));
     setScaleState(next);
   }, []);

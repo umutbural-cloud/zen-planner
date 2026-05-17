@@ -4,6 +4,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { NotebookNote, QuickNoteColor } from "@/features/knowledge/types";
+import { isJsonObject, quickDocFromJson, quickTextFromJson } from "@/features/knowledge/lib/noteContent";
 import { QuickNoteEditor } from "./QuickNoteEditor";
 
 type NoteUpdate = Partial<Pick<NotebookNote, "title" | "content" | "color" | "pinned">>;
@@ -35,8 +36,8 @@ export const QuickNoteCard = ({
   const debounceRef = useRef<number | null>(null);
   const focusedRef = useRef(false);
   const tone = tokenFor(note.color);
-  const noteText = typeof note.content?.text === "string" ? note.content.text : "";
-  const noteDoc = note.content?.doc && typeof note.content.doc === "object" ? note.content.doc : null;
+  const noteText = quickTextFromJson(note.content);
+  const noteDoc = quickDocFromJson(note.content);
 
   useEffect(() => {
     if (!focusedRef.current) {
@@ -99,7 +100,9 @@ export const QuickNoteCard = ({
         <QuickNoteEditor
           doc={noteDoc}
           text={noteText}
-          onChange={(doc, text) => onUpdate(note.id, { content: { ...note.content, doc, text } })}
+          onChange={(doc, text) => onUpdate(note.id, {
+            content: { ...(isJsonObject(note.content) ? note.content : {}), doc, text },
+          })}
         />
       </div>
 

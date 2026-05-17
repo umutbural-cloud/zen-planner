@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useUndo } from "./useUndo";
@@ -7,6 +7,10 @@ import type { Database } from "@/integrations/supabase/types";
 export type TaskStatus = Database["public"]["Enums"]["task_status"];
 export type TaskColor = "gray" | "yellow" | "red" | "blue" | "green";
 export type TaskKind = "task" | "timebox";
+type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
+type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
+type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
+type PomodoroSessionInsert = Database["public"]["Tables"]["pomodoro_sessions"]["Insert"];
 
 export type Task = {
   id: string;
@@ -30,13 +34,37 @@ export type Task = {
   category_id: string | null;
 };
 
+type CreateTaskInput = {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  start_date?: string;
+  end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  color?: TaskColor;
+  kind?: TaskKind;
+  parent_block_id?: string | null;
+  category_id?: string | null;
+};
+
+type UpdateTaskInput = Partial<Omit<Task, "id" | "project_id" | "user_id" | "created_at">>;
+
+const normalizeTask = (row: TaskRow): Task => ({
+  ...row,
+  color: (["gray", "yellow", "red", "blue", "green"] as const).includes(row.color as TaskColor)
+    ? row.color as TaskColor
+    : "gray",
+  kind: row.kind === "timebox" ? "timebox" : "task",
+});
+
 export const useTasks = (projectId: string | null) => {
   const { user } = useAuth();
   const { push } = useUndo();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     if (!user || !projectId) { setTasks([]); setLoading(false); return; }
     const { data } = await supabase
       .from("tasks")
@@ -44,34 +72,23 @@ export const useTasks = (projectId: string | null) => {
       .eq("project_id", projectId)
       .is("deleted_at", null)
       .order("position", { ascending: true });
-    setTasks((data as Task[]) || []);
+    setTasks((data || []).map(normalizeTask));
     setLoading(false);
-  };
+  }, [projectId, user]);
 
-  useEffect(() => { fetchTasks(); }, [user, projectId]);
+  useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
-  const createTask = async (task: {
-    title: string;
-    description?: string;
-    status?: TaskStatus;
-    start_date?: string;
-    end_date?: string;
-    start_time?: string;
-    end_time?: string;
-    color?: TaskColor;
-    kind?: TaskKind;
-    parent_block_id?: string | null;
-    category_id?: string | null;
-  }) => {
+  const createTask = async (task: CreateTaskInput) => {
     if (!user || !projectId) return null;
     const maxPos = tasks.reduce((m, t) => Math.max(m, t.position || 0), 0);
+    const payload: TaskInsert = { ...task, project_id: projectId, user_id: user.id, position: maxPos + 1 };
     const { data, error } = await supabase
       .from("tasks")
-      .insert({ ...task, project_id: projectId, user_id: user.id, position: maxPos + 1 } as any)
+      .insert(payload)
       .select()
       .single();
     if (!error && data) {
-      const created = data as Task;
+      const created = normalizeTask(data);
       setTasks((prev) => [...prev, created]);
       push({
         label: "Görev eklendi",
@@ -85,17 +102,18 @@ export const useTasks = (projectId: string | null) => {
         },
       });
     }
-    return data as Task | null;
+    return data ? normalizeTask(data) : null;
   };
 
-  const updateTask = async (id: string, updates: Partial<Omit<Task, "id" | "project_id" | "user_id" | "created_at">>) => {
+  const updateTask = async (id: string, updates: UpdateTaskInput) => {
     const before = tasks.find((t) => t.id === id);
-    const { data, error } = await supabase.from("tasks").update(updates as any).eq("id", id).select().single();
+    const updatePayload: TaskUpdate = updates;
+    const { data, error } = await supabase.from("tasks").update(updatePayload).eq("id", id).select().single();
     if (!error && data) {
-      setTasks((prev) => prev.map((t) => (t.id === id ? (data as Task) : t)));
+      setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask(data) : t)));
 
       // Sync auto-created pomodoro session with task completion state
-      const task = data as Task;
+      const task = normalizeTask(data);
       const becameDone = before && before.status !== "done" && task.status === "done";
       const becameUndone = before && before.status === "done" && task.status !== "done";
       if (user && (becameDone || becameUndone)) {
@@ -122,33 +140,37 @@ export const useTasks = (projectId: string | null) => {
             }
 
             if (becameDone && dur > 0) {
-              await supabase.from("pomodoro_sessions").insert({
+              const session: PomodoroSessionInsert = {
                 user_id: user.id,
                 started_at: startISO,
                 ended_at: endISO,
                 duration_seconds: dur,
                 kind: "work",
-                category_id: (task as any).category_id || null,
+                category_id: task.category_id || null,
                 note: task.title,
                 task_id: task.id,
-              } as any);
+              };
+              await supabase.from("pomodoro_sessions").insert(session);
             }
           }
-        } catch {}
+        } catch {
+          // Session sync is best-effort; the task update itself should remain committed.
+        }
       }
 
       if (before) {
-        const beforeSnap: any = {};
-        Object.keys(updates).forEach((k) => { beforeSnap[k] = (before as any)[k]; });
+        const beforeSnap = Object.fromEntries(
+          (Object.keys(updates) as Array<keyof UpdateTaskInput>).map((key) => [key, before[key]])
+        ) as TaskUpdate;
         push({
           label: "Görev düzenlendi",
           undo: async () => {
             const { data: r } = await supabase.from("tasks").update(beforeSnap).eq("id", id).select().single();
-            if (r) setTasks((prev) => prev.map((t) => (t.id === id ? (r as Task) : t)));
+            if (r) setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask(r) : t)));
           },
           redo: async () => {
-            const { data: r } = await supabase.from("tasks").update(updates as any).eq("id", id).select().single();
-            if (r) setTasks((prev) => prev.map((t) => (t.id === id ? (r as Task) : t)));
+            const { data: r } = await supabase.from("tasks").update(updatePayload).eq("id", id).select().single();
+            if (r) setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask(r) : t)));
           },
         });
       }
@@ -184,7 +206,7 @@ export const useTasks = (projectId: string | null) => {
     );
     await Promise.all(
       orderedIds.map((id, i) =>
-        supabase.from("tasks").update({ position: i + 1 } as any).eq("id", id)
+        supabase.from("tasks").update({ position: i + 1 }).eq("id", id)
       )
     );
   };

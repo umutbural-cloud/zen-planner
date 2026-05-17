@@ -25,6 +25,8 @@ export type TableSpec = {
   fk: Partial<Record<string, TableName>>;
 };
 
+export type PortableRow = Record<string, unknown>;
+
 // Order matters: parents before children.
 export const TABLES: TableSpec[] = [
   { name: "projects", fk: { parent_id: "projects" } },
@@ -51,18 +53,19 @@ export type ExportFile = {
   exported_at: string;
   export_id: string;
   user_data_only: true;
-  data: Partial<Record<TableName, any[]>> & { user_settings?: any | null };
+  data: Partial<Record<TableName, PortableRow[]>> & { user_settings?: PortableRow | null };
   counts: Record<string, number>;
 };
 
-export function isExportFile(x: any): x is ExportFile {
+export function isExportFile(x: unknown): x is ExportFile {
   if (!x || typeof x !== "object") return false;
-  if (x.app_name !== APP_NAME) return false;
-  if (typeof x.schema_version !== "number") return false;
-  if (typeof x.export_id !== "string" || x.export_id.length < 8) return false;
-  if (typeof x.exported_at !== "string") return false;
-  if (x.user_data_only !== true) return false;
-  if (!x.data || typeof x.data !== "object") return false;
+  const candidate = x as Record<string, unknown>;
+  if (candidate.app_name !== APP_NAME) return false;
+  if (typeof candidate.schema_version !== "number") return false;
+  if (typeof candidate.export_id !== "string" || candidate.export_id.length < 8) return false;
+  if (typeof candidate.exported_at !== "string") return false;
+  if (candidate.user_data_only !== true) return false;
+  if (!candidate.data || typeof candidate.data !== "object") return false;
   return true;
 }
 

@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, ListTodo } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { TaskStatus } from "@/hooks/useTasks";
 
 type Task = {
   id: string;
   title: string;
-  status: string;
+  status: TaskStatus;
   position: number;
 };
 
@@ -15,7 +16,7 @@ const PomodoroTaskList = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectId, setProjectId] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
     const { data: proj } = await supabase
       .from("projects")
@@ -33,14 +34,14 @@ const PomodoroTaskList = () => {
       .is("deleted_at", null)
       .order("position", { ascending: true });
     setTasks((data as Task[]) || []);
-  };
+  }, [user]);
 
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [load]);
 
   const toggle = async (t: Task) => {
-    const next = t.status === "done" ? "todo" : "done";
+    const next: TaskStatus = t.status === "done" ? "todo" : "done";
     setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: next } : x)));
-    await supabase.from("tasks").update({ status: next as any }).eq("id", t.id);
+    await supabase.from("tasks").update({ status: next }).eq("id", t.id);
   };
 
   const active = tasks.filter((t) => t.status !== "done");

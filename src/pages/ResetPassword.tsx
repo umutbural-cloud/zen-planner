@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu.";
+
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -45,8 +47,8 @@ const ResetPassword = () => {
       toast({ title: "完了", description: "Şifreniz güncellendi." });
       await supabase.auth.signOut();
       navigate("/auth", { replace: true });
-    } catch (error: any) {
-      toast({ title: "Hata", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      toast({ title: "Hata", description: errorMessage(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       backlog_tasks: {
@@ -182,7 +207,22 @@ export type Database = {
           title?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "habits_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "habit_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       journal_entries: {
         Row: {
@@ -461,6 +501,13 @@ export type Database = {
             referencedRelation: "pomodoro_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pomodoro_sessions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
         ]
       }
       projects: {
@@ -723,6 +770,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tasks_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "pomodoro_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_block_id_fkey"
+            columns: ["parent_block_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -934,6 +995,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       pomodoro_kind: ["work", "break"],

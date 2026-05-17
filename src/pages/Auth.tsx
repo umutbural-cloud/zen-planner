@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 
 type Mode = "login" | "signup" | "forgot";
 
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu.";
+
 const Auth = () => {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -60,10 +62,10 @@ const Auth = () => {
         });
         setMode("login");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Hata",
-        description: error.message,
+        description: errorMessage(error),
         variant: "destructive",
       });
     } finally {

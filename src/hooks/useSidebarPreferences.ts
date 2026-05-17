@@ -95,7 +95,9 @@ export const useSidebarPreferences = () => {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         window.dispatchEvent(new Event(EVENT));
-      } catch {}
+      } catch {
+        // Persistence is optional; keep the in-memory preference change.
+      }
       return next;
     });
   };
@@ -104,7 +106,9 @@ export const useSidebarPreferences = () => {
     try {
       window.localStorage.setItem(CUSTOM_KEY, JSON.stringify(next));
       window.dispatchEvent(new Event(EVENT));
-    } catch {}
+    } catch {
+      // Persistence is optional; keep the in-memory custom modules.
+    }
   };
 
   const addCustomModule = (label: string, target: CustomModuleTarget) => {

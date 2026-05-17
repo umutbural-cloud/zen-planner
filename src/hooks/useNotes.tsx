@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -17,7 +17,7 @@ export const useNotes = (projectId: string | null) => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     if (!user || !projectId) { setNotes([]); setLoading(false); return; }
     const { data } = await supabase
       .from("notes")
@@ -26,9 +26,9 @@ export const useNotes = (projectId: string | null) => {
       .order("created_at", { ascending: false });
     setNotes(data || []);
     setLoading(false);
-  };
+  }, [projectId, user]);
 
-  useEffect(() => { fetchNotes(); }, [user, projectId]);
+  useEffect(() => { fetchNotes(); }, [fetchNotes]);
 
   const createNote = async (content: string = "") => {
     if (!user || !projectId) return null;

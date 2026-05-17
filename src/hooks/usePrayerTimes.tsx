@@ -44,7 +44,7 @@ const cleanTime = (t: string): string => {
 };
 
 const buildStarts = (timings: AladhanTimings): Record<TimeOfDayKey, string> => {
-  const out: Record<TimeOfDayKey, string> = {} as any;
+  const out = {} as Record<TimeOfDayKey, string>;
   ALL_TIME_OF_DAY_KEYS.forEach((k) => {
     out[k] = cleanTime(timings[PRAYER_TO_SLOT[k]] || "00:00");
   });
@@ -61,15 +61,25 @@ const readCache = (): CacheShape | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 };
 
 const writeCache = (c: CacheShape) => {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(c)); } catch {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(c));
+  } catch {
+    // Cache persistence is optional.
+  }
 };
 
 const persistAutoStarts = (starts: Record<TimeOfDayKey, string>) => {
-  try { localStorage.setItem(STORAGE_AUTO_STARTS, JSON.stringify(starts)); } catch {}
+  try {
+    localStorage.setItem(STORAGE_AUTO_STARTS, JSON.stringify(starts));
+  } catch {
+    // Cache persistence is optional.
+  }
   window.dispatchEvent(new Event(TIME_EVENT));
 };
 
@@ -143,10 +153,11 @@ export const usePrayerTimes = () => {
   // Push the resolved starts into the time-of-day system whenever they change.
   useEffect(() => {
     if (!enabled) return;
-    if (query.data) {
-      persistAutoStarts(query.data.starts);
+    const result = query.data;
+    if (result) {
+      persistAutoStarts(result.starts);
     }
-  }, [enabled, query.data?.date, query.data?.starts]);
+  }, [enabled, query.data]);
 
   // Auto-refresh at midnight.
   const [, setTick] = useState(0);

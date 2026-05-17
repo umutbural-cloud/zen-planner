@@ -227,7 +227,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
   }, [tasks]);
 
   const matchesFilters = (t: Task) => {
-    if (categoryFilter !== "all" && (t as any).category_id !== categoryFilter) return false;
+    if (categoryFilter !== "all" && t.category_id !== categoryFilter) return false;
     return true;
   };
 
@@ -257,7 +257,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
   };
 
   const categoryDotOf = (t: Task) => {
-    const cid = (t as any).category_id;
+    const cid = t.category_id;
     if (!cid) return undefined;
     const c = categories.find((x) => x.id === cid);
     return c ? colorHex(c.color) : undefined;

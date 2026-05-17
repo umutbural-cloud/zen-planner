@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { Database } from "@/integrations/supabase/types";
 
 export type StartupPageSetting =
   | { type: "module"; value: "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" }
@@ -45,8 +46,32 @@ const readCache = (): UserSettings => {
 };
 
 const writeCache = (s: UserSettings) => {
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(s)); } catch {}
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(s));
+  } catch {
+    // localStorage can be unavailable in private browsing or restricted embeds.
+  }
   window.dispatchEvent(new Event(EVENT));
+};
+
+const isStartupPageSetting = (value: unknown): value is StartupPageSetting => {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type === "default") return true;
+  if (candidate.type === "project") return typeof candidate.value === "string";
+  if (candidate.type === "module") {
+    return candidate.value === "backlog" ||
+      candidate.value === "journal" ||
+      candidate.value === "habits" ||
+      candidate.value === "workHistory" ||
+      candidate.value === "pomodoro";
+  }
+  return false;
+};
+
+const isStringRecord = (value: unknown): value is Record<string, string> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value).every((entry) => typeof entry === "string");
 };
 
 export const useUserSettings = () => {
@@ -79,8 +104,8 @@ export const useUserSettings = () => {
           latitude: data.latitude,
           longitude: data.longitude,
           calculation_method: data.calculation_method,
-          module_labels: (data as any).module_labels ?? {},
-          startup_page: ((data as any).startup_page as StartupPageSetting) ?? { type: "default" },
+          module_labels: isStringRecord(data.module_labels) ? data.module_labels : {},
+          startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
           
         };
         setSettings(next);
@@ -89,17 +114,18 @@ export const useUserSettings = () => {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, [user]);
 
   const update = useCallback(async (patch: Partial<UserSettings>) => {
     const next = { ...readCache(), ...patch };
     setSettings(next);
     writeCache(next);
     if (!user) return;
+    const payload: Database["public"]["Tables"]["user_settings"]["Insert"] = { user_id: user.id, ...next };
     await supabase
       .from("user_settings")
-      .upsert({ user_id: user.id, ...next } as any, { onConflict: "user_id" });
-  }, [user?.id]);
+      .upsert(payload, { onConflict: "user_id" });
+  }, [user]);
 
   return { settings, update, loading };
 };

@@ -18,6 +18,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useNotebookNotes } from "../hooks/useNotebookNotes";
 import type { NotebookNote } from "../types";
 import RichNoteEditor from "./RichNoteEditor";
+import { richDocFromJson } from "../lib/noteContent";
 
 const PageRow = ({
   note, children, allNotes, depth, selectedId, onSelect, onAddChild, onDelete,
@@ -165,7 +166,7 @@ const RichNotesPanel = ({ notebookId }: { notebookId: string }) => {
         {selected ? (
           <RichNoteEditor
             key={selected.id}
-            value={selected.content}
+            value={richDocFromJson(selected.content)}
             onChange={(doc) => updateNote(selected.id, { content: doc })}
             titleValue={titleDraft}
             onTitleChange={handleTitleChange}

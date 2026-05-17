@@ -22,11 +22,13 @@ const HabitsToday = () => {
     try {
       const raw = localStorage.getItem(`habits-order-${today}`);
       setOverride(raw ? JSON.parse(raw) : null);
-    } catch { setOverride(null); }
+    } catch {
+      setOverride(null);
+    }
   }, [today]);
 
   const todayDate = parseISO(today);
-  const last7 = useMemo(() => Array.from({ length: 7 }, (_, i) => subDays(todayDate, 6 - i)), [today]);
+  const last7 = useMemo(() => Array.from({ length: 7 }, (_, i) => subDays(todayDate, 6 - i)), [todayDate]);
 
   const baseSorted = [...habits].sort((a, b) => a.position - b.position);
   const ordered = useMemo(() => {
@@ -57,7 +59,11 @@ const HabitsToday = () => {
       else result.push(fid);
     });
     setOverride(result);
-    try { localStorage.setItem(`habits-order-${today}`, JSON.stringify(result)); } catch {}
+    try {
+      localStorage.setItem(`habits-order-${today}`, JSON.stringify(result));
+    } catch {
+      // Persistence is optional; keep the in-memory order for this render.
+    }
   };
 
   return (

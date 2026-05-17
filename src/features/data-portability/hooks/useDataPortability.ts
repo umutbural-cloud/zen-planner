@@ -30,7 +30,7 @@ export function useDataPortability() {
 
   const previewImport = useCallback(async (raw: File) => {
     const text = await raw.text();
-    let parsed: any;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(text);
     } catch {

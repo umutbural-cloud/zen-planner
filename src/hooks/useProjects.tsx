@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useUndo } from "./useUndo";
+import type { Database, Json } from "@/integrations/supabase/types";
 
 export type ViewKey = "notes" | "table" | "gantt" | "kanban" | "calendar";
 
 export type ProjectKind = "project" | "knowledge";
+type ProjectRow = Database["public"]["Tables"]["projects"]["Row"];
+type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+type ProjectUpdate = Database["public"]["Tables"]["projects"]["Update"];
 
 export type Project = {
   id: string;
@@ -24,6 +28,22 @@ export type Project = {
 
 const DEFAULT_VIEWS: ViewKey[] = ["table", "notes"];
 const KNOWLEDGE_VIEWS: ViewKey[] = ["notes"];
+const VALID_VIEWS = new Set<ViewKey>(["notes", "table", "gantt", "kanban", "calendar"]);
+
+const normalizeViews = (value: Json, fallback: ViewKey[] = DEFAULT_VIEWS): ViewKey[] => {
+  if (!Array.isArray(value)) return fallback;
+  const views = value.filter((view): view is ViewKey => typeof view === "string" && VALID_VIEWS.has(view as ViewKey));
+  return views.length > 0 ? views : fallback;
+};
+
+const normalizeProject = (row: ProjectRow): Project => {
+  const kind: ProjectKind = row.kind === "knowledge" ? "knowledge" : "project";
+  return {
+    ...row,
+    enabled_views: normalizeViews(row.enabled_views, kind === "knowledge" ? KNOWLEDGE_VIEWS : DEFAULT_VIEWS),
+    kind,
+  };
+};
 
 export const useProjects = () => {
   const { user } = useAuth();
@@ -31,34 +51,30 @@ export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("projects")
       .select("*")
       .is("deleted_at", null)
       .order("created_at", { ascending: true });
-    const normalized = ((data as any[]) || []).map((p) => ({
-      ...p,
-      enabled_views: Array.isArray(p.enabled_views) ? p.enabled_views : DEFAULT_VIEWS,
-      kind: p.kind || "project",
-    })) as Project[];
+    const normalized = (data || []).map(normalizeProject);
     // Default proje en üstte
     normalized.sort((a, b) => Number(!!b.is_default) - Number(!!a.is_default));
     setProjects(normalized);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchProjects(); }, [user]);
+  useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   const createProject = async (name: string, parentId?: string, kind: ProjectKind = "project") => {
     if (!user) return null;
     const views = kind === "knowledge" ? KNOWLEDGE_VIEWS : DEFAULT_VIEWS;
-    const insertData: any = { name, user_id: user.id, enabled_views: views, kind };
+    const insertData: ProjectInsert = { name, user_id: user.id, enabled_views: views, kind };
     if (parentId) insertData.parent_id = parentId;
     const { data, error } = await supabase.from("projects").insert(insertData).select().single();
     if (!error && data) {
-      const created = { ...data, enabled_views: (data as any).enabled_views || views, kind: (data as any).kind || "project" } as Project;
+      const created = normalizeProject(data);
       setProjects((prev) => [...prev, created]);
       push({
         label: kind === "knowledge" ? "Defter eklendi" : "Proje eklendi",
@@ -72,14 +88,15 @@ export const useProjects = () => {
         },
       });
     }
-    return data as Project | null;
+    return data ? normalizeProject(data) : null;
   };
 
   const updateProject = async (id: string, updates: Partial<Pick<Project, "name" | "emoji" | "icon" | "icon_color" | "enabled_views">>) => {
     const before = projects.find((p) => p.id === id);
-    const { data, error } = await supabase.from("projects").update(updates as any).eq("id", id).select().single();
+    const updatePayload: ProjectUpdate = updates;
+    const { data, error } = await supabase.from("projects").update(updatePayload).eq("id", id).select().single();
     if (!error && data) {
-      const updated = { ...data, enabled_views: (data as any).enabled_views || DEFAULT_VIEWS } as Project;
+      const updated = normalizeProject(data);
       setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
       if (before && (updates.name !== undefined || updates.emoji !== undefined)) {
         const beforeSnap = { name: before.name, emoji: before.emoji };
@@ -90,13 +107,13 @@ export const useProjects = () => {
             fetchProjects();
           },
           redo: async () => {
-            await supabase.from("projects").update(updates as any).eq("id", id);
+            await supabase.from("projects").update(updatePayload).eq("id", id);
             fetchProjects();
           },
         });
       }
     }
-    return data;
+    return data ? normalizeProject(data) : null;
   };
 
   const deleteProject = async (id: string) => {

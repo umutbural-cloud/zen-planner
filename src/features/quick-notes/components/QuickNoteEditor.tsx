@@ -1,15 +1,12 @@
 import { useEffect, useRef } from "react";
-import type React from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
+import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import { Bold, Heading3, Italic, List, ListOrdered } from "lucide-react";
+import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
+import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
 
-type QuickNoteDoc = Record<string, unknown>;
-
-const EMPTY_DOC = { type: "doc", content: [{ type: "paragraph" }] };
-
-const textToDoc = (text: string) => ({
+const textToDoc = (text: string): JSONContent => ({
   type: "doc",
   content: text
     ? text.split("\n").map((line) => ({
@@ -19,40 +16,14 @@ const textToDoc = (text: string) => ({
     : [{ type: "paragraph" }],
 });
 
-const ToolbarButton = ({
-  onClick,
-  active,
-  title,
-  children,
-}: {
-  onClick: () => void;
-  active: boolean;
-  title: string;
-  children: React.ReactNode;
-}) => (
-  <button
-    type="button"
-    onMouseDown={(event) => event.preventDefault()}
-    onClick={onClick}
-    title={title}
-    className={`rounded-sm p-1 transition-colors ${
-      active
-        ? "bg-accent text-accent-foreground"
-        : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-    }`}
-  >
-    {children}
-  </button>
-);
-
 export const QuickNoteEditor = ({
   doc,
   text,
   onChange,
 }: {
-  doc?: QuickNoteDoc | null;
+  doc?: JSONContent | null;
   text: string;
-  onChange: (doc: QuickNoteDoc, text: string) => void;
+  onChange: (doc: JSONContent, text: string) => void;
 }) => {
   const debounceRef = useRef<number | null>(null);
   const lastContentRef = useRef<string>("");
@@ -67,12 +38,14 @@ export const QuickNoteEditor = ({
         blockquote: false,
         horizontalRule: false,
       }),
+      FontSize,
+      LineHeight,
       Placeholder.configure({ placeholder: "Düşünceyi yakala..." }),
     ],
     content: initialContent,
     editorProps: {
       attributes: {
-        class: "quick-note-editor focus:outline-none min-h-24 text-[13px] font-light leading-[1.72] text-foreground/90",
+        class: "quick-note-editor focus:outline-none min-h-24 text-[12px] font-light leading-[1.72] text-foreground/90",
       },
     },
     onUpdate: ({ editor }) => {
@@ -100,24 +73,11 @@ export const QuickNoteEditor = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-0.5 border-b border-border/50 pb-2">
-        <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Kalın">
-          <Bold className="h-3.5 w-3.5" />
-        </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="İtalik">
-          <Italic className="h-3.5 w-3.5" />
-        </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="Alt başlık">
-          <Heading3 className="h-3.5 w-3.5" />
-        </ToolbarButton>
-        <div className="mx-1 h-4 w-px bg-border/60" />
-        <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Madde">
-          <List className="h-3.5 w-3.5" />
-        </ToolbarButton>
-        <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Sıralı madde">
-          <ListOrdered className="h-3.5 w-3.5" />
-        </ToolbarButton>
-      </div>
+      <RichTextToolbar
+        editor={editor}
+        compact
+        features={{ strike: false, taskList: false, blockquote: false, history: false }}
+      />
       <EditorContent editor={editor} />
     </div>
   );

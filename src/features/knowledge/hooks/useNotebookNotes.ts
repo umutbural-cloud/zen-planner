@@ -28,6 +28,23 @@ const sortNotes = (items: NotebookNote[]) =>
 
 const toNotebookNote = (row: NotebookNoteRow) => row as unknown as NotebookNote;
 
+const collectDeletedNoteIds = (sourceNotes: NotebookNote[], rootId: string) => {
+  const idsToDelete = new Set<string>([rootId]);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    sourceNotes.forEach((note) => {
+      if (note.parent_note_id && idsToDelete.has(note.parent_note_id) && !idsToDelete.has(note.id)) {
+        idsToDelete.add(note.id);
+        changed = true;
+      }
+    });
+  }
+
+  return Array.from(idsToDelete);
+};
+
 export const useNotebookNotes = (notebookId: string | null, type?: NoteType) => {
   const { user } = useAuth();
   const [notes, setNotes] = useState<NotebookNote[]>([]);
@@ -98,9 +115,11 @@ export const useNotebookNotes = (notebookId: string | null, type?: NoteType) => 
   };
 
   const deleteNote = async (id: string) => {
-    setNotes((p) => p.filter((n) => n.id !== id));
+    const idsToDelete = collectDeletedNoteIds(notes, id);
+    setNotes((p) => p.filter((n) => !idsToDelete.includes(n.id)));
     const payload: NotebookNoteUpdatePayload = { deleted_at: new Date().toISOString() };
-    await supabase.from("notebook_notes").update(payload).eq("id", id);
+    await supabase.from("notebook_notes").update(payload).in("id", idsToDelete);
+    return idsToDelete;
   };
 
   return { notes, loading, createNote, updateNote, deleteNote, reorderNotes, refetch: fetchNotes };
@@ -133,9 +152,12 @@ export const useKnowledgeNotes = () => {
     return () => window.removeEventListener(KNOWLEDGE_NOTES_CHANGED_EVENT, fetchNotes);
   }, [fetchNotes]);
 
-  const createNote = async (notebookId: string, input: { type: NoteType; title?: string; content?: NotebookNote["content"]; color?: QuickNoteColor }) => {
+  const createNote = async (notebookId: string, input: { type: NoteType; title?: string; content?: NotebookNote["content"]; color?: QuickNoteColor; parent_note_id?: string | null }) => {
     if (!user) return null;
-    const siblingNotes = notes.filter((n) => n.type === input.type && n.notebook_id === notebookId && !n.parent_note_id);
+    const parentNoteId = input.parent_note_id ?? null;
+    const siblingNotes = notes.filter(
+      (n) => n.type === input.type && n.notebook_id === notebookId && (n.parent_note_id ?? null) === parentNoteId
+    );
     const maxPosition = siblingNotes.reduce((max, note) => Math.max(max, note.position || 0), 0);
     const payload: NotebookNoteInsert = {
       user_id: user.id,
@@ -144,7 +166,7 @@ export const useKnowledgeNotes = () => {
       title: input.title ?? "",
       content: input.content ?? {},
       color: input.color ?? "default",
-      parent_note_id: null,
+      parent_note_id: parentNoteId,
       position: maxPosition + 1,
     };
     const { data, error } = await supabase.from("notebook_notes").insert(payload).select().single();
@@ -157,17 +179,19 @@ export const useKnowledgeNotes = () => {
     return null;
   };
 
-  const updateNote = async (id: string, updates: Partial<Pick<NotebookNote, "title" | "content" | "color" | "pinned" | "position">>) => {
+  const updateNote = async (id: string, updates: Partial<Pick<NotebookNote, "title" | "content" | "color" | "pinned" | "parent_note_id" | "position">>) => {
     setNotes((prev) => sortNotes(prev.map((note) => (note.id === id ? { ...note, ...updates } as NotebookNote : note))));
     await supabase.from("notebook_notes").update(updates as NotebookNoteUpdatePayload).eq("id", id);
     notifyKnowledgeNotesChanged();
   };
 
   const deleteNote = async (id: string) => {
-    setNotes((prev) => prev.filter((note) => note.id !== id));
+    const idsToDelete = collectDeletedNoteIds(notes, id);
+    setNotes((prev) => prev.filter((note) => !idsToDelete.includes(note.id)));
     const payload: NotebookNoteUpdatePayload = { deleted_at: new Date().toISOString() };
-    await supabase.from("notebook_notes").update(payload).eq("id", id);
+    await supabase.from("notebook_notes").update(payload).in("id", idsToDelete);
     notifyKnowledgeNotesChanged();
+    return idsToDelete;
   };
 
   return { notes, loading, createNote, updateNote, deleteNote, refetch: fetchNotes };

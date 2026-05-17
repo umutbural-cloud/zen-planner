@@ -1,10 +1,11 @@
 import { Trash2, RotateCcw, FileText, Folder, ListChecks, BookOpen, Package } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTrash, TrashItem } from "@/hooks/useTrash";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 
-const kindMeta: Record<TrashItem["kind"], { label: string; icon: any }> = {
+const kindMeta: Record<TrashItem["kind"], { label: string; icon: LucideIcon }> = {
   task: { label: "Görev", icon: ListChecks },
   note: { label: "Not", icon: FileText },
   project: { label: "Proje", icon: Folder },

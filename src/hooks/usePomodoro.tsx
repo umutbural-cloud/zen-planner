@@ -35,12 +35,15 @@ function notify(title: string, body: string) {
       const n = new Notification(title, { body, icon: "/favicon.ico", tag: "keikaku-pomodoro" });
       n.onclick = () => { window.focus(); n.close(); };
     }
-  } catch {}
+  } catch {
+    // Notifications can fail despite granted permission on some browsers.
+  }
 }
 
 function playChime() {
   try {
-    const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
+    const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
+    const Ctor = globalThis.AudioContext || audioWindow.webkitAudioContext;
     if (!Ctor) return;
     const ctx = new Ctor();
     const now = ctx.currentTime;
@@ -59,7 +62,9 @@ function playChime() {
       o.stop(t + 0.65);
     });
     setTimeout(() => ctx.close(), 1500);
-  } catch {}
+  } catch {
+    // Audio playback can be blocked until the user interacts with the page.
+  }
 }
 
 export const PomodoroProvider = ({ children }: { children: ReactNode }) => {

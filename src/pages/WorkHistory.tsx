@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ChevronLeft, ChevronRight, Clock, Settings2, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -121,10 +121,10 @@ const WorkHistory = () => {
     } catch { /* ignore */ }
   };
 
-  const isCatIncluded = (catId: string | null) => {
+  const isCatIncluded = useCallback((catId: string | null) => {
     if (includedCats === null) return true;
     return includedCats.has(catId ?? NONE_CAT_KEY);
-  };
+  }, [includedCats]);
 
   const toggleStatsCat = (key: string) => {
     // Materialize current selection (treat null as "everything")
@@ -145,7 +145,7 @@ const WorkHistory = () => {
 
   const filteredStatsSessions = useMemo(
     () => sessions.filter((s) => isCatIncluded(s.category_id)),
-    [sessions, includedCats],
+    [sessions, isCatIncluded],
   );
 
   const toggleRecentCat = (key: string) => {
@@ -156,10 +156,10 @@ const WorkHistory = () => {
       return next;
     });
   };
-  const sessionMatchesFilter = (s: Session) => {
+  const sessionMatchesFilter = useCallback((s: Session) => {
     if (recentCatFilter.size === 0) return true;
     return recentCatFilter.has(s.category_id ?? NONE_CAT_KEY);
-  };
+  }, [recentCatFilter]);
 
   useEffect(() => {
     if (!user) return;
@@ -340,7 +340,7 @@ const WorkHistory = () => {
       out.push({ key: k, date: d, total, sessions: items });
     }
     return out;
-  }, [sessions, recentWeeks, recentCatFilter]);
+  }, [sessions, recentWeeks, sessionMatchesFilter]);
 
   // -------- Sidebar handlers --------
   const handleSidebarSelect = (id: string, v?: ViewKey) => {

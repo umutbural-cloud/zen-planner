@@ -1,4 +1,4 @@
-import { type ChangeEvent, type ReactNode, useEffect, useRef } from "react";
+import { type ChangeEvent, useEffect, useRef } from "react";
 import { useEditor, EditorContent, NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
 import { Node, mergeAttributes, type JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -6,7 +6,9 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
-import { Bold, Italic, Link as LinkIcon, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2, ListTree, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
+import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
 
 const lowlight = createLowlight(common);
 
@@ -25,25 +27,6 @@ type Props = {
   titleValue: string;
   onTitleChange: (v: string) => void;
 };
-
-type ToolbarButtonProps = {
-  onClick: () => void;
-  active?: boolean;
-  title: string;
-  children: ReactNode;
-};
-
-const TbBtn = ({ onClick, active, title, children }: ToolbarButtonProps) => (
-  <button
-    type="button"
-    onMouseDown={(e) => e.preventDefault()}
-    onClick={onClick}
-    title={title}
-    className={`p-1.5 rounded-sm transition-colors ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"}`}
-  >
-    {children}
-  </button>
-);
 
 const ToggleBlockView = ({ node, updateAttributes }: NodeViewProps) => {
   const open = (node.attrs.open as boolean | undefined) ?? true;
@@ -145,13 +128,15 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
       }),
       CodeBlockLowlight.configure({ lowlight }),
       ToggleBlock,
+      FontSize,
+      LineHeight,
       Placeholder.configure({ placeholder: placeholder || "Yazmaya başla, ya da bir blok ekle..." }),
       Link.configure({ openOnClick: false, autolink: true }),
     ],
     content: value && Object.keys(value || {}).length ? value : { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
       attributes: {
-        class: "rich-note-editor focus:outline-none font-light leading-[1.85] text-[15px] prose-rich",
+        class: "rich-note-editor focus:outline-none font-light leading-[1.85] text-[12px] prose-rich",
       },
       handleDOMEvents: {
         copy: () => false,
@@ -201,20 +186,13 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
         style={{ fontFamily: '"Noto Serif JP", serif' }}
       />
 
-      <div className="sticky top-0 z-10 -mx-6 sm:-mx-12 px-6 sm:px-12 py-1 mb-3 flex flex-wrap items-center gap-0.5 bg-background/80 backdrop-blur-sm border-b border-border/40 opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity">
-        <TbBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="H1"><Heading1 className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="H2"><Heading2 className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="H3"><Heading3 className="h-3.5 w-3.5" /></TbBtn>
-        <div className="w-px h-4 bg-border/60 mx-0.5" />
-        <TbBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Kalın"><Bold className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="İtalik"><Italic className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={insertLink} active={editor.isActive("link")} title="Bağlantı"><LinkIcon className="h-3.5 w-3.5" /></TbBtn>
-        <div className="w-px h-4 bg-border/60 mx-0.5" />
-        <TbBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Madde"><List className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Sıralı"><ListOrdered className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title="Alıntı"><Quote className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive("codeBlock")} title="Kod bloğu"><Code2 className="h-3.5 w-3.5" /></TbBtn>
-        <TbBtn onClick={() => editor.chain().focus().insertToggleBlock().run()} active={editor.isActive("toggleBlock")} title="Toggle"><ListTree className="h-3.5 w-3.5" /></TbBtn>
+      <div className="sticky top-0 z-10 -mx-6 sm:-mx-12 px-6 sm:px-12 py-1 mb-3 bg-background/80 backdrop-blur-sm opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <RichTextToolbar
+          editor={editor}
+          features={{ link: true, taskList: false, codeBlock: true, toggleBlock: true, history: false }}
+          onInsertLink={insertLink}
+          onInsertToggleBlock={() => editor.chain().focus().insertToggleBlock().run()}
+        />
       </div>
 
       <div className="min-h-[60vh]" onMouseDown={(event) => {

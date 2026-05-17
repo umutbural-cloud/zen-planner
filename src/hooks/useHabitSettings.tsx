@@ -7,7 +7,9 @@ const read = (): HabitTodayDefault => {
   try {
     const v = localStorage.getItem(KEY);
     return v === "all" ? "all" : "time";
-  } catch { return "time"; }
+  } catch {
+    return "time";
+  }
 };
 
 export const useHabitTodayDefault = () => {
@@ -27,7 +29,11 @@ export const useHabitTodayDefault = () => {
   }, []);
 
   const update = (v: HabitTodayDefault) => {
-    try { localStorage.setItem(KEY, v); } catch {}
+    try {
+      localStorage.setItem(KEY, v);
+    } catch {
+      // localStorage can be unavailable in private browsing or restricted embeds.
+    }
     setValue(v);
     window.dispatchEvent(new Event("habits-settings-changed"));
   };

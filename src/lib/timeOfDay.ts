@@ -36,11 +36,19 @@ const STORAGE_AUTO_STARTS = "habits-time-of-day-auto-starts";
 const EVENT = "time-of-day-ranges-changed";
 
 export const readAutoMode = (): boolean => {
-  try { return localStorage.getItem(STORAGE_AUTO) === "true"; } catch { return false; }
+  try {
+    return localStorage.getItem(STORAGE_AUTO) === "true";
+  } catch {
+    return false;
+  }
 };
 
 export const writeAutoMode = (v: boolean) => {
-  try { localStorage.setItem(STORAGE_AUTO, v ? "true" : "false"); } catch {}
+  try {
+    localStorage.setItem(STORAGE_AUTO, v ? "true" : "false");
+  } catch {
+    // Persistence is optional; listeners still receive the in-memory change event.
+  }
   window.dispatchEvent(new Event(EVENT));
 };
 
@@ -55,7 +63,9 @@ export const readAutoStarts = (): Record<TimeOfDayKey, string> | null => {
       if (isValidTime(parsed?.[k])) { out[k] = parsed[k]; any = true; }
     });
     return any ? out : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 };
 
 export const readEffectiveStarts = (): Record<TimeOfDayKey, string> => {
@@ -99,7 +109,9 @@ export const readTimeOfDayLabels = (): Record<TimeOfDayKey, string> => {
     ALL_TIME_OF_DAY_KEYS.forEach((k) => {
       if (typeof parsed?.[k] === "string" && parsed[k].trim()) out[k] = parsed[k].trim();
     });
-  } catch {}
+  } catch {
+    // Ignore invalid or unavailable stored labels and keep defaults.
+  }
   return out;
 };
 
@@ -116,7 +128,11 @@ export const readTimeOfDayDisabled = (): TimeOfDayKey[] => {
 };
 
 const persist = (key: string, value: unknown) => {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Persistence is optional; listeners still receive the in-memory change event.
+  }
   window.dispatchEvent(new Event(EVENT));
 };
 

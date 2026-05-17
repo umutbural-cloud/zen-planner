@@ -81,8 +81,9 @@ const InzivaView = () => {
   }, [lines]);
 
   useEffect(() => {
+    const timers = fadeTimers.current;
     return () => {
-      fadeTimers.current.forEach((tid) => clearTimeout(tid));
+      timers.forEach((tid) => clearTimeout(tid));
       if (countdownTimer.current) clearInterval(countdownTimer.current);
     };
   }, []);
@@ -272,7 +273,7 @@ const InzivaView = () => {
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             className={`outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/40 mb-4 last:mb-0 text-base font-light leading-relaxed tracking-wide transition-opacity ease-out ${
-              line.fading ? "opacity-0 duration-[3000ms]" : "opacity-100 duration-300"
+              line.fading ? "opacity-0 duration-[3000ms]/opacity" : "opacity-100 duration-300"
             }`}
             data-placeholder={line.id === activeId ? "Sadece yaz..." : undefined}
           />

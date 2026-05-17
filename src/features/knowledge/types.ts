@@ -21,7 +21,7 @@ export type NotebookNote = {
   notebook_id: string;
   type: NoteType;
   title: string;
-  content: any; // jsonb — quick: { text }, rich: Tiptap doc
+  content: Json; // jsonb — quick: { text }, rich: Tiptap doc
   color: QuickNoteColor;
   pinned: boolean;
   parent_note_id: string | null;
@@ -30,3 +30,4 @@ export type NotebookNote = {
   created_at: string;
   updated_at: string;
 };
+import type { Json } from "@/integrations/supabase/types";

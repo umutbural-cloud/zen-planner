@@ -18,6 +18,7 @@ import {
   useSidebarPreferences,
   SIDEBAR_ITEM_ORDER,
   SIDEBAR_ITEM_LABELS,
+  type SidebarItemKey,
 } from "@/hooks/useSidebarPreferences";
 import { useModuleLabels } from "@/hooks/useModuleLabels";
 import { useStartupPage } from "@/hooks/useStartupPage";
@@ -84,7 +85,12 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
     "default";
   const handleStartupChange = (v: string) => {
     if (v === "default") setStartup({ type: "default" });
-    else if (v.startsWith("mod:")) setStartup({ type: "module", value: v.slice(4) as any });
+    else if (v.startsWith("mod:")) {
+      const key = v.slice(4);
+      if (SIDEBAR_ITEM_ORDER.includes(key as SidebarItemKey) && key !== "retreat") {
+        setStartup({ type: "module", value: key as Exclude<SidebarItemKey, "retreat"> });
+      }
+    }
     else if (v.startsWith("prj:")) setStartup({ type: "project", value: v.slice(4) });
   };
   const [section, setSection] = useState<SectionKey>("habits");
@@ -113,7 +119,11 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
     setNotifPerm(result);
     if (result === "granted") {
       toast.success("Bildirimler açıldı.");
-      try { new Notification("Keikaku", { body: "Bildirimler aktif." }); } catch {}
+      try {
+        new Notification("Keikaku", { body: "Bildirimler aktif." });
+      } catch {
+        // Some browsers grant permission but still block immediate notification creation.
+      }
     } else {
       toast.error("Bildirim izni reddedildi.");
     }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Play, Pause, Check, RotateCcw, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil } from "lucide-react";
+import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -41,7 +41,7 @@ const Pomodoro = () => {
   const { projects, createProject, updateProject, deleteProject } = useProjects();
   const { section, selectedProjectId, view, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, reset, skipBreak } = usePomodoro();
+  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak } = usePomodoro();
   const { categories, create: createCategory, update: updateCategory, remove: removeCategory } = usePomodoroCategories();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingTime, setEditingTime] = useState(false);
@@ -380,9 +380,11 @@ const Pomodoro = () => {
                       <button onClick={start} className="flex items-center gap-2 px-6 py-2 rounded-sm bg-foreground text-background hover:bg-foreground/90 text-sm transition-colors">
                         <Play className="h-4 w-4" /> Başlat
                       </button>
-                      <button onClick={reset} className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 hover:bg-accent/50 text-sm transition-colors">
-                        <RotateCcw className="h-4 w-4" /> Sıfırla
-                      </button>
+                      {isBreak && (
+                        <button onClick={skipBreak} className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 hover:bg-accent/50 text-sm transition-colors">
+                          <SkipForward className="h-4 w-4" /> Atla
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

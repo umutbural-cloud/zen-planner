@@ -26,14 +26,13 @@ type Props = {
 
 const EMPTY_RICH_DOC = { type: "doc", content: [{ type: "paragraph" }] };
 
-const quickText = (note: NotebookNote) => {
-  const text = note.content?.text;
-  return typeof text === "string" ? text.trim() : "";
+const noteLabel = (note: NotebookNote) => {
+  return note.title?.trim() || "Başlıksız doküman";
 };
 
-const noteLabel = (note: NotebookNote) => {
-  if (note.type === "quick") return note.title?.trim() || quickText(note) || "Anlık not";
-  return note.title?.trim() || "Başlıksız doküman";
+const defaultTitle = (type: NoteType, siblings: NotebookNote[]) => {
+  if (type === "quick") return "Anlık Not";
+  return `Zengin Doküman ${siblings.length + 1}`;
 };
 
 const NotebookSidebarTree = ({
@@ -46,15 +45,12 @@ const NotebookSidebarTree = ({
   const { notes, loading: notesLoading, createNote, deleteNote } = useKnowledgeNotes();
   const [createOpen, setCreateOpen] = useState(false);
   const [creatingType, setCreatingType] = useState<NoteType | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [quickVersion, setQuickVersion] = useState(0);
   const [collapsedQuickGroups, setCollapsedQuickGroups] = useState<Record<string, boolean>>({});
-  const quickNotebookIds = new Set(
-    notebooks
-      .filter((notebook) => notebook.icon === QUICK_NOTEBOOK_ICON)
-      .map((notebook) => notebook.id)
-  );
   const rootNotebooks = notebooks.filter((notebook) => notebook.icon !== QUICK_NOTEBOOK_ICON);
-  const visibleNotes = notes.filter((note) => !(note.type === "quick" && quickNotebookIds.has(note.notebook_id)));
+  const visibleNotes = notes.filter((note) => note.type === "rich");
+  const loading = notebooksLoading || notesLoading;
 
   useEffect(() => {
     const refresh = () => setQuickVersion((value) => value + 1);
@@ -65,6 +61,15 @@ const NotebookSidebarTree = ({
       window.removeEventListener("storage", refresh);
     };
   }, []);
+
+  const childrenOf = (notebookId: string, parentId: string | null) =>
+    visibleNotes
+      .filter((note) => note.notebook_id === notebookId && (note.parent_note_id ?? null) === parentId)
+      .sort((a, b) => {
+        if (a.type !== b.type) return a.type === "quick" ? -1 : 1;
+        if (a.position !== b.position) return a.position - b.position;
+        return a.created_at.localeCompare(b.created_at);
+      });
 
   const ensureKnowledgeNotebook = async () => {
     const existingNotebook = notebooks.find((notebook) => !notebook.deleted_at && notebook.icon !== QUICK_NOTEBOOK_ICON);
@@ -78,30 +83,34 @@ const NotebookSidebarTree = ({
     return createdNotebook.id;
   };
 
-  const handleCreate = async (type: NoteType) => {
+  const handleCreate = async (type: NoteType, notebookId?: string, parentNote?: NotebookNote) => {
     setCreatingType(type);
-    const notebookId = await ensureKnowledgeNotebook();
-    if (!notebookId) {
+    const targetNotebookId = notebookId || parentNote?.notebook_id || (await ensureKnowledgeNotebook());
+    if (!targetNotebookId) {
       setCreatingType(null);
       return;
     }
 
     if (type === "quick") {
-      const existing = getQuickNotebooks(notebookId)[0];
-      const quickNotebook = existing || createQuickNotebook(notebookId);
+      const quickNotebook = createQuickNotebook(targetNotebookId);
       onSelectNotebook(quickNotebook.id);
+      onSelectKnowledgeNote(null);
       setCreateOpen(false);
       setCreatingType(null);
       return;
     }
 
-    const created = await createNote(notebookId, {
+    const parentId = parentNote?.id ?? null;
+    const siblings = childrenOf(targetNotebookId, parentId);
+    const created = await createNote(targetNotebookId, {
       type,
-      title: "Başlıksız",
+      title: defaultTitle(type, siblings),
       content: EMPTY_RICH_DOC,
+      parent_note_id: parentId,
     });
 
     if (created) {
+      if (parentId) setCollapsed((prev) => ({ ...prev, [parentId]: false }));
       onSelectKnowledgeNote(created.id);
       setCreateOpen(false);
     }
@@ -109,11 +118,62 @@ const NotebookSidebarTree = ({
   };
 
   const handleDelete = async (note: NotebookNote) => {
-    await deleteNote(note.id);
-    if (selectedKnowledgeNoteId === note.id) onSelectKnowledgeNote(null);
+    const deletedIds = await deleteNote(note.id);
+    if (selectedKnowledgeNoteId && deletedIds.includes(selectedKnowledgeNoteId)) onSelectKnowledgeNote(null);
   };
 
-  const loading = notebooksLoading || notesLoading;
+  const renderNote = (note: NotebookNote, depth: number) => {
+    const children = childrenOf(note.notebook_id, note.id);
+    const active = selectedKnowledgeNoteId === note.id;
+    const isCollapsed = collapsed[note.id] ?? false;
+
+    return (
+      <div key={note.id}>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => onSelectKnowledgeNote(note.id)}
+            className={`group/note text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+            style={{ paddingLeft: `${24 + depth * 16}px` }}
+          >
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                if (children.length > 0) setCollapsed((prev) => ({ ...prev, [note.id]: !isCollapsed }));
+              }}
+              className="shrink-0"
+              title={children.length > 0 ? "Aç/kapat" : ""}
+            >
+              <ChevronRight className={`h-3 w-3 transition-transform ${!isCollapsed ? "rotate-90" : ""} ${children.length === 0 ? "opacity-20" : ""}`} />
+            </button>
+            <FileText className="h-3.5 w-3.5 shrink-0 opacity-80" />
+            <span className="truncate flex-1">{noteLabel(note)}</span>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                handleCreate(note.type, note.notebook_id, note);
+              }}
+              className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
+              title="Alt sayfa ekle"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                handleDelete(note);
+              }}
+              className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
+              title="Sil"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+
+        {!isCollapsed && children.map((child) => renderNote(child, depth + 1))}
+      </div>
+    );
+  };
 
   return (
     <SidebarMenu>
@@ -130,16 +190,37 @@ const NotebookSidebarTree = ({
         void quickVersion;
         const quickChildren = getQuickNotebooks(notebook.id);
         const quickGroupCollapsed = collapsedQuickGroups[notebook.id] ?? false;
+        const rootNotes = childrenOf(notebook.id, null);
 
         return (
           <div key={notebook.id}>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => onSelectNotebook(notebook.id)}
-                className={`text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+                className={`group/notebook text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
               >
                 <BookOpen className="h-3.5 w-3.5 shrink-0 opacity-80" />
                 <span className="truncate flex-1">{notebook.name}</span>
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleCreate("quick", notebook.id);
+                  }}
+                  className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/notebook:opacity-100 focus:opacity-100 transition-opacity"
+                  title="Anlık not ekle"
+                >
+                  <StickyNote className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleCreate("rich", notebook.id);
+                  }}
+                  className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/notebook:opacity-100 focus:opacity-100 transition-opacity"
+                  title="Zengin doküman ekle"
+                >
+                  <FileText className="h-3 w-3" />
+                </button>
               </SidebarMenuButton>
             </SidebarMenuItem>
 
@@ -155,7 +236,7 @@ const NotebookSidebarTree = ({
                   style={{ paddingLeft: "24px" }}
                 >
                   <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-75" />
-                  <span className="truncate flex-1">Anlık Not</span>
+                  <span className="truncate flex-1">Anlık Notlar</span>
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
@@ -181,7 +262,7 @@ const NotebookSidebarTree = ({
                   >
                     <ChevronRight className={`h-3 w-3 shrink-0 transition-transform ${quickGroupCollapsed ? "" : "rotate-90"}`} />
                     <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-75" />
-                    <span className="truncate flex-1">Anlık Not</span>
+                    <span className="truncate flex-1">Anlık Notlar</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
@@ -214,6 +295,8 @@ const NotebookSidebarTree = ({
                 })}
               </>
             )}
+
+            {rootNotes.map((note) => renderNote(note, 0))}
           </div>
         );
       })}
@@ -225,33 +308,6 @@ const NotebookSidebarTree = ({
           </div>
         </SidebarMenuItem>
       )}
-
-      {visibleNotes.map((note) => {
-        const Icon = note.type === "quick" ? StickyNote : FileText;
-        const active = selectedKnowledgeNoteId === note.id;
-
-        return (
-          <SidebarMenuItem key={note.id}>
-            <SidebarMenuButton
-              onClick={() => onSelectKnowledgeNote(note.id)}
-              className={`group/note text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0 opacity-80" />
-              <span className="truncate flex-1">{noteLabel(note)}</span>
-              <button
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleDelete(note);
-                }}
-                className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
-                title="Sil"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        );
-      })}
 
       <SidebarMenuItem>
         <Popover open={createOpen} onOpenChange={setCreateOpen}>
@@ -268,7 +324,7 @@ const NotebookSidebarTree = ({
               className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-sm hover:bg-accent transition-colors text-left disabled:opacity-50"
             >
               <StickyNote className="h-3.5 w-3.5" />
-              <span className="tracking-wide">Anlık not</span>
+              <span className="tracking-wide">Anlık notlar</span>
             </button>
             <button
               onClick={() => handleCreate("rich")}

@@ -234,7 +234,7 @@ const KanbanView = ({ projectId }: { projectId: string }) => {
   const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
 
   const categoryDotOf = (t: Task) => {
-    const cid = (t as any).category_id;
+    const cid = t.category_id;
     if (!cid) return undefined;
     const c = categories.find((x) => x.id === cid);
     return c ? colorHex(c.color) : undefined;

@@ -38,7 +38,7 @@ const JournalCompletedTasks = ({ date }: { date: string }) => {
         .lte("completed_at", end.toISOString())
         .order("completed_at", { ascending: false });
       if (!active) return;
-      setTasks((data as any) || []);
+      setTasks(data || []);
       setLoading(false);
     };
     load();

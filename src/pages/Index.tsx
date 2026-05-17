@@ -14,6 +14,7 @@ import TrashView from "@/components/TrashView";
 import HabitsView from "@/components/HabitsView";
 import InzivaView from "@/components/InzivaView";
 import NotebookView from "@/features/knowledge/components/NotebookView";
+import { useKnowledgeNotes } from "@/features/knowledge/hooks/useNotebookNotes";
 import { useProjects } from "@/hooks/useProjects";
 import { ViewKey } from "@/hooks/useProjectViews";
 import { useUndo } from "@/hooks/useUndo";
@@ -41,9 +42,11 @@ const Index = () => {
   const { section, selectedProjectId, view, journalDate, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { startup } = useStartupPage();
   const { loading: settingsLoading } = useUserSettings();
+  const { notes: knowledgeNotes } = useKnowledgeNotes();
   const navigate = useNavigate();
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  const selectedKnowledgeNote = knowledgeNotes.find((note) => note.id === selectedKnowledgeNoteId) || null;
   const projectViews: ViewKey[] = selectedProject?.enabled_views || ["table", "notes"];
 
   // İlk yüklemede açılış sayfası tercihini uygula
@@ -82,7 +85,18 @@ const Index = () => {
       const pvs = (def.enabled_views?.length ? def.enabled_views : ["table", "notes"]) as ViewKey[];
       setView(pvs[0]);
     }
-  }, [loading, settingsLoading, projects, startup]);
+  }, [
+    loading,
+    navigate,
+    projects,
+    section,
+    selectedProjectId,
+    setSection,
+    setSelectedProjectId,
+    setView,
+    settingsLoading,
+    startup,
+  ]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -169,6 +183,11 @@ const Index = () => {
                     onChange={(updates) => updateProject(selectedProject.id, updates)}
                   />
                   {selectedProject.name}
+                </h1>
+              )}
+              {section === "notebook" && selectedKnowledgeNote && (
+                <h1 className="text-sm tracking-wide truncate font-light text-muted-foreground">
+                  {selectedKnowledgeNote.title || (selectedKnowledgeNote.type === "quick" ? "Anlık not" : "Başlıksız doküman")}
                 </h1>
               )}
             </div>
@@ -314,6 +333,7 @@ const Index = () => {
                 noteId={selectedKnowledgeNoteId}
                 selectedNotebookId={selectedNotebookId}
                 onClearSelection={() => setSelectedKnowledgeNoteId(null)}
+                onSelectNote={setSelectedKnowledgeNoteId}
               />
             )}
             {section === "project" && (

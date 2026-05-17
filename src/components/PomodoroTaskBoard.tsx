@@ -31,7 +31,11 @@ const PomodoroTaskBoard = () => {
 
   const setAndPersist = (v: ViewKind) => {
     setView(v);
-    try { localStorage.setItem("pomodoro:taskView", v); } catch {}
+    try {
+      localStorage.setItem("pomodoro:taskView", v);
+    } catch {
+      // Persistence is optional; keep the in-memory view change.
+    }
   };
 
   return (

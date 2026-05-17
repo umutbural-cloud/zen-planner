@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import type { Database } from "@/integrations/supabase/types";
+
+type HabitCategoryRow = Database["public"]["Tables"]["habit_categories"]["Row"];
+type HabitCategoryInsert = Database["public"]["Tables"]["habit_categories"]["Insert"];
+type HabitCategoryUpdate = Database["public"]["Tables"]["habit_categories"]["Update"];
 
 export type HabitCategory = {
   id: string;
@@ -62,20 +67,20 @@ export const useHabitCategories = () => {
   const fetchCategories = useCallback(async () => {
     if (!user) { setCategories([]); setLoading(false); return; }
     const { data } = await supabase
-      .from("habit_categories" as any)
+      .from("habit_categories")
       .select("*")
       .eq("user_id", user.id)
       .order("position", { ascending: true });
-    let rows = (data as any as HabitCategory[]) || [];
+    let rows = (data || []) as HabitCategoryRow[];
     if (rows.length === 0) {
-      const payload = DEFAULTS.map((d, i) => ({ user_id: user.id, name: d.name, color: d.color, position: i }));
-      await supabase.from("habit_categories" as any).upsert(payload, { onConflict: "user_id,name", ignoreDuplicates: true });
+      const payload: HabitCategoryInsert[] = DEFAULTS.map((d, i) => ({ user_id: user.id, name: d.name, color: d.color, position: i }));
+      await supabase.from("habit_categories").upsert(payload, { onConflict: "user_id,name", ignoreDuplicates: true });
       const { data: refetched } = await supabase
-        .from("habit_categories" as any)
+        .from("habit_categories")
         .select("*")
         .eq("user_id", user.id)
         .order("position", { ascending: true });
-      rows = (refetched as any as HabitCategory[]) || [];
+      rows = refetched || [];
     }
     setCategories(rows);
     setLoading(false);
@@ -86,20 +91,21 @@ export const useHabitCategories = () => {
   const createCategory = async (name: string, color = "gray") => {
     if (!user || !name.trim()) return null;
     const pos = categories.reduce((m, c) => Math.max(m, c.position), 0) + 1;
-    const { data } = await supabase.from("habit_categories" as any)
+    const { data } = await supabase.from("habit_categories")
       .insert({ user_id: user.id, name: name.trim(), color, position: pos })
       .select().single();
-    if (data) setCategories((p) => [...p, data as any]);
-    return data as any;
+    if (data) setCategories((p) => [...p, data]);
+    return data;
   };
 
   const updateCategory = async (id: string, updates: Partial<HabitCategory>) => {
-    const { data } = await supabase.from("habit_categories" as any).update(updates as any).eq("id", id).select().single();
-    if (data) setCategories((p) => p.map((c) => c.id === id ? { ...c, ...(data as any) } : c));
+    const payload: HabitCategoryUpdate = updates;
+    const { data } = await supabase.from("habit_categories").update(payload).eq("id", id).select().single();
+    if (data) setCategories((p) => p.map((c) => c.id === id ? data : c));
   };
 
   const deleteCategory = async (id: string) => {
-    await supabase.from("habit_categories" as any).delete().eq("id", id);
+    await supabase.from("habit_categories").delete().eq("id", id);
     setCategories((p) => p.filter((c) => c.id !== id));
   };
 

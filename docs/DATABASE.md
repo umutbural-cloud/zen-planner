@@ -32,7 +32,7 @@ Most user-owned tables should include:
 - `updated_at timestamptz NOT NULL DEFAULT now()`
 - `deleted_at timestamptz` when soft deletion is needed
 - `position integer NOT NULL DEFAULT 0` when manual sorting is needed
-- `stable_export_id text` when participating in export/import flows
+- `stable_export_id uuid` when participating in export/import flows
 
 ## RLS Pattern
 

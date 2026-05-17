@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Clock, Filter, ArrowUpDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,7 +39,7 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
   const [filterCat, setFilterCat] = useState<string | "all">("all");
   const [sortBy, setSortBy] = useState<SortBy>("started_desc");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     const start = new Date(`${date}T00:00:00`);
@@ -52,17 +52,16 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
       .gte("started_at", start.toISOString())
       .lte("started_at", end.toISOString())
       .order("started_at", { ascending: false });
-    setSessions((data as any) || []);
+    setSessions(data || []);
     setLoading(false);
-  };
+  }, [date, user]);
 
   useEffect(() => {
     load();
     const handler = () => load();
     window.addEventListener("pomodoro:session-saved", handler);
     return () => window.removeEventListener("pomodoro:session-saved", handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, date]);
+  }, [load]);
 
   const visible = useMemo(() => {
     let arr = sessions;
@@ -101,7 +100,7 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
 
   const updateCategory = async (id: string, category_id: string | null) => {
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, category_id } : s)));
-    await supabase.from("pomodoro_sessions").update({ category_id } as any).eq("id", id);
+    await supabase.from("pomodoro_sessions").update({ category_id }).eq("id", id);
   };
 
   return (

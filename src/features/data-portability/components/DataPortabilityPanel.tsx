@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { useDataPortability } from "../hooks/useDataPortability";
 import { ImportPreviewDialog } from "./ImportPreviewDialog";
 
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export const DataPortabilityPanel = () => {
   const {
     exporting, importing, progress, pending,
@@ -17,8 +20,8 @@ export const DataPortabilityPanel = () => {
     try {
       await exportNow();
       toast.success("Yedek indirildi");
-    } catch (e: any) {
-      toast.error(e?.message || "Dışa aktarım başarısız");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "Dışa aktarım başarısız"));
     }
   };
 
@@ -27,8 +30,8 @@ export const DataPortabilityPanel = () => {
     setReading(true);
     try {
       await previewImport(file);
-    } catch (e: any) {
-      toast.error(e?.message || "Dosya okunamadı");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "Dosya okunamadı"));
     } finally {
       setReading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -41,8 +44,8 @@ export const DataPortabilityPanel = () => {
       toast.success(`İçe aktarım tamam — ${res.inserted} kayıt eklendi${res.skipped ? `, ${res.skipped} mevcut atlandı` : ""}`);
       // Reload to pick up new data across all hooks.
       setTimeout(() => window.location.reload(), 600);
-    } catch (e: any) {
-      toast.error(e?.message || "İçe aktarım başarısız");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "İçe aktarım başarısız"));
     }
   };
 

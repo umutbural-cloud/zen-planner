@@ -1,13 +1,20 @@
 import { useMemo, useState } from "react";
 import { format, subDays, eachDayOfInterval, parseISO } from "date-fns";
 import { useHabits, isHabitScheduledOn } from "@/hooks/useHabits";
-import { useHabitCategories, colorHex } from "@/hooks/useHabitCategories";
+import { useHabitCategories, colorHex, type HabitCategory } from "@/hooks/useHabitCategories";
 import { getHabitIcon } from "@/lib/habitIcons";
 
 type Range = "week" | "month" | "year";
 
 const RANGE_DAYS: Record<Range, number> = { week: 7, month: 30, year: 365 };
 const RANGE_LABEL: Record<Range, string> = { week: "Hafta", month: "Ay", year: "Yıl" };
+const UNCATEGORIZED: HabitCategory = {
+  id: "__none__",
+  name: "Kategorisiz",
+  color: "gray",
+  position: 999,
+  user_id: "",
+};
 
 const HabitsStats = () => {
   const { habits, completionsMap, today } = useHabits();
@@ -59,7 +66,7 @@ const HabitsStats = () => {
       const completed = uncatHs.reduce((a, s) => a + s.completed, 0);
       const total = uncatHs.reduce((a, s) => a + s.total, 0);
       byCategory.push({
-        category: { id: "__none__", name: "Kategorisiz", color: "gray", position: 999, user_id: "" } as any,
+        category: UNCATEGORIZED,
         completed, total,
         rate: total === 0 ? 0 : Math.round((completed / total) * 100),
         count: uncatHs.length,

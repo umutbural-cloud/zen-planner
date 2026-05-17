@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from "@/integrations/supabase/client";
 import { APP_NAME, SCHEMA_VERSION, TABLES, type ExportFile, type TableName } from "./schema";
 

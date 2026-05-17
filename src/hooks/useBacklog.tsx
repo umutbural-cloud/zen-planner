@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useUndo } from "./useUndo";
+import type { Database } from "@/integrations/supabase/types";
 
 export type Priority = "low" | "medium" | "high";
 export type Urgency = "someday" | "this_week" | "today";
+type BacklogTaskInsert = Database["public"]["Tables"]["backlog_tasks"]["Insert"];
+type BacklogTaskUpdate = Database["public"]["Tables"]["backlog_tasks"]["Update"];
+type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 
 export type BacklogTask = {
   id: string;
@@ -26,7 +30,7 @@ export const useBacklog = () => {
   const [items, setItems] = useState<BacklogTask[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from("backlog_tasks")
@@ -35,23 +39,24 @@ export const useBacklog = () => {
       .order("position", { ascending: true });
     setItems((data as BacklogTask[]) || []);
     setLoading(false);
-  };
+  }, [user]);
 
-  useEffect(() => { fetchItems(); }, [user]);
+  useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const createItem = async (input: { title: string; priority?: Priority; urgency?: Urgency; due_date?: string | null }) => {
     if (!user) return null;
     const maxPos = items.reduce((m, t) => Math.max(m, t.position || 0), 0);
+    const payload: BacklogTaskInsert = {
+      user_id: user.id,
+      title: input.title,
+      priority: input.priority || "medium",
+      urgency: input.urgency || "someday",
+      due_date: input.due_date || null,
+      position: maxPos + 1,
+    };
     const { data, error } = await supabase
       .from("backlog_tasks")
-      .insert({
-        user_id: user.id,
-        title: input.title,
-        priority: input.priority || "medium",
-        urgency: input.urgency || "someday",
-        due_date: input.due_date || null,
-        position: maxPos + 1,
-      })
+      .insert(payload)
       .select()
       .single();
     if (!error && data) {
@@ -75,7 +80,8 @@ export const useBacklog = () => {
   const updateItem = async (id: string, updates: Partial<Omit<BacklogTask, "id" | "user_id" | "created_at" | "updated_at">>) => {
     const before = items.find((t) => t.id === id);
     if (!before) return;
-    const { data, error } = await supabase.from("backlog_tasks").update(updates as any).eq("id", id).select().single();
+    const updatePayload: BacklogTaskUpdate = updates;
+    const { data, error } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).select().single();
     if (!error && data) {
       setItems((prev) => prev.map((t) => (t.id === id ? (data as BacklogTask) : t)));
       const beforeSnap = { ...before };
@@ -89,7 +95,7 @@ export const useBacklog = () => {
           if (r) setItems((prev) => prev.map((t) => (t.id === id ? (r as BacklogTask) : t)));
         },
         redo: async () => {
-          const { data: r } = await supabase.from("backlog_tasks").update(updates as any).eq("id", id).select().single();
+          const { data: r } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).select().single();
           if (r) setItems((prev) => prev.map((t) => (t.id === id ? (r as BacklogTask) : t)));
         },
       });
@@ -128,18 +134,15 @@ export const useBacklog = () => {
       .limit(1);
     const maxPos = existing?.[0]?.position || 0;
 
-    const { data: newTask } = await supabase
-      .from("tasks")
-      .insert({
-        title: item.title,
-        description: item.description,
-        end_date: item.due_date,
-        project_id: projectId,
-        user_id: user.id,
-        position: maxPos + 1,
-      } as any)
-      .select()
-      .single();
+    const taskPayload: TaskInsert = {
+      title: item.title,
+      description: item.description,
+      end_date: item.due_date,
+      project_id: projectId,
+      user_id: user.id,
+      position: maxPos + 1,
+    };
+    const { data: newTask } = await supabase.from("tasks").insert(taskPayload).select().single();
 
     if (newTask) {
       await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
@@ -147,13 +150,13 @@ export const useBacklog = () => {
       push({
         label: "Görev projeye taşındı",
         undo: async () => {
-          await supabase.from("tasks").delete().eq("id", (newTask as any).id);
+          await supabase.from("tasks").delete().eq("id", newTask.id);
           await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id);
           fetchItems();
         },
         redo: async () => {
           // Re-insert task and re-soft-delete backlog
-          await supabase.from("tasks").insert(newTask as any);
+          await supabase.from("tasks").insert(newTask);
           await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
           fetchItems();
         },
