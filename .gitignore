@@ -26,3 +26,4 @@ dist-ssr
 .env.local
 keikaku-export-*.json
 .vercel
+supabase/.temp/

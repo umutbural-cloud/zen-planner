@@ -69,6 +69,7 @@ export const useTasks = (projectId: string | null) => {
     const { data } = await supabase
       .from("tasks")
       .select("*")
+      .eq("user_id", user.id)
       .eq("project_id", projectId)
       .is("deleted_at", null)
       .order("position", { ascending: true });
@@ -108,7 +109,7 @@ export const useTasks = (projectId: string | null) => {
   const updateTask = async (id: string, updates: UpdateTaskInput) => {
     const before = tasks.find((t) => t.id === id);
     const updatePayload: TaskUpdate = updates;
-    const { data, error } = await supabase.from("tasks").update(updatePayload).eq("id", id).select().single();
+    const { data, error } = await supabase.from("tasks").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
     if (!error && data) {
       setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask(data) : t)));
 
@@ -131,6 +132,7 @@ export const useTasks = (projectId: string | null) => {
               await supabase
                 .from("pomodoro_sessions")
                 .delete()
+                .eq("user_id", user.id)
                 .eq("task_id", task.id)
                 .eq("kind", "work")
                 .eq("started_at", startISO)
@@ -165,11 +167,11 @@ export const useTasks = (projectId: string | null) => {
         push({
           label: "Görev düzenlendi",
           undo: async () => {
-            const { data: r } = await supabase.from("tasks").update(beforeSnap).eq("id", id).select().single();
+            const { data: r } = await supabase.from("tasks").update(beforeSnap).eq("id", id).eq("user_id", user?.id ?? "").select().single();
             if (r) setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask(r) : t)));
           },
           redo: async () => {
-            const { data: r } = await supabase.from("tasks").update(updatePayload).eq("id", id).select().single();
+            const { data: r } = await supabase.from("tasks").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
             if (r) setTasks((prev) => prev.map((t) => (t.id === id ? normalizeTask(r) : t)));
           },
         });
@@ -181,17 +183,17 @@ export const useTasks = (projectId: string | null) => {
   const deleteTask = async (id: string) => {
     const before = tasks.find((t) => t.id === id);
     if (!before) return;
-    await supabase.from("pomodoro_sessions").delete().eq("task_id", id);
-    await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("pomodoro_sessions").delete().eq("task_id", id).eq("user_id", user?.id ?? "");
+    await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
     setTasks((prev) => prev.filter((t) => t.id !== id));
     push({
       label: "Görev silindi",
       undo: async () => {
-        await supabase.from("tasks").update({ deleted_at: null }).eq("id", id);
+        await supabase.from("tasks").update({ deleted_at: null }).eq("id", id).eq("user_id", user?.id ?? "");
         setTasks((prev) => [...prev, { ...before, deleted_at: null }].sort((a, b) => a.position - b.position));
       },
       redo: async () => {
-        await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+        await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
         setTasks((prev) => prev.filter((t) => t.id !== id));
       },
     });
@@ -207,6 +209,7 @@ export const useTasks = (projectId: string | null) => {
     await Promise.all(
       orderedIds.map((id, i) =>
         supabase.from("tasks").update({ position: i + 1 }).eq("id", id)
+          .eq("user_id", user?.id ?? "")
       )
     );
   };

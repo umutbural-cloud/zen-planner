@@ -1,11 +1,44 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from "@/integrations/supabase/client";
 import { TABLES, type ExportFile } from "./schema";
+import { z } from "zod";
 
 export type ImportProgress = {
   table: string;
   done: number;
   total: number;
+};
+
+const MAX_ROWS_PER_TABLE = 10000;
+const MAX_TOTAL_ROWS = 100000;
+
+const rowSchema = z.record(z.string(), z.unknown()).superRefine((row, ctx) => {
+  if ("id" in row && typeof row.id !== "string") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "id must be a string" });
+  }
+  if ("stable_export_id" in row && typeof row.stable_export_id !== "string") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "stable_export_id must be a string" });
+  }
+});
+
+const validateImportPayload = (file: ExportFile) => {
+  let total = 0;
+  for (const t of TABLES) {
+    const rows = (file.data[t.name] as unknown[]) || [];
+    if (rows.length > MAX_ROWS_PER_TABLE) {
+      throw new Error(`${t.name}: row limit exceeded`);
+    }
+    rows.forEach((row, idx) => {
+      const result = rowSchema.safeParse(row);
+      if (!result.success) {
+        throw new Error(`${t.name}[${idx}]: invalid row payload`);
+      }
+    });
+    total += rows.length;
+  }
+  if (total > MAX_TOTAL_ROWS) {
+    throw new Error("Import payload too large");
+  }
 };
 
 // Dynamic Supabase table access is intentionally isolated in this import boundary.
@@ -16,6 +49,8 @@ export async function importUserData(
   file: ExportFile,
   onProgress?: (p: ImportProgress) => void,
 ): Promise<{ inserted: number; skipped: number }> {
+  validateImportPayload(file);
+
   const idMap: Record<string, Map<string, string>> = {};
   let inserted = 0;
   let skipped = 0;

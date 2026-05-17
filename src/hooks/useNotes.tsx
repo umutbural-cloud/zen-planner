@@ -22,6 +22,7 @@ export const useNotes = (projectId: string | null) => {
     const { data } = await supabase
       .from("notes")
       .select("*")
+      .eq("user_id", user.id)
       .eq("project_id", projectId)
       .order("created_at", { ascending: false });
     setNotes(data || []);
@@ -42,13 +43,13 @@ export const useNotes = (projectId: string | null) => {
   };
 
   const updateNote = async (id: string, updates: { content?: string; title?: string }) => {
-    const { data, error } = await supabase.from("notes").update(updates).eq("id", id).select().single();
+    const { data, error } = await supabase.from("notes").update(updates).eq("id", id).eq("user_id", user?.id ?? "").select().single();
     if (!error && data) setNotes((prev) => prev.map((n) => (n.id === id ? data : n)));
     return data;
   };
 
   const deleteNote = async (id: string) => {
-    await supabase.from("notes").delete().eq("id", id);
+    await supabase.from("notes").delete().eq("id", id).eq("user_id", user?.id ?? "");
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 

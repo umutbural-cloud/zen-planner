@@ -17,6 +17,7 @@ export const useNotebooks = () => {
     const { data } = await supabase
       .from("notebooks")
       .select("*")
+      .eq("user_id", user.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: true });
     setNotebooks(data || []);
@@ -54,11 +55,11 @@ export const useNotebooks = () => {
   const updateNotebook = async (id: string, updates: Partial<Pick<Notebook, "name" | "icon" | "icon_color" | "parent_id" | "position">>) => {
     setNotebooks((p) => p.map((n) => (n.id === id ? { ...n, ...updates } as Notebook : n)));
     const payload: NotebookUpdate = updates;
-    await supabase.from("notebooks").update(payload).eq("id", id);
+    await supabase.from("notebooks").update(payload).eq("id", id).eq("user_id", user?.id ?? "");
   };
 
   const deleteNotebook = async (id: string) => {
-    await supabase.from("notebooks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("notebooks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
     setNotebooks((p) => p.filter((n) => n.id !== id && n.parent_id !== id));
   };
 

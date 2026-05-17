@@ -53,6 +53,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
       const { data: existing } = await supabase
         .from("notes")
         .select("*")
+        .eq("user_id", user.id)
         .eq("project_id", projectId)
         .is("deleted_at", null)
         .order("created_at", { ascending: true })
@@ -87,7 +88,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
       timer = setTimeout(async () => {
         setSaving(true);
         const json = JSON.stringify(editor.getJSON());
-        await supabase.from("notes").update({ content: json }).eq("id", note.id);
+        await supabase.from("notes").update({ content: json }).eq("id", note.id).eq("user_id", user.id);
         setSaving(false);
       }, 600);
     };
@@ -110,7 +111,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
     if (titleDebounce.current) clearTimeout(titleDebounce.current);
     titleDebounce.current = setTimeout(async () => {
       setSaving(true);
-      await supabase.from("notes").update({ title: value }).eq("id", note.id);
+      await supabase.from("notes").update({ title: value }).eq("id", note.id).eq("user_id", user.id);
       setSaving(false);
     }, 600);
   };

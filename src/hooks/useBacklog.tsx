@@ -35,6 +35,7 @@ export const useBacklog = () => {
     const { data } = await supabase
       .from("backlog_tasks")
       .select("*")
+      .eq("user_id", user.id)
       .is("deleted_at", null)
       .order("position", { ascending: true });
     setItems((data as BacklogTask[]) || []);
@@ -81,7 +82,7 @@ export const useBacklog = () => {
     const before = items.find((t) => t.id === id);
     if (!before) return;
     const updatePayload: BacklogTaskUpdate = updates;
-    const { data, error } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).select().single();
+    const { data, error } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
     if (!error && data) {
       setItems((prev) => prev.map((t) => (t.id === id ? (data as BacklogTask) : t)));
       const beforeSnap = { ...before };
@@ -91,11 +92,11 @@ export const useBacklog = () => {
           const { data: r } = await supabase.from("backlog_tasks").update({
             title: beforeSnap.title, priority: beforeSnap.priority, urgency: beforeSnap.urgency,
             due_date: beforeSnap.due_date, description: beforeSnap.description,
-          }).eq("id", id).select().single();
+          }).eq("id", id).eq("user_id", user?.id ?? "").select().single();
           if (r) setItems((prev) => prev.map((t) => (t.id === id ? (r as BacklogTask) : t)));
         },
         redo: async () => {
-          const { data: r } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).select().single();
+          const { data: r } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
           if (r) setItems((prev) => prev.map((t) => (t.id === id ? (r as BacklogTask) : t)));
         },
       });
@@ -105,16 +106,16 @@ export const useBacklog = () => {
   const deleteItem = async (id: string) => {
     const before = items.find((t) => t.id === id);
     if (!before) return;
-    await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
     setItems((prev) => prev.filter((t) => t.id !== id));
     push({
       label: "Heybe görevi silindi",
       undo: async () => {
-        await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id);
+        await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id).eq("user_id", user?.id ?? "");
         setItems((prev) => [...prev, { ...before, deleted_at: null }].sort((a, b) => a.position - b.position));
       },
       redo: async () => {
-        await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+        await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
         setItems((prev) => prev.filter((t) => t.id !== id));
       },
     });
@@ -129,6 +130,7 @@ export const useBacklog = () => {
     const { data: existing } = await supabase
       .from("tasks")
       .select("position")
+      .eq("user_id", user.id)
       .eq("project_id", projectId)
       .order("position", { ascending: false })
       .limit(1);
@@ -145,19 +147,19 @@ export const useBacklog = () => {
     const { data: newTask } = await supabase.from("tasks").insert(taskPayload).select().single();
 
     if (newTask) {
-      await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+      await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
       setItems((prev) => prev.filter((t) => t.id !== id));
       push({
         label: "Görev projeye taşındı",
         undo: async () => {
-          await supabase.from("tasks").delete().eq("id", newTask.id);
-          await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id);
+          await supabase.from("tasks").delete().eq("id", newTask.id).eq("user_id", user.id);
+          await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
           fetchItems();
         },
         redo: async () => {
           // Re-insert task and re-soft-delete backlog
           await supabase.from("tasks").insert(newTask);
-          await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+          await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
           fetchItems();
         },
       });
