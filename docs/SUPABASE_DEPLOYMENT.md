@@ -64,5 +64,6 @@ Before using real data:
 
 - Confirm Row Level Security is enabled on all public user-data tables.
 - Confirm `user_id` policies use `auth.uid() = user_id`.
-- Create a test user and verify project, task, note, habit, Pomodoro, journal, notebook, import, and export flows.
+- Create a test user and verify project, task, note, habit, Pomodoro, journal, import, and export flows.
+- Knowledge center notebooks / defter notes are intentionally excluded from the transfer export.
 - Keep `supabase/migrations` as the source of truth for future schema changes.

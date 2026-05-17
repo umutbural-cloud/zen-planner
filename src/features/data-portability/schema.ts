@@ -1,4 +1,5 @@
 // Whitelist of user-owned, portable tables and their foreign-key shape.
+// Knowledge center tables are intentionally excluded from this transfer set.
 // Auth, sessions, push_subscriptions, reminders (device-bound) are NOT exported.
 
 export const APP_NAME = "Keikaku";
@@ -8,16 +9,13 @@ export type TableName =
   | "projects"
   | "habit_categories"
   | "pomodoro_categories"
-  | "notebooks"
-  | "notebook_notes"
   | "notes"
   | "tasks"
   | "habits"
   | "habit_completions"
   | "pomodoro_sessions"
   | "backlog_tasks"
-  | "journal_entries"
-  | "quick_notes";
+  | "journal_entries";
 
 export type TableSpec = {
   name: TableName;
@@ -32,8 +30,6 @@ export const TABLES: TableSpec[] = [
   { name: "projects", fk: { parent_id: "projects" } },
   { name: "habit_categories", fk: {} },
   { name: "pomodoro_categories", fk: {} },
-  { name: "notebooks", fk: { parent_id: "notebooks" } },
-  { name: "notebook_notes", fk: { notebook_id: "notebooks", parent_note_id: "notebook_notes" } },
   { name: "notes", fk: { project_id: "projects" } },
   { name: "tasks", fk: { project_id: "projects", parent_block_id: "tasks", category_id: "pomodoro_categories" } },
   { name: "habits", fk: { project_id: "projects", category_id: "habit_categories" } },
@@ -41,7 +37,6 @@ export const TABLES: TableSpec[] = [
   { name: "pomodoro_sessions", fk: { task_id: "tasks", category_id: "pomodoro_categories" } },
   { name: "backlog_tasks", fk: {} },
   { name: "journal_entries", fk: {} },
-  { name: "quick_notes", fk: {} },
 ];
 
 // Per-table column blacklist (sensitive / server-managed identifiers we won't export).
@@ -75,9 +70,8 @@ export type ImportSummary = {
   notes: number;
   habits: number;
   pomodoro_sessions: number;
-  notebooks: number;
-  quick_notes: number;
   journal_entries: number;
+  backlog_tasks: number;
   total: number;
 };
 
@@ -88,12 +82,11 @@ export function summarize(file: ExportFile): ImportSummary {
   return {
     projects: len("projects"),
     tasks: len("tasks"),
-    notes: len("notes") + len("notebook_notes"),
+    notes: len("notes"),
     habits: len("habits"),
     pomodoro_sessions: len("pomodoro_sessions"),
-    notebooks: len("notebooks"),
-    quick_notes: len("quick_notes"),
     journal_entries: len("journal_entries"),
+    backlog_tasks: len("backlog_tasks"),
     total,
   };
 }

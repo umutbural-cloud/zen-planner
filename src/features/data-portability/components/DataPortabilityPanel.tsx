@@ -55,9 +55,8 @@ export const DataPortabilityPanel = () => {
         <FileJson className="h-3 w-3" /> Verilerim
       </div>
       <div className="text-[10px] text-muted-foreground tracking-wide leading-relaxed">
-        Tüm görevlerinizi, projelerinizi, notlarınızı, alışkanlıklarınızı ve odak geçmişinizi
-        JSON olarak indirin; başka bir hesaba veya ortama taşıyabilirsiniz.
-        Sadece size ait veriler aktarılır.
+        Bilgi merkezi dışındaki proje, görev, heybe, alışkanlık ve odak geçmişinizi JSON olarak
+        indirin; başka bir hesaba veya ortama taşıyabilirsiniz. Sadece size ait veriler aktarılır.
       </div>
 
       <div className="flex flex-col sm:flex-row gap-2 pt-1">

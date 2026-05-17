@@ -38,11 +38,10 @@ export const ImportPreviewDialog = ({ pending, importing, progress, onCancel, on
           <div className="space-y-1 py-2">
             <Row label="Proje" value={s.projects} />
             <Row label="Görev" value={s.tasks} />
-            <Row label="Not (klasik + defter)" value={s.notes} />
-            <Row label="Hızlı not" value={s.quick_notes} />
-            <Row label="Defter" value={s.notebooks} />
+            <Row label="Not" value={s.notes} />
             <Row label="Alışkanlık" value={s.habits} />
             <Row label="Odak oturumu" value={s.pomodoro_sessions} />
+            <Row label="Heybe" value={s.backlog_tasks} />
             <Row label="Günlük kaydı" value={s.journal_entries} />
             <div className="pt-2 text-[10px] text-muted-foreground tracking-wide leading-relaxed">
               Bu kayıtlar mevcut hesabınıza eklenir. Aynı yedek daha önce yüklendiyse tekrar eden kayıtlar atlanır.
