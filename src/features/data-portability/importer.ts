@@ -9,8 +9,8 @@ export type ImportProgress = {
   total: number;
 };
 
-const MAX_ROWS_PER_TABLE = 10000;
-const MAX_TOTAL_ROWS = 100000;
+const MAX_ROWS_PER_TABLE = 3000;
+const MAX_TOTAL_ROWS = 20000;
 
 const TABLE_COLUMNS: Record<string, Set<string>> = {
   projects: new Set([
@@ -310,7 +310,7 @@ export async function importUserData(
           if (oldFk) {
             const mapped = idMap[t.name].get(oldFk);
             if (mapped && payload[col] !== mapped) {
-              await supabase.from(t.name as any).update({ [col]: mapped }).eq("id", payload.id);
+              await supabase.from(t.name as any).update({ [col]: mapped }).eq("id", payload.id).eq("user_id", userId);
             }
           }
         }

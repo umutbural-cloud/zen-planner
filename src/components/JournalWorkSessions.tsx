@@ -83,16 +83,18 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
   const totalM = Math.floor((totalSec % 3600) / 60);
 
   const updateNote = async (id: string, note: string) => {
-    await supabase.from("pomodoro_sessions").update({ note }).eq("id", id);
+    if (!user) return;
+    await supabase.from("pomodoro_sessions").update({ note }).eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, note } : s)));
   };
 
   const updateTimes = async (id: string, startedAt: string, endedAt: string) => {
+    if (!user) return;
     const dur = Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000);
     if (dur <= 0) { toast.error("Bitiş başlangıçtan sonra olmalı."); return; }
     await supabase.from("pomodoro_sessions").update({
       started_at: startedAt, ended_at: endedAt, duration_seconds: dur,
-    }).eq("id", id);
+    }).eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.map((s) => (s.id === id
       ? { ...s, started_at: startedAt, ended_at: endedAt, duration_seconds: dur }
       : s)));
@@ -100,7 +102,8 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
 
   const updateCategory = async (id: string, category_id: string | null) => {
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, category_id } : s)));
-    await supabase.from("pomodoro_sessions").update({ category_id }).eq("id", id);
+    if (!user) return;
+    await supabase.from("pomodoro_sessions").update({ category_id }).eq("id", id).eq("user_id", user.id);
   };
 
   return (

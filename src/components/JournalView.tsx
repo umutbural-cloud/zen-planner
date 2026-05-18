@@ -81,20 +81,20 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
   }, [date, user, editor]);
 
   useEffect(() => {
-    if (!editor || !entryId) return;
+    if (!editor || !entryId || !user) return;
     let timer: ReturnType<typeof setTimeout>;
     const handler = () => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
         setSaving(true);
         const json = JSON.stringify(editor.getJSON());
-        await supabase.from("journal_entries").update({ content: json }).eq("id", entryId);
+        await supabase.from("journal_entries").update({ content: json }).eq("id", entryId).eq("user_id", user.id);
         setSaving(false);
       }, 600);
     };
     editor.on("update", handler);
     return () => { editor.off("update", handler); clearTimeout(timer); };
-  }, [editor, entryId]);
+  }, [editor, entryId, user]);
 
   const shift = (n: number) => onDateChange(format(addDays(currentDate, n), "yyyy-MM-dd"));
 

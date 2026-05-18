@@ -57,14 +57,16 @@ export const usePomodoroCategories = () => {
   };
 
   const update = async (id: string, patch: Partial<Pick<PomodoroCategory, "name" | "color">>) => {
+    if (!user) return;
     setCategories((arr) => arr.map((c) => (c.id === id ? { ...c, ...patch } : c)));
     const payload: PomodoroCategoryUpdate = patch;
-    await supabase.from("pomodoro_categories").update(payload).eq("id", id);
+    await supabase.from("pomodoro_categories").update(payload).eq("id", id).eq("user_id", user.id);
   };
 
   const remove = async (id: string) => {
+    if (!user) return;
     setCategories((arr) => arr.filter((c) => c.id !== id));
-    await supabase.from("pomodoro_categories").delete().eq("id", id);
+    await supabase.from("pomodoro_categories").delete().eq("id", id).eq("user_id", user.id);
   };
 
   return { categories, loading, create, update, remove, reload: load };

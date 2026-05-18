@@ -99,13 +99,15 @@ export const useHabitCategories = () => {
   };
 
   const updateCategory = async (id: string, updates: Partial<HabitCategory>) => {
+    if (!user) return;
     const payload: HabitCategoryUpdate = updates;
-    const { data } = await supabase.from("habit_categories").update(payload).eq("id", id).select().single();
+    const { data } = await supabase.from("habit_categories").update(payload).eq("id", id).eq("user_id", user.id).select().single();
     if (data) setCategories((p) => p.map((c) => c.id === id ? data : c));
   };
 
   const deleteCategory = async (id: string) => {
-    await supabase.from("habit_categories").delete().eq("id", id);
+    if (!user) return;
+    await supabase.from("habit_categories").delete().eq("id", id).eq("user_id", user.id);
     setCategories((p) => p.filter((c) => c.id !== id));
   };
 

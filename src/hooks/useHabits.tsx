@@ -111,15 +111,17 @@ export const useHabits = (projectId?: string | null) => {
   };
 
   const updateHabit = async (id: string, updates: Partial<Habit>) => {
+    if (!user) return;
     const payload: HabitUpdate = updates;
-    const { data } = await supabase.from("habits").update(payload).eq("id", id).select().single();
+    const { data } = await supabase.from("habits").update(payload).eq("id", id).eq("user_id", user.id).select().single();
     if (data) {
       setHabits((prev) => prev.map((h) => h.id === id ? normalizeHabit(data, h.completed_today) : h));
     }
   };
 
   const deleteHabit = async (id: string) => {
-    await supabase.from("habits").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+    if (!user) return;
+    await supabase.from("habits").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
     setHabits((prev) => prev.filter((h) => h.id !== id));
   };
 
@@ -128,7 +130,7 @@ export const useHabits = (projectId?: string | null) => {
     const d = date || today;
     const has = completionsMap[habit.id]?.has(d) ?? false;
     if (has) {
-      await supabase.from("habit_completions").delete().eq("habit_id", habit.id).eq("completion_date", d);
+      await supabase.from("habit_completions").delete().eq("habit_id", habit.id).eq("completion_date", d).eq("user_id", user.id);
       setCompletionsMap((m) => {
         const s = new Set(m[habit.id] || []); s.delete(d);
         return { ...m, [habit.id]: s };
@@ -145,9 +147,10 @@ export const useHabits = (projectId?: string | null) => {
   };
 
   const reorderHabits = async (orderedIds: string[]) => {
+    if (!user) return;
     const newMap = new Map(orderedIds.map((id, i) => [id, i + 1]));
     setHabits((prev) => [...prev].sort((a, b) => (newMap.get(a.id) ?? 0) - (newMap.get(b.id) ?? 0)).map((h) => ({ ...h, position: newMap.get(h.id) ?? h.position })));
-    await Promise.all(orderedIds.map((id, i) => supabase.from("habits").update({ position: i + 1 }).eq("id", id)));
+    await Promise.all(orderedIds.map((id, i) => supabase.from("habits").update({ position: i + 1 }).eq("id", id).eq("user_id", user.id)));
   };
 
   const moveHabit = (id: string, dir: -1 | 1) => {

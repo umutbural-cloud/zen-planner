@@ -153,7 +153,8 @@ const Pomodoro = () => {
   const isBreak = kind === "break";
 
   const updateNote = async (id: string, note: string) => {
-    await supabase.from("pomodoro_sessions").update({ note }).eq("id", id);
+    if (!user) return;
+    await supabase.from("pomodoro_sessions").update({ note }).eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, note } : s)));
   };
 
@@ -162,11 +163,13 @@ const Pomodoro = () => {
     if (!session) return;
     const newDuration = Math.max(1, Math.round(totalSeconds));
     const newEnd = new Date(parseISO(session.started_at).getTime() + newDuration * 1000).toISOString();
-    await supabase.from("pomodoro_sessions").update({ duration_seconds: newDuration, ended_at: newEnd }).eq("id", id);
+    if (!user) return;
+    await supabase.from("pomodoro_sessions").update({ duration_seconds: newDuration, ended_at: newEnd }).eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, duration_seconds: newDuration, ended_at: newEnd } : s)));
   };
 
   const updateTimes = async (id: string, startedAt: string, endedAt: string) => {
+    if (!user) return;
     const startMs = parseISO(startedAt).getTime();
     const endMs = parseISO(endedAt).getTime();
     if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) {
@@ -177,7 +180,8 @@ const Pomodoro = () => {
     await supabase
       .from("pomodoro_sessions")
       .update({ started_at: startedAt, ended_at: endedAt, duration_seconds: newDuration })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
     setSessions((arr) =>
       arr.map((s) => (s.id === id ? { ...s, started_at: startedAt, ended_at: endedAt, duration_seconds: newDuration } : s))
     );
@@ -186,11 +190,13 @@ const Pomodoro = () => {
   const updateSessionCategory = async (id: string, category_id: string | null) => {
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, category_id } : s)));
     const payload: PomodoroSessionUpdate = { category_id };
-    await supabase.from("pomodoro_sessions").update(payload).eq("id", id);
+    if (!user) return;
+    await supabase.from("pomodoro_sessions").update(payload).eq("id", id).eq("user_id", user.id);
   };
 
   const deleteSession = async (id: string) => {
-    await supabase.from("pomodoro_sessions").delete().eq("id", id);
+    if (!user) return;
+    await supabase.from("pomodoro_sessions").delete().eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.filter((s) => s.id !== id));
   };
 
