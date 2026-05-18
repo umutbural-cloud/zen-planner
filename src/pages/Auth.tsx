@@ -7,7 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 
 type Mode = "login" | "signup" | "forgot";
 
-const errorMessage = (error: unknown) => error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu.";
+const errorMessage = (error: unknown) => {
+  const message = error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu.";
+  if (message.toLowerCase().includes("email rate limit exceeded")) {
+    return "Kısa sürede çok fazla doğrulama e-postası istendi. Lütfen biraz bekleyip tekrar deneyin.";
+  }
+  return message;
+};
 const APP_URL = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, "");
 
 const Auth = () => {
