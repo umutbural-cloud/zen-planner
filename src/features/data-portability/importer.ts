@@ -59,6 +59,16 @@ const USER_SETTINGS_COLUMNS = new Set([
   "timezone", "ui_scale", "user_id",
 ]);
 
+const naturalKeyFor = (table: string, row: Record<string, unknown>) => {
+  if ((table === "habit_categories" || table === "pomodoro_categories") && typeof row.name === "string") {
+    return `name:${row.name}`;
+  }
+  if (table === "journal_entries" && typeof row.entry_date === "string") {
+    return `entry_date:${row.entry_date}`;
+  }
+  return null;
+};
+
 const rowSchema = z.record(z.string(), z.unknown()).superRefine((row, ctx) => {
   if ("id" in row && typeof row.id !== "string") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "id must be a string" });
@@ -136,6 +146,7 @@ export async function importUserData(
 
     const stableIds = rows.map((r) => r.stable_export_id).filter(Boolean);
     const existing = new Map<string, string>();
+    const existingNatural = new Map<string, string>();
     if (stableIds.length) {
       for (let i = 0; i < stableIds.length; i += 500) {
         const chunk = stableIds.slice(i, i + 500);
@@ -145,6 +156,30 @@ export async function importUserData(
           .eq("user_id", userId)
           .in("stable_export_id", chunk);
         (ex || []).forEach((row: any) => existing.set(row.stable_export_id, row.id));
+      }
+    }
+    if (t.name === "habit_categories" || t.name === "pomodoro_categories") {
+      const names = rows.map((r) => r.name).filter((name): name is string => typeof name === "string");
+      for (let i = 0; i < names.length; i += 500) {
+        const chunk = names.slice(i, i + 500);
+        const { data: ex } = await supabase
+          .from(t.name as any)
+          .select("id, name")
+          .eq("user_id", userId)
+          .in("name", chunk);
+        (ex || []).forEach((row: any) => existingNatural.set(`name:${row.name}`, row.id));
+      }
+    }
+    if (t.name === "journal_entries") {
+      const dates = rows.map((r) => r.entry_date).filter((date): date is string => typeof date === "string");
+      for (let i = 0; i < dates.length; i += 500) {
+        const chunk = dates.slice(i, i + 500);
+        const { data: ex } = await supabase
+          .from("journal_entries")
+          .select("id, entry_date")
+          .eq("user_id", userId)
+          .in("entry_date", chunk);
+        (ex || []).forEach((row: any) => existingNatural.set(`entry_date:${row.entry_date}`, row.id));
       }
     }
 
@@ -161,6 +196,13 @@ export async function importUserData(
         ) {
           defaultPomodoroProjectId = existsId;
         }
+        skipped++;
+        continue;
+      }
+      const naturalKey = naturalKeyFor(t.name, row);
+      const naturalExistsId = naturalKey ? existingNatural.get(naturalKey) : undefined;
+      if (naturalExistsId && row.id) {
+        idMap[t.name].set(row.id, naturalExistsId);
         skipped++;
         continue;
       }
