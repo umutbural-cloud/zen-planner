@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 type Mode = "login" | "signup" | "forgot";
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu.";
+const APP_URL = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, "");
 
 const Auth = () => {
   const [mode, setMode] = useState<Mode>("login");
@@ -26,8 +27,12 @@ const Auth = () => {
 
     try {
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        if (data.user && !data.user.email_confirmed_at) {
+          await supabase.auth.signOut();
+          throw new Error("Giriş yapmadan önce e-posta doğrulama bağlantısına tıklayın.");
+        }
       } else if (mode === "signup") {
         if (!fullName.trim()) {
           throw new Error("Lütfen ad ve soyadınızı girin.");
@@ -42,7 +47,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${APP_URL}/`,
             data: { full_name: fullName.trim() },
           },
         });
@@ -53,7 +58,7 @@ const Auth = () => {
         });
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${APP_URL}/reset-password`,
         });
         if (error) throw error;
         toast({
