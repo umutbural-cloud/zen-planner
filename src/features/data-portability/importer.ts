@@ -60,6 +60,13 @@ const USER_SETTINGS_COLUMNS = new Set([
 ]);
 
 const naturalKeyFor = (table: string, row: Record<string, unknown>) => {
+  if (
+    table === "projects" &&
+    row.deleted_at == null &&
+    (row.is_default === true || row.name === "Yapılacaklar Listesi")
+  ) {
+    return "default_project";
+  }
   if ((table === "habit_categories" || table === "pomodoro_categories") && typeof row.name === "string") {
     return `name:${row.name}`;
   }
@@ -158,6 +165,16 @@ export async function importUserData(
         (ex || []).forEach((row: any) => existing.set(row.stable_export_id, row.id));
       }
     }
+    if (t.name === "projects") {
+      const { data: ex } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_default", true)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (ex) existingNatural.set("default_project", ex.id);
+    }
     if (t.name === "habit_categories" || t.name === "pomodoro_categories") {
       const names = rows.map((r) => r.name).filter((name): name is string => typeof name === "string");
       for (let i = 0; i < names.length; i += 500) {
@@ -203,6 +220,9 @@ export async function importUserData(
       const naturalExistsId = naturalKey ? existingNatural.get(naturalKey) : undefined;
       if (naturalExistsId && row.id) {
         idMap[t.name].set(row.id, naturalExistsId);
+        if (t.name === "projects" && !defaultPomodoroProjectId) {
+          defaultPomodoroProjectId = naturalExistsId;
+        }
         skipped++;
         continue;
       }
