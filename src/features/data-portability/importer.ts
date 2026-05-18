@@ -12,6 +12,53 @@ export type ImportProgress = {
 const MAX_ROWS_PER_TABLE = 10000;
 const MAX_TOTAL_ROWS = 100000;
 
+const TABLE_COLUMNS: Record<string, Set<string>> = {
+  projects: new Set([
+    "id", "created_at", "deleted_at", "emoji", "enabled_views", "icon", "icon_color",
+    "kind", "name", "parent_id", "stable_export_id", "user_id",
+  ]),
+  habit_categories: new Set([
+    "id", "color", "created_at", "name", "position", "stable_export_id", "updated_at", "user_id",
+  ]),
+  pomodoro_categories: new Set([
+    "id", "color", "created_at", "name", "position", "stable_export_id", "updated_at", "user_id",
+  ]),
+  notes: new Set([
+    "id", "content", "created_at", "deleted_at", "project_id", "stable_export_id", "title", "updated_at", "user_id",
+  ]),
+  tasks: new Set([
+    "id", "category_id", "color", "completed_at", "created_at", "deleted_at", "description",
+    "end_date", "end_time", "hidden", "kind", "parent_block_id", "position", "project_id",
+    "reminder_minutes_before", "stable_export_id", "start_date", "start_time", "status", "title", "user_id",
+  ]),
+  habits: new Set([
+    "id", "category_id", "created_at", "deleted_at", "description", "frequency_days",
+    "frequency_type", "hidden", "icon", "position", "project_id", "stable_export_id",
+    "time_of_day", "title", "user_id",
+  ]),
+  habit_completions: new Set([
+    "id", "completed_at", "completion_date", "habit_id", "stable_export_id", "user_id",
+  ]),
+  pomodoro_sessions: new Set([
+    "id", "category_id", "created_at", "duration_seconds", "ended_at", "kind", "note",
+    "stable_export_id", "started_at", "task_id", "updated_at", "user_id",
+  ]),
+  backlog_tasks: new Set([
+    "id", "color", "created_at", "deleted_at", "description", "due_date", "position",
+    "priority", "stable_export_id", "title", "updated_at", "urgency", "user_id",
+  ]),
+  journal_entries: new Set([
+    "id", "content", "created_at", "deleted_at", "entry_date", "stable_export_id", "updated_at", "user_id",
+  ]),
+};
+
+const USER_SETTINGS_COLUMNS = new Set([
+  "auto_prayer_times", "calculation_method", "city", "country", "default_pomodoro_project_id",
+  "latitude", "location_permission", "longitude", "module_labels", "notify_habits",
+  "notify_pomodoro", "notify_tasks", "quiet_hours_end", "quiet_hours_start", "startup_page",
+  "timezone", "ui_scale", "user_id",
+]);
+
 const rowSchema = z.record(z.string(), z.unknown()).superRefine((row, ctx) => {
   if ("id" in row && typeof row.id !== "string") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "id must be a string" });
@@ -20,6 +67,29 @@ const rowSchema = z.record(z.string(), z.unknown()).superRefine((row, ctx) => {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "stable_export_id must be a string" });
   }
 });
+
+const pickAllowed = (row: Record<string, unknown>, allowed: Set<string>) => {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (allowed.has(key)) cleaned[key] = value;
+  }
+  return cleaned;
+};
+
+const isStartupPage = (value: unknown): value is Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type === "default") return true;
+  if (candidate.type === "project") return typeof candidate.value === "string";
+  if (candidate.type === "module") {
+    return candidate.value === "backlog" ||
+      candidate.value === "journal" ||
+      candidate.value === "habits" ||
+      candidate.value === "workHistory" ||
+      candidate.value === "pomodoro";
+  }
+  return false;
+};
 
 const validateImportPayload = (file: ExportFile) => {
   let total = 0;
@@ -54,6 +124,7 @@ export async function importUserData(
   const idMap: Record<string, Map<string, string>> = {};
   let inserted = 0;
   let skipped = 0;
+  let defaultPomodoroProjectId: string | null = null;
 
   for (const t of TABLES) {
     const rows = (file.data[t.name] as any[]) || [];
@@ -82,11 +153,19 @@ export async function importUserData(
       const existsId = row.stable_export_id ? existing.get(row.stable_export_id) : undefined;
       if (existsId && row.id) {
         idMap[t.name].set(row.id, existsId);
+        if (
+          t.name === "projects" &&
+          !defaultPomodoroProjectId &&
+          row.deleted_at == null &&
+          (row.is_default === true || !rows.some((candidate) => candidate.deleted_at == null && candidate.is_default === true))
+        ) {
+          defaultPomodoroProjectId = existsId;
+        }
         skipped++;
         continue;
       }
 
-      const newRow: any = { ...row };
+      const newRow: any = pickAllowed(row, TABLE_COLUMNS[t.name]);
       const oldId = row.id as string | undefined;
       const newId = crypto.randomUUID();
       newRow.id = newId;
@@ -101,9 +180,15 @@ export async function importUserData(
         }
       }
 
-      if (t.name === "projects") delete newRow.is_default;
-
       if (oldId) idMap[t.name].set(oldId, newId);
+      if (
+        t.name === "projects" &&
+        !defaultPomodoroProjectId &&
+        row.deleted_at == null &&
+        (row.is_default === true || !rows.some((candidate) => candidate.deleted_at == null && candidate.is_default === true))
+      ) {
+        defaultPomodoroProjectId = newId;
+      }
       payloads.push({ original: row, payload: newRow });
     }
 
@@ -135,7 +220,21 @@ export async function importUserData(
 
   const us = file.data.user_settings;
   if (us && typeof us === "object") {
-    const { id, ...rest } = us as any;
+    const rest = pickAllowed(us as Record<string, unknown>, USER_SETTINGS_COLUMNS);
+    const oldDefaultPomodoroProjectId = rest.default_pomodoro_project_id;
+    if (typeof oldDefaultPomodoroProjectId === "string") {
+      rest.default_pomodoro_project_id = idMap.projects?.get(oldDefaultPomodoroProjectId) ?? null;
+    } else {
+      rest.default_pomodoro_project_id = defaultPomodoroProjectId;
+    }
+
+    if (isStartupPage(rest.startup_page) && rest.startup_page.type === "project") {
+      const mappedProjectId = idMap.projects?.get(rest.startup_page.value as string);
+      rest.startup_page = mappedProjectId ? { type: "project", value: mappedProjectId } : { type: "default" };
+    } else if (!isStartupPage(rest.startup_page)) {
+      rest.startup_page = { type: "default" };
+    }
+
     await supabase
       .from("user_settings")
       .upsert({ ...rest, user_id: userId }, { onConflict: "user_id" });
