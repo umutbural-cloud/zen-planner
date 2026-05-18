@@ -59,11 +59,13 @@ const USER_SETTINGS_COLUMNS = new Set([
   "timezone", "ui_scale", "user_id",
 ]);
 
+const isImportedDefaultProject = (row: Record<string, unknown>) =>
+  row.deleted_at == null && (row.is_default === true || row.name === "Yapılacaklar Listesi");
+
 const naturalKeyFor = (table: string, row: Record<string, unknown>) => {
   if (
     table === "projects" &&
-    row.deleted_at == null &&
-    (row.is_default === true || row.name === "Yapılacaklar Listesi")
+    isImportedDefaultProject(row)
   ) {
     return "default_project";
   }
@@ -106,6 +108,22 @@ const isStartupPage = (value: unknown): value is Record<string, unknown> => {
       candidate.value === "pomodoro";
   }
   return false;
+};
+
+const remapForeignKeys = (
+  fk: Partial<Record<string, string>>,
+  row: Record<string, unknown>,
+  idMap: Record<string, Map<string, string>>,
+) => {
+  const updates: Record<string, string | null> = {};
+  for (const [col, refTable] of Object.entries(fk)) {
+    if (refTable === "tasks" && col === "parent_block_id") continue;
+    const oldFk = row[col];
+    if (!oldFk || typeof oldFk !== "string") continue;
+    const mapped = idMap[refTable]?.get(oldFk);
+    updates[col] = mapped ?? null;
+  }
+  return updates;
 };
 
 const validateImportPayload = (file: ExportFile) => {
@@ -203,25 +221,40 @@ export async function importUserData(
     const payloads: any[] = [];
     for (const row of rows) {
       const existsId = row.stable_export_id ? existing.get(row.stable_export_id) : undefined;
-      if (existsId && row.id) {
-        idMap[t.name].set(row.id, existsId);
+      const naturalKey = naturalKeyFor(t.name, row);
+      const naturalExistsId = naturalKey ? existingNatural.get(naturalKey) : undefined;
+      if (t.name === "projects" && naturalExistsId && existsId && naturalExistsId !== existsId) {
+        await supabase
+          .from("projects")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", existsId)
+          .eq("user_id", userId);
+      }
+      const targetExistingId = t.name === "projects" && naturalExistsId ? naturalExistsId : existsId ?? naturalExistsId;
+
+      if (targetExistingId && row.id) {
+        idMap[t.name].set(row.id, targetExistingId);
+        const refUpdates = remapForeignKeys(t.fk, row, idMap);
+        if (Object.keys(refUpdates).length) {
+          await supabase
+            .from(t.name as any)
+            .update(refUpdates)
+            .eq("id", targetExistingId)
+            .eq("user_id", userId);
+        }
+        if (t.name === "journal_entries" && typeof row.content === "string" && row.content.length > 0) {
+          await supabase
+            .from("journal_entries")
+            .update({ content: row.content, deleted_at: row.deleted_at ?? null })
+            .eq("id", targetExistingId)
+            .eq("user_id", userId);
+        }
         if (
           t.name === "projects" &&
           !defaultPomodoroProjectId &&
-          row.deleted_at == null &&
-          (row.is_default === true || !rows.some((candidate) => candidate.deleted_at == null && candidate.is_default === true))
+          (isImportedDefaultProject(row) || !rows.some((candidate) => candidate.deleted_at == null && candidate.is_default === true))
         ) {
-          defaultPomodoroProjectId = existsId;
-        }
-        skipped++;
-        continue;
-      }
-      const naturalKey = naturalKeyFor(t.name, row);
-      const naturalExistsId = naturalKey ? existingNatural.get(naturalKey) : undefined;
-      if (naturalExistsId && row.id) {
-        idMap[t.name].set(row.id, naturalExistsId);
-        if (t.name === "projects" && !defaultPomodoroProjectId) {
-          defaultPomodoroProjectId = naturalExistsId;
+          defaultPomodoroProjectId = targetExistingId;
         }
         skipped++;
         continue;
