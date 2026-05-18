@@ -76,7 +76,16 @@ export const QuickNoteEditor = ({
       <RichTextToolbar
         editor={editor}
         compact
-        features={{ strike: false, taskList: false, blockquote: false, history: false }}
+        features={{
+          headingLevels: [3],
+          strike: false,
+          taskList: false,
+          blockquote: false,
+          history: false,
+          fontSize: false,
+          lineHeight: false,
+          orderedList: false,
+        }}
       />
       <EditorContent editor={editor} />
     </div>

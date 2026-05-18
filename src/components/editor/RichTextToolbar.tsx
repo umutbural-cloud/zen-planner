@@ -46,6 +46,8 @@ type Props = {
     history?: boolean;
     fontSize?: boolean;
     lineHeight?: boolean;
+    orderedList?: boolean;
+    headingLevels?: number[];
   };
   onInsertLink?: () => void;
   onInsertToggleBlock?: () => void;
@@ -94,6 +96,8 @@ export const RichTextToolbar = ({
     history: true,
     fontSize: true,
     lineHeight: true,
+    orderedList: true,
+    headingLevels: [1, 2, 3],
     ...features,
   };
 
@@ -155,15 +159,21 @@ export const RichTextToolbar = ({
     >
       {enabled.headings && (
         <>
-          <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="Başlık 1">
-            <Heading1 className="h-3.5 w-3.5" />
-          </ToolbarButton>
-          <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Başlık 2">
-            <Heading2 className="h-3.5 w-3.5" />
-          </ToolbarButton>
-          <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="Başlık 3">
-            <Heading3 className="h-3.5 w-3.5" />
-          </ToolbarButton>
+          {enabled.headingLevels.includes(1) && (
+            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="Başlık 1">
+              <Heading1 className="h-3.5 w-3.5" />
+            </ToolbarButton>
+          )}
+          {enabled.headingLevels.includes(2) && (
+            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Başlık 2">
+              <Heading2 className="h-3.5 w-3.5" />
+            </ToolbarButton>
+          )}
+          {enabled.headingLevels.includes(3) && (
+            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="Başlık 3">
+              <Heading3 className="h-3.5 w-3.5" />
+            </ToolbarButton>
+          )}
           <Divider />
         </>
       )}
@@ -209,9 +219,11 @@ export const RichTextToolbar = ({
       <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Madde">
         <List className="h-3.5 w-3.5" />
       </ToolbarButton>
-      <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Sıralı liste">
-        <ListOrdered className="h-3.5 w-3.5" />
-      </ToolbarButton>
+      {enabled.orderedList && (
+        <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Sıralı liste">
+          <ListOrdered className="h-3.5 w-3.5" />
+        </ToolbarButton>
+      )}
       {enabled.taskList && (
         <ToolbarButton onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive("taskList")} title="Yapılacaklar">
           <CheckSquare className="h-3.5 w-3.5" />
