@@ -78,6 +78,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
   const { get: moduleLabel, rename: renameModule, reset: resetModule, labels: customLabels } = useModuleLabels();
   const { startup, setStartup } = useStartupPage();
   const { projects } = useProjects();
+  const workspaceProjects = projects.filter((project) => project.kind === "project");
   const enabledModules = SIDEBAR_ITEM_ORDER.filter((k) => sidebarPrefs[k]);
   const startupValue =
     startup.type === "module" ? `mod:${startup.value}` :
@@ -649,6 +650,31 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                       )}
                       {projects.map((p) => (
                         <SelectItem key={`prj:${p.id}`} value={`prj:${p.id}`}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="border-t border-border/60" />
+
+                <div className="space-y-2">
+                  <div className="text-sm font-light">Varsayılan çalışma alanı</div>
+                  <div className="text-[10px] text-muted-foreground tracking-wide">
+                    Pomodoro sayfasındaki görev panosu bu projeyi gösterir
+                  </div>
+                  <Select
+                    value={userSettings.default_pomodoro_project_id ?? "default"}
+                    onValueChange={(value) => updateUserSettings({
+                      default_pomodoro_project_id: value === "default" ? null : value,
+                    })}
+                  >
+                    <SelectTrigger className="h-9 text-sm font-light">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      <SelectItem value="default">Varsayılan proje</SelectItem>
+                      {workspaceProjects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

@@ -18,6 +18,7 @@ export type UserSettings = {
   calculation_method: number;
   module_labels: Record<string, string>;
   startup_page: StartupPageSetting;
+  default_pomodoro_project_id: string | null;
 };
 
 const DEFAULTS: UserSettings = {
@@ -30,6 +31,7 @@ const DEFAULTS: UserSettings = {
   calculation_method: 13,
   module_labels: {},
   startup_page: { type: "default" },
+  default_pomodoro_project_id: null,
 };
 
 const CACHE_KEY = "keikaku.userSettings.v1";
@@ -91,7 +93,7 @@ export const useUserSettings = () => {
     (async () => {
       const { data } = await supabase
         .from("user_settings")
-        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page")
+        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id")
         .eq("user_id", user.id)
         .maybeSingle();
       if (cancelled) return;
@@ -106,7 +108,7 @@ export const useUserSettings = () => {
           calculation_method: data.calculation_method,
           module_labels: isStringRecord(data.module_labels) ? data.module_labels : {},
           startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
-          
+          default_pomodoro_project_id: data.default_pomodoro_project_id,
         };
         setSettings(next);
         writeCache(next);

@@ -799,6 +799,7 @@ export type Database = {
           city: string | null
           country: string
           created_at: string
+          default_pomodoro_project_id: string | null
           latitude: number | null
           location_permission: boolean
           longitude: number | null
@@ -820,6 +821,7 @@ export type Database = {
           city?: string | null
           country?: string
           created_at?: string
+          default_pomodoro_project_id?: string | null
           latitude?: number | null
           location_permission?: boolean
           longitude?: number | null
@@ -841,6 +843,7 @@ export type Database = {
           city?: string | null
           country?: string
           created_at?: string
+          default_pomodoro_project_id?: string | null
           latitude?: number | null
           location_permission?: boolean
           longitude?: number | null

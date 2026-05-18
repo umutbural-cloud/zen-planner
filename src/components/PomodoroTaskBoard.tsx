@@ -1,33 +1,30 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Table as TableIcon, KanbanSquare, ListTodo } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
 import TableView from "./TableView";
 import KanbanView from "./KanbanView";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import type { Project } from "@/hooks/useProjects";
 
 type ViewKind = "table" | "kanban";
 
-const PomodoroTaskBoard = () => {
-  const { user } = useAuth();
-  const [projectId, setProjectId] = useState<string | null>(null);
+type Props = {
+  projects: Project[];
+};
+
+const PomodoroTaskBoard = ({ projects }: Props) => {
+  const { settings } = useUserSettings();
   const [view, setView] = useState<ViewKind>(() => {
     const saved = typeof localStorage !== "undefined" ? localStorage.getItem("pomodoro:taskView") : null;
     return saved === "kanban" ? "kanban" : "table";
   });
 
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("is_default", true)
-        .is("deleted_at", null)
-        .maybeSingle();
-      if (data) setProjectId(data.id);
-    })();
-  }, [user]);
+  const project = useMemo(() => {
+    const workspaceProjects = projects.filter((item) => item.kind === "project");
+    return workspaceProjects.find((item) => item.id === settings.default_pomodoro_project_id) ??
+      workspaceProjects.find((item) => item.is_default) ??
+      workspaceProjects[0] ??
+      null;
+  }, [projects, settings.default_pomodoro_project_id]);
 
   const setAndPersist = (v: ViewKind) => {
     setView(v);
@@ -43,7 +40,7 @@ const PomodoroTaskBoard = () => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-light">
           <ListTodo className="h-3 w-3" />
-          Yapılacaklar Listesi
+          {project?.name ?? "Yapılacaklar Listesi"}
         </div>
         <div className="flex items-center gap-0.5 border border-border/60 rounded-sm p-0.5">
           <button
@@ -69,14 +66,14 @@ const PomodoroTaskBoard = () => {
         </div>
       </div>
 
-      {!projectId ? (
+      {!project ? (
         <div className="text-center text-xs text-muted-foreground py-6 border border-border/60 rounded-sm">
-          Yapılacaklar Listesi bulunamadı
+          Pomodoro çalışma alanı bulunamadı
         </div>
       ) : view === "table" ? (
-        <TableView projectId={projectId} />
+        <TableView projectId={project.id} />
       ) : (
-        <KanbanView projectId={projectId} />
+        <KanbanView projectId={project.id} />
       )}
     </section>
   );

@@ -395,7 +395,7 @@ const Pomodoro = () => {
                   isRunning ? "opacity-30 hover:opacity-100" : "opacity-100"
                 }`}
               >
-                <PomodoroTaskBoard />
+                <PomodoroTaskBoard projects={projects} />
               </div>
 
               <section
