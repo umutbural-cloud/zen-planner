@@ -1,1 +1,24 @@
 project_id = "vfdjirbdbbldjyrmhhck"
+
+[auth]
+site_url = "https://zen-planner-seven.vercel.app"
+additional_redirect_urls = [
+  "https://zen-planner-seven.vercel.app",
+  "https://zen-planner-seven.vercel.app/",
+  "https://zen-planner-seven.vercel.app/reset-password",
+  "http://localhost:8080",
+  "http://localhost:8080/",
+  "http://localhost:8080/reset-password",
+  "http://127.0.0.1:8080",
+  "http://127.0.0.1:8080/",
+  "http://127.0.0.1:8080/reset-password",
+]
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
