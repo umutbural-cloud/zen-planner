@@ -126,6 +126,20 @@ const remapForeignKeys = (
   return updates;
 };
 
+const prepareExistingUpdate = (
+  table: string,
+  row: Record<string, unknown>,
+  fk: Partial<Record<string, string>>,
+  idMap: Record<string, Map<string, string>>,
+  userId: string,
+) => {
+  const updates = pickAllowed(row, TABLE_COLUMNS[table]);
+  delete updates.id;
+  updates.user_id = userId;
+  Object.assign(updates, remapForeignKeys(fk, row, idMap));
+  return updates;
+};
+
 const validateImportPayload = (file: ExportFile) => {
   let total = 0;
   for (const t of TABLES) {
@@ -226,7 +240,7 @@ export async function importUserData(
       if (t.name === "projects" && naturalExistsId && existsId && naturalExistsId !== existsId) {
         await supabase
           .from("projects")
-          .update({ deleted_at: new Date().toISOString() })
+          .update({ deleted_at: new Date().toISOString(), stable_export_id: crypto.randomUUID() })
           .eq("id", existsId)
           .eq("user_id", userId);
       }
@@ -234,21 +248,12 @@ export async function importUserData(
 
       if (targetExistingId && row.id) {
         idMap[t.name].set(row.id, targetExistingId);
-        const refUpdates = remapForeignKeys(t.fk, row, idMap);
-        if (Object.keys(refUpdates).length) {
-          await supabase
-            .from(t.name as any)
-            .update(refUpdates)
-            .eq("id", targetExistingId)
-            .eq("user_id", userId);
-        }
-        if (t.name === "journal_entries" && typeof row.content === "string" && row.content.length > 0) {
-          await supabase
-            .from("journal_entries")
-            .update({ content: row.content, deleted_at: row.deleted_at ?? null })
-            .eq("id", targetExistingId)
-            .eq("user_id", userId);
-        }
+        const updatePayload = prepareExistingUpdate(t.name, row, t.fk, idMap, userId);
+        await supabase
+          .from(t.name as any)
+          .update(updatePayload)
+          .eq("id", targetExistingId)
+          .eq("user_id", userId);
         if (
           t.name === "projects" &&
           !defaultPomodoroProjectId &&
