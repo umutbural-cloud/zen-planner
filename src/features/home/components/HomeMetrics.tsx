@@ -34,10 +34,10 @@ const HomeMetrics = ({ metrics }: Props) => {
               <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
             </div>
             <div className="mt-2 flex items-baseline gap-1.5">
-              <span className="text-2xl font-extralight tabular-nums tracking-tight text-foreground">
+              <span className="text-xl sm:text-2xl font-extralight tabular-nums tracking-tight leading-tight text-foreground">
                 {metric.value}
               </span>
-              <span className="text-[10px] text-muted-foreground tracking-wide">{metric.hint}</span>
+              {metric.hint && <span className="text-[10px] text-muted-foreground tracking-wide">{metric.hint}</span>}
             </div>
           </div>
         );

@@ -35,21 +35,20 @@ export type HomeStudySession = {
   minutes: number;
 };
 
+export type HomeHabitTimeOfDay = "morning" | "noon" | "evening" | "night";
+
 export type HomeHabit = {
   id: string;
   label: string;
   streak?: number;
   done?: boolean;
   icon: LucideIcon;
+  timeOfDay?: HomeHabitTimeOfDay;
 };
 
 export type HomePomodoroSummary = {
-  activeTaskTitle: string;
   completed: number;
   goal: number;
-  remainingLabel: string;
-  timerLabel: string;
-  progress: number;
 };
 
 export type HomeNotePreview = {
@@ -59,17 +58,22 @@ export type HomeNotePreview = {
   updatedLabel: string;
 };
 
+export type HomeRecentWorkItem = {
+  id: string;
+  name: string;
+  durationLabel: string;
+  endedAtLabel: string;
+};
+
 export type HomeDashboardData = {
   userName: string;
   dateLabel: string;
-  campDayLabel: string;
-  statusLabel: string;
-  streakDays: number;
   metrics: HomeSectionState<HomeMetric[]>;
   plan: HomeSectionState<HomePlanTask[]>;
   study: HomeSectionState<HomeStudySession[]>;
   habits: HomeSectionState<HomeHabit[]>;
   pomodoro: HomeSectionState<HomePomodoroSummary | null>;
+  recentWork: HomeSectionState<HomeRecentWorkItem[]>;
   notes: HomeSectionState<HomeNotePreview[]>;
   dayClose: HomeSectionState<{
     summary: string;

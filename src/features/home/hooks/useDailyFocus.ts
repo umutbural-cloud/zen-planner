@@ -7,6 +7,7 @@ const FOCUS_OPTIONS: DailyFocusOption[] = [
   { id: "content", label: "İçerik Üretimi" },
   { id: "community", label: "Topluluk" },
   { id: "sessions", label: "Seanslar" },
+  { id: "personal", label: "Kişisel İşler" },
   { id: "other", label: "Diğer", allowsCustomText: true },
 ];
 

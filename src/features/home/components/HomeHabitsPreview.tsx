@@ -1,11 +1,32 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { HomeHabit, HomeSectionState } from "@/features/home/types";
+import { useState } from "react";
 
 type Props = {
   habits: HomeSectionState<HomeHabit[]>;
 };
 
+const FILTERS = [
+  { id: "all", label: "Tümü" },
+  { id: "morning", label: "Sabah" },
+  { id: "noon", label: "Öğlen" },
+  { id: "evening", label: "Akşam" },
+  { id: "night", label: "Gece" },
+] as const;
+
+type FilterId = (typeof FILTERS)[number]["id"];
+
 const HomeHabitsPreview = ({ habits }: Props) => {
+  const [filter, setFilter] = useState<FilterId>("all");
   const doneCount = habits.data.filter((habit) => habit.done).length;
+  const filterIndex = FILTERS.findIndex((item) => item.id === filter);
+  const activeFilter = FILTERS[filterIndex] || FILTERS[0];
+  const filteredHabits = filter === "all" ? habits.data : habits.data.filter((habit) => habit.timeOfDay === filter);
+
+  const moveFilter = (direction: -1 | 1) => {
+    const next = (filterIndex + direction + FILTERS.length) % FILTERS.length;
+    setFilter(FILTERS[next].id);
+  };
 
   return (
     <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
@@ -15,13 +36,25 @@ const HomeHabitsPreview = ({ habits }: Props) => {
           {doneCount} / {habits.data.length}
         </span>
       </header>
+      <div className="mx-5 mb-2 flex items-center justify-between rounded-md border border-border/60 bg-background/30 px-2 py-1">
+        <button type="button" onClick={() => moveFilter(-1)} className="p-1 text-muted-foreground hover:text-foreground transition-colors" title="Önceki zaman dilimi">
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{activeFilter.label}</span>
+        <button type="button" onClick={() => moveFilter(1)} className="p-1 text-muted-foreground hover:text-foreground transition-colors" title="Sonraki zaman dilimi">
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
       {habits.status === "loading" && <div className="mx-4 mb-4 h-36 rounded-xl bg-muted/40 animate-pulse" />}
       {habits.status === "error" && <div className="px-5 pb-5 text-xs text-destructive">{habits.error || "Alışkanlıklar yüklenemedi."}</div>}
       {(habits.status === "empty" || habits.data.length === 0) && <div className="px-5 pb-5 text-xs text-muted-foreground">Bugün için alışkanlık yok.</div>}
-      {habits.status === "ready" && (
+      {habits.status === "ready" && filteredHabits.length === 0 && (
+        <div className="px-5 pb-5 text-xs text-muted-foreground">Bu zaman diliminde alışkanlık yok.</div>
+      )}
+      {habits.status === "ready" && filteredHabits.length > 0 && (
         <ul className="px-2 pb-2 divide-y divide-border/40">
-          {habits.data.map((habit) => {
+          {filteredHabits.map((habit) => {
             const Icon = habit.icon;
 
             return (

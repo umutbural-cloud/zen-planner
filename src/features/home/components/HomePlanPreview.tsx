@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar as CalendarIcon, CheckCircle2, Circle, Clock, ListTodo, Loader2, TrendingUp } from "lucide-react";
+import { CheckCircle2, Circle, Clock, ListTodo, Loader2, TrendingUp } from "lucide-react";
 import type { HomePlanTask, HomeSectionState, HomeStudySession } from "@/features/home/types";
 
 type Props = {
@@ -10,7 +10,6 @@ type Props = {
 const TABS = [
   { id: "tasks", label: "Görevler", icon: ListTodo },
   { id: "doing", label: "Yapılıyor", icon: Loader2 },
-  { id: "calendar", label: "Takvim", icon: CalendarIcon },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -21,6 +20,8 @@ const HomePlanPreview = ({ plan, study }: Props) => {
   const totalMinutes = study.data.reduce((sum, row) => sum + row.minutes, 0);
   const goal = 180;
   const pct = Math.min(100, Math.round((totalMinutes / goal) * 100));
+  const visibleTasks = plan.data.slice(0, 5);
+  const hasMoreTasks = plan.data.length > visibleTasks.length;
 
   return (
     <div className="space-y-5">
@@ -56,7 +57,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
           {(plan.status === "empty" || plan.data.length === 0) && <div className="px-4 py-10 text-center text-xs text-muted-foreground">Bugün için plan yok.</div>}
           {plan.status === "ready" && tab === "tasks" && (
             <ul className="divide-y divide-border/50">
-              {plan.data.map((task) => (
+              {visibleTasks.map((task) => (
                 <li
                   key={task.id}
                   className="group flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-accent/30 transition-colors cursor-pointer"
@@ -74,10 +75,14 @@ const HomePlanPreview = ({ plan, study }: Props) => {
                   </div>
                 </li>
               ))}
+              {hasMoreTasks && (
+                <li className="px-3 py-2 text-center text-xs text-muted-foreground">
+                  Devamını göster
+                </li>
+              )}
             </ul>
           )}
           {plan.status === "ready" && tab === "doing" && <div className="px-4 py-10 text-center text-xs text-muted-foreground tracking-wide">Şu anda yapılan görev yok.</div>}
-          {plan.status === "ready" && tab === "calendar" && <div className="px-4 py-10 text-center text-xs text-muted-foreground tracking-wide">Bugünün takvim görünümü burada.</div>}
         </div>
       </section>
 

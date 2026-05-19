@@ -1,4 +1,9 @@
-import { Target } from "lucide-react";
+import { Check, ChevronDown, Target } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { DailyFocusOption } from "@/features/home/types";
 
 type Props = {
@@ -9,13 +14,19 @@ type Props = {
 
 const HomeFocusSelector = ({ selectedFocus, focusOptions, onSelectFocus }: Props) => {
   return (
-    <div className="relative border-t border-border/60 px-6 lg:px-8 py-4">
-      <div className="flex items-center gap-2 overflow-x-auto">
-        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70 shrink-0">
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="mt-5 inline-flex max-w-full items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3 py-1.5 text-left transition-colors hover:bg-accent/40"
+        >
           <Target className="h-3 w-3" />
-          Odak listesi
-        </span>
-        <div className="h-3 w-px bg-border/60 mx-1" />
+          <span className="shrink-0 text-xs text-muted-foreground">Bugünün odağı:</span>
+          <span className="min-w-0 truncate text-xs text-foreground tracking-wide">{selectedFocus}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-1" align="start">
         {focusOptions.map((focus) => {
           const active = selectedFocus === focus.label;
 
@@ -24,18 +35,17 @@ const HomeFocusSelector = ({ selectedFocus, focusOptions, onSelectFocus }: Props
               key={focus.id}
               type="button"
               onClick={() => onSelectFocus(focus.label)}
-              className={`shrink-0 text-xs px-3 py-1 rounded-md border transition-colors ${
-                active
-                  ? "bg-foreground/10 border-foreground/20 text-foreground"
-                  : "bg-transparent border-border/60 text-muted-foreground hover:text-foreground hover:bg-accent/40"
+              className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition-colors ${
+                active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               }`}
             >
-              {active ? `✓ ${focus.label}` : focus.label}
+              <span className="flex-1">{focus.label}</span>
+              {active && <Check className="h-3 w-3" />}
             </button>
           );
         })}
-      </div>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 

@@ -1,27 +1,24 @@
-import { Activity, BookOpen, Brain, CheckSquare, Clock3, Droplet, Flame, Smile, Timer } from "lucide-react";
+import { Activity, BookOpen, Brain, CheckSquare, Clock3, Droplet, Smile, Timer, TrendingUp } from "lucide-react";
+import { formatDurationLabel } from "@/features/home/lib/formatDurationLabel";
 import type { HomeDashboardData } from "@/features/home/types";
 
 export const useHomeDashboardData = (): HomeDashboardData => {
   const today = new Date();
-  const dateLabel = today.toLocaleDateString("tr-TR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const day = today.toLocaleDateString("tr-TR", { day: "numeric" });
+  const month = today.toLocaleDateString("tr-TR", { month: "long" });
+  const weekday = today.toLocaleDateString("tr-TR", { weekday: "long" });
+  const dateLabel = `${day} ${month} ${weekday}`;
 
   return {
     userName: "Umut",
     dateLabel,
-    campDayLabel: "Disiplin yolculuğu · Kampın 6. günü",
-    statusLabel: "İyi ilerliyorsun",
-    streakDays: 12,
     metrics: {
       status: "ready",
       data: [
         { id: "tasks", label: "Görev", value: "5", icon: CheckSquare, hint: "tamamlandı" },
         { id: "pomo", label: "Pomodoro", value: "4", icon: Timer, hint: "/ 6 hedef" },
-        { id: "time", label: "Süre", value: "2s10dk", icon: Clock3, hint: "çalışma" },
-        { id: "streak", label: "Streak", value: "12", icon: Flame, hint: "gün" },
+        { id: "time", label: "Süre", value: formatDurationLabel(130), icon: Clock3, hint: "" },
+        { id: "weekly-average", label: "Son 7 Gün Ort.", value: formatDurationLabel(105), icon: TrendingUp, hint: "" },
       ],
     },
     plan: {
@@ -32,6 +29,7 @@ export const useHomeDashboardData = (): HomeDashboardData => {
         { id: "3", title: "Bülten taslağını bitir", tag: "Yayın Yönetimi" },
         { id: "4", title: "Sponsorluk teklifini gözden geçir", tag: "Planlama" },
         { id: "5", title: "Kamp görevi: Günlük yaz", tag: "Kamp" },
+        { id: "6", title: "Haftalık değerlendirme notlarını toparla", tag: "Günlük" },
       ],
     },
     study: {
@@ -45,23 +43,27 @@ export const useHomeDashboardData = (): HomeDashboardData => {
     habits: {
       status: "ready",
       data: [
-        { id: "1", label: "Su iç", streak: 7, done: true, icon: Droplet },
-        { id: "2", label: "Meditasyon", streak: 3, done: true, icon: Brain },
-        { id: "3", label: "Kitap oku", icon: BookOpen },
-        { id: "4", label: "Spor / esneme", icon: Activity },
-        { id: "5", label: "Diş fırçala", icon: Smile },
+        { id: "1", label: "Su iç", streak: 7, done: true, icon: Droplet, timeOfDay: "morning" },
+        { id: "2", label: "Meditasyon", streak: 3, done: true, icon: Brain, timeOfDay: "morning" },
+        { id: "3", label: "Kitap oku", icon: BookOpen, timeOfDay: "evening" },
+        { id: "4", label: "Spor / esneme", icon: Activity, timeOfDay: "noon" },
+        { id: "5", label: "Diş fırçala", icon: Smile, timeOfDay: "night" },
       ],
     },
     pomodoro: {
       status: "ready",
       data: {
-        activeTaskTitle: "Bülten taslağını bitir",
         completed: 4,
         goal: 6,
-        remainingLabel: "2 kaldı",
-        timerLabel: "18:32",
-        progress: 0.66,
       },
+    },
+    recentWork: {
+      status: "ready",
+      data: [
+        { id: "1", name: "Bülten taslağı", durationLabel: formatDurationLabel(42), endedAtLabel: "16:40" },
+        { id: "2", name: "Ekip toplantısı", durationLabel: formatDurationLabel(25), endedAtLabel: "14:15" },
+        { id: "3", name: "İçerik planı", durationLabel: formatDurationLabel(38), endedAtLabel: "11:20" },
+      ],
     },
     notes: {
       status: "ready",
