@@ -97,7 +97,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
       editor.off("update", handler);
       clearTimeout(timer);
     };
-  }, [editor, note]);
+  }, [editor, note, user.id]);
 
   useEffect(() => {
     return () => {
