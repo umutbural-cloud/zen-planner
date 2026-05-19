@@ -260,6 +260,7 @@ const Pomodoro = () => {
           selectedNotebookId={selectedNotebookId}
           selectedKnowledgeNoteId={selectedKnowledgeNoteId}
           onSelect={handleSidebarSelect}
+          onSelectHome={() => { setSection("home"); navigate("/"); }}
           onCreate={handleSidebarCreate}
           onDelete={handleSidebarDelete}
           onUpdateProject={updateProject}

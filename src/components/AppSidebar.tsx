@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Package, Trash, Settings, Repeat, Check, Clock, Wind, type LucideIcon } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Package, Trash, Settings, Repeat, Check, Clock, Wind, Home, type LucideIcon } from "lucide-react";
 import { useSidebarPreferences } from "@/hooks/useSidebarPreferences";
 import { useModuleLabels } from "@/hooks/useModuleLabels";
 import { HABIT_ICON_GROUPS, getHabitIcon } from "@/lib/habitIcons";
@@ -40,7 +40,7 @@ const VIEW_META: Record<ViewKey, { label: string; jp: string; icon: LucideIcon }
 };
 const ALL_VIEW_KEYS: ViewKey[] = ["notes", "table", "gantt", "kanban", "calendar"];
 
-export type Section = "project" | "backlog" | "trash" | "journal" | "habits" | "retreat" | "notebook";
+export type Section = "home" | "project" | "backlog" | "trash" | "journal" | "habits" | "retreat" | "notebook";
 
 type Props = {
   projects: Project[];
@@ -50,6 +50,7 @@ type Props = {
   selectedNotebookId: string | null;
   selectedKnowledgeNoteId: string | null;
   onSelect: (id: string, view?: ViewKey) => void;
+  onSelectHome: () => void;
   onCreate: (name: string, parentId?: string) => void;
   onDelete: (id: string) => void;
   onUpdateProject: (id: string, updates: { name?: string; emoji?: string; icon?: string | null; icon_color?: string | null; enabled_views?: ViewKey[] }) => void;
@@ -360,7 +361,7 @@ const ProjectItem = ({
   );
 };
 
-const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, selectedKnowledgeNoteId, onSelect, onCreate, onDelete, onUpdateProject, onSelectBacklog, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook, onSelectKnowledgeNote }: Props) => {
+const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, selectedKnowledgeNoteId, onSelect, onSelectHome, onCreate, onDelete, onUpdateProject, onSelectBacklog, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook, onSelectKnowledgeNote }: Props) => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const { prefs, setItem } = useSidebarPreferences();
@@ -412,6 +413,15 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={onSelectHome}
+                  className={`text-sm font-light ${section === "home" ? "bg-accent text-accent-foreground" : ""}`}
+                >
+                  <Home className="h-3.5 w-3.5" />
+                  <span className="tracking-wide">Ana Sayfa</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {prefs.backlog && (
                 <SidebarMenuItem>
                   <SidebarMenuButton

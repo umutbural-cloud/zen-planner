@@ -400,6 +400,7 @@ const WorkHistory = () => {
           selectedNotebookId={selectedNotebookId}
           selectedKnowledgeNoteId={selectedKnowledgeNoteId}
           onSelect={handleSidebarSelect}
+          onSelectHome={() => { setSection("home"); navigate("/"); }}
           onCreate={handleSidebarCreate}
           onDelete={(id) => deleteProject(id)}
           onUpdateProject={updateProject}

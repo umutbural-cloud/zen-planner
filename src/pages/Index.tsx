@@ -13,6 +13,7 @@ import BacklogView from "@/components/BacklogView";
 import TrashView from "@/components/TrashView";
 import HabitsView from "@/components/HabitsView";
 import InzivaView from "@/components/InzivaView";
+import HomeView from "@/features/home/HomeView";
 import NotebookView from "@/features/knowledge/components/NotebookView";
 import { useKnowledgeNotes } from "@/features/knowledge/hooks/useNotebookNotes";
 import { useProjects } from "@/hooks/useProjects";
@@ -159,6 +160,7 @@ const Index = () => {
           selectedNotebookId={selectedNotebookId}
           selectedKnowledgeNoteId={selectedKnowledgeNoteId}
           onSelect={handleSelect}
+          onSelectHome={() => setSection("home")}
           onCreate={handleCreate}
           onDelete={handleDelete}
           onUpdateProject={updateProject}
@@ -175,6 +177,11 @@ const Index = () => {
           <header className="h-12 flex items-center justify-between border-b border-border/60 px-4 gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <SidebarTrigger className="text-muted-foreground" />
+              {section === "home" && (
+                <h1 className="text-base tracking-wide truncate font-light">
+                  Ana Sayfa
+                </h1>
+              )}
               {section === "project" && selectedProject && (
                 <h1 className="text-base tracking-wide truncate font-light flex items-center gap-2">
                   <ProjectIconPicker
@@ -321,6 +328,7 @@ const Index = () => {
           </header>
 
           <main className="flex-1 p-3 sm:p-6 overflow-auto">
+            {section === "home" && <HomeView />}
             {section === "backlog" && <BacklogView />}
             {section === "trash" && <TrashView />}
             {section === "journal" && (
