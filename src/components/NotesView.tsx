@@ -18,11 +18,13 @@ type Note = {
 };
 
 const NotesView = ({ projectId }: { projectId: string }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
   const [note, setNote] = useState<Note | null>(null);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const titleDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editor = useEditor({
@@ -48,48 +50,81 @@ const NotesView = ({ projectId }: { projectId: string }) => {
   useEffect(() => {
     let active = true;
     const load = async () => {
-      if (!user || !projectId || !editor) return;
-      setLoading(true);
-      const { data: existing } = await supabase
-        .from("notes")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("project_id", projectId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      let n = existing;
-      if (!n) {
-        const { data: created } = await supabase
-          .from("notes")
-          .insert({ project_id: projectId, user_id: user.id, title: "", content: "" })
-          .select()
-          .single();
-        n = created;
+      if (authLoading || !editor) return;
+      if (!userId || !projectId) {
+        setLoading(false);
+        return;
       }
-      if (!active || !n) return;
-      setNote(n);
-      setTitle(n.title || "");
-      editor.commands.setContent(n.content ? safeParse(n.content) : "");
-      setLoading(false);
+      setLoading(true);
+      setError(null);
+      try {
+        const { data: existing, error: selectError } = await supabase
+          .from("notes")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("project_id", projectId)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (selectError) throw selectError;
+
+        let n = existing;
+        if (!n) {
+          const { data: created, error: insertError } = await supabase
+            .from("notes")
+            .insert({ project_id: projectId, user_id: userId, title: "", content: "" })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+          n = created;
+        }
+
+        if (!active) return;
+        if (!n) {
+          setError("Not oluşturulamadı.");
+          return;
+        }
+
+        setNote(n);
+        setTitle(n.title || "");
+        editor.commands.setContent(n.content ? safeParse(n.content) : "");
+      } catch (err) {
+        console.error("Not yüklenemedi:", err);
+        if (active) setError("Not yüklenemedi. Lütfen tekrar deneyin.");
+      } finally {
+        if (active) setLoading(false);
+      }
     };
     load();
     return () => { active = false; };
-  }, [projectId, user, editor]);
+  }, [authLoading, projectId, userId, editor]);
 
   // Debounced save on editor changes
   useEffect(() => {
-    if (!editor || !note) return;
+    if (!editor || !note || !userId) return;
     let timer: ReturnType<typeof setTimeout>;
     const handler = () => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
         setSaving(true);
-        const json = JSON.stringify(editor.getJSON());
-        await supabase.from("notes").update({ content: json }).eq("id", note.id).eq("user_id", user.id);
-        setSaving(false);
+        try {
+          const json = JSON.stringify(editor.getJSON());
+          const { error: updateError } = await supabase
+            .from("notes")
+            .update({ content: json })
+            .eq("id", note.id)
+            .eq("user_id", userId);
+
+          if (updateError) throw updateError;
+        } catch (err) {
+          console.error("Not içeriği kaydedilemedi:", err);
+          setError("Not kaydedilemedi. Lütfen tekrar deneyin.");
+        } finally {
+          setSaving(false);
+        }
       }, 600);
     };
     editor.on("update", handler);
@@ -97,7 +132,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
       editor.off("update", handler);
       clearTimeout(timer);
     };
-  }, [editor, note, user.id]);
+  }, [editor, note, userId]);
 
   useEffect(() => {
     return () => {
@@ -107,16 +142,29 @@ const NotesView = ({ projectId }: { projectId: string }) => {
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    if (!note) return;
+    if (!note || !userId) return;
     if (titleDebounce.current) clearTimeout(titleDebounce.current);
     titleDebounce.current = setTimeout(async () => {
       setSaving(true);
-      await supabase.from("notes").update({ title: value }).eq("id", note.id).eq("user_id", user.id);
-      setSaving(false);
+      try {
+        const { error: updateError } = await supabase
+          .from("notes")
+          .update({ title: value })
+          .eq("id", note.id)
+          .eq("user_id", userId);
+
+        if (updateError) throw updateError;
+      } catch (err) {
+        console.error("Not başlığı kaydedilemedi:", err);
+        setError("Not başlığı kaydedilemedi. Lütfen tekrar deneyin.");
+      } finally {
+        setSaving(false);
+      }
     }, 600);
   };
 
   if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (error) return <div className="text-center text-destructive text-sm py-12">{error}</div>;
 
   return (
     <div className="max-w-3xl mx-auto">
