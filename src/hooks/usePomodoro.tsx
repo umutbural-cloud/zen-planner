@@ -23,6 +23,17 @@ type Ctx = {
   skipBreak: () => void;       // during a break, jump straight to work
 };
 
+type WakeLockSentinelLike = EventTarget & {
+  released: boolean;
+  release: () => Promise<void>;
+};
+
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: {
+    request: (type: "screen") => Promise<WakeLockSentinelLike>;
+  };
+};
+
 const PomodoroContext = createContext<Ctx | null>(null);
 
 const DEFAULT_WORK = 25 * 60;
@@ -35,17 +46,43 @@ function notify(title: string, body: string) {
       const n = new Notification(title, { body, icon: "/favicon.ico", tag: "keikaku-pomodoro" });
       n.onclick = () => { window.focus(); n.close(); };
     }
-  } catch {
-    // Notifications can fail despite granted permission on some browsers.
+  } catch (error) {
+    console.warn("[pomodoro] Notification failed", error);
+  }
+}
+
+const getAudioContext = (() => {
+  let ctx: AudioContext | null = null;
+  return () => {
+    const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
+    const Ctor = globalThis.AudioContext || audioWindow.webkitAudioContext;
+    if (!Ctor) return null;
+    if (!ctx || ctx.state === "closed") {
+      ctx = new Ctor();
+    }
+    return ctx;
+  };
+})();
+
+async function unlockChime() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== "suspended") return;
+    await ctx.resume();
+  } catch (error) {
+    console.warn("[pomodoro] Audio unlock failed", error);
   }
 }
 
 function playChime() {
   try {
-    const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
-    const Ctor = globalThis.AudioContext || audioWindow.webkitAudioContext;
-    if (!Ctor) return;
-    const ctx = new Ctor();
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      void ctx.resume().catch((error) => {
+        console.warn("[pomodoro] Audio resume failed", error);
+      });
+    }
     const now = ctx.currentTime;
     const notes = [880, 1318.5, 1760];
     notes.forEach((freq, i) => {
@@ -61,9 +98,8 @@ function playChime() {
       o.start(t);
       o.stop(t + 0.65);
     });
-    setTimeout(() => ctx.close(), 1500);
-  } catch {
-    // Audio playback can be blocked until the user interacts with the page.
+  } catch (error) {
+    console.warn("[pomodoro] Audio playback failed", error);
   }
 }
 
@@ -79,7 +115,13 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   // Wall-clock based tracking — survives backgrounded tabs / OS throttling
   const [endsAt, setEndsAt] = useState<number | null>(null);   // ms epoch when current phase ends
   const intervalRef = useRef<number | null>(null);
+  const finishTimeoutRef = useRef<number | null>(null);
   const finishingRef = useRef(false);
+  const activeSessionIdRef = useRef(0);
+  const completedSessionIdRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
+  const wakeLockRequestRef = useRef<Promise<void> | null>(null);
+  const wakeLockUnsupportedLoggedRef = useRef(false);
 
   // refs mirror state so timer callbacks see fresh values
   const phaseRef = useRef(phase);
@@ -103,6 +145,59 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const clearFinishScheduler = () => {
+    if (finishTimeoutRef.current) {
+      window.clearTimeout(finishTimeoutRef.current);
+      finishTimeoutRef.current = null;
+    }
+  };
+
+  const releaseWakeLock = useCallback(() => {
+    const wakeLock = wakeLockRef.current;
+    wakeLockRef.current = null;
+    wakeLockRequestRef.current = null;
+    if (!wakeLock || wakeLock.released) return;
+    void wakeLock.release().catch((error) => {
+      console.warn("[pomodoro] Screen wake lock release failed", error);
+    });
+  }, []);
+
+  const requestWakeLock = useCallback(() => {
+    if (typeof navigator === "undefined") return;
+    const wakeLockApi = (navigator as NavigatorWithWakeLock).wakeLock;
+    if (!wakeLockApi) {
+      if (!wakeLockUnsupportedLoggedRef.current) {
+        console.info("[pomodoro] Screen Wake Lock API is not supported in this browser");
+        wakeLockUnsupportedLoggedRef.current = true;
+      }
+      return;
+    }
+    if (wakeLockRef.current && !wakeLockRef.current.released) return;
+    if (wakeLockRequestRef.current) return;
+
+    wakeLockRequestRef.current = wakeLockApi.request("screen")
+      .then((wakeLock) => {
+        wakeLockRequestRef.current = null;
+        if (phaseRef.current !== "running") {
+          void wakeLock.release().catch((error) => {
+            console.warn("[pomodoro] Screen wake lock release failed", error);
+          });
+          return;
+        }
+        wakeLockRef.current = wakeLock;
+        wakeLock.addEventListener("release", () => {
+          if (wakeLockRef.current === wakeLock) {
+            wakeLockRef.current = null;
+          }
+          console.info("[pomodoro] Screen wake lock was released");
+        }, { once: true });
+      })
+      .catch((error) => {
+        wakeLockRequestRef.current = null;
+        console.warn("[pomodoro] Screen wake lock request failed", error);
+      });
+  }, []);
+
   const persistSession = useCallback(async (k: PomodoroKind, started: Date, ended: Date, durationS: number) => {
     if (!user || durationS < 1) return;
     await supabase.from("pomodoro_sessions").insert({
@@ -116,14 +211,19 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   // Phase finished naturally: save it, switch to the next phase but WAIT for user to start
-  const handleAutoFinish = useCallback(() => {
+  const handleAutoFinish = useCallback((sessionId: number) => {
     if (finishingRef.current) return;
+    if (completedSessionIdRef.current === sessionId) return;
+    if (activeSessionIdRef.current !== sessionId) return;
     finishingRef.current = true;
+    completedSessionIdRef.current = sessionId;
     const finishedKind = kindRef.current;
     const dur = durationRef.current;
     const started = startedAtRef.current || new Date(Date.now() - dur * 1000);
     const ended = new Date(started.getTime() + dur * 1000);
-    persistSession(finishedKind, started, ended, dur);
+    void persistSession(finishedKind, started, ended, dur).catch((error) => {
+      console.warn("[pomodoro] Session persist failed", error);
+    });
     playChime();
 
     if (finishedKind === "work") {
@@ -141,13 +241,37 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     }
     setStartedAt(null);
     setEndsAt(null);
+    endsAtRef.current = null;
+    releaseWakeLock();
     setPhase("idle");
     setTimeout(() => { finishingRef.current = false; }, 50);
-  }, [persistSession]);
+  }, [persistSession, releaseWakeLock]);
 
   // keep endsAt accessible to tick without re-binding interval
   const endsAtRef = useRef<number | null>(null);
   useEffect(() => { endsAtRef.current = endsAt; }, [endsAt]);
+
+  const finishIfDue = useCallback(() => {
+    if (phaseRef.current !== "running") return false;
+    const ends = endsAtRef.current;
+    if (ends == null || Date.now() < ends) return false;
+    setRemainingSec(0);
+    clearTimer();
+    clearFinishScheduler();
+    handleAutoFinish(activeSessionIdRef.current);
+    return true;
+  }, [handleAutoFinish]);
+
+  const scheduleFinish = useCallback(() => {
+    clearFinishScheduler();
+    if (phaseRef.current !== "running") return;
+    const ends = endsAtRef.current;
+    if (ends == null) return;
+    const delay = Math.max(0, ends - Date.now());
+    finishTimeoutRef.current = window.setTimeout(() => {
+      finishIfDue();
+    }, delay);
+  }, [finishIfDue]);
 
   // Tick: derive remaining from wall-clock difference (immune to setInterval throttling)
   const tick = useCallback(() => {
@@ -157,36 +281,74 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     const remaining = Math.max(0, Math.round((ends - Date.now()) / 1000));
     setRemainingSec(remaining);
     if (remaining <= 0) {
-      clearTimer();
-      handleAutoFinish();
+      finishIfDue();
     }
-  }, [handleAutoFinish]);
+  }, [finishIfDue]);
 
   useEffect(() => {
     if (phase === "running") {
       clearTimer();
       tick(); // immediate sync (covers tab refocus)
+      scheduleFinish();
       intervalRef.current = window.setInterval(tick, 500);
     } else {
       clearTimer();
+      clearFinishScheduler();
     }
-    return clearTimer;
-  }, [phase, tick]);
+    return () => {
+      clearTimer();
+      clearFinishScheduler();
+    };
+  }, [phase, scheduleFinish, tick]);
 
   // Re-sync immediately when tab becomes visible again (handles background throttling/sleep)
   useEffect(() => {
+    const syncIfActive = () => {
+      if (phaseRef.current !== "running") return;
+      if (!finishIfDue()) tick();
+    };
     const onVisible = () => {
-      if (document.visibilityState === "visible" && phaseRef.current === "running") {
-        tick();
+      if (document.visibilityState === "visible") {
+        syncIfActive();
+        if (phaseRef.current === "running") requestWakeLock();
       }
     };
+    const onPageShow = () => {
+      syncIfActive();
+      if (phaseRef.current === "running") requestWakeLock();
+    };
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
+    window.addEventListener("focus", syncIfActive);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("focus", syncIfActive);
+      window.removeEventListener("pageshow", onPageShow);
     };
-  }, [tick]);
+  }, [finishIfDue, requestWakeLock, tick]);
+
+  useEffect(() => {
+    if (phase === "running") {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+    return () => {
+      releaseWakeLock();
+    };
+  }, [phase, releaseWakeLock, requestWakeLock]);
+
+  useEffect(() => {
+    const unlock = () => {
+      void unlockChime();
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   // Live tab title: "Zen 24:59 — Keikaku" while running, restore when idle
   useEffect(() => {
@@ -213,12 +375,18 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     if (phase === "running") return;
     const now = Date.now();
     const dur = kind === "break" ? breakDurationSec : workDurationSec;
+    activeSessionIdRef.current += 1;
+    completedSessionIdRef.current = null;
     setKind(kind === "break" ? "break" : "work");
     setDurationSec(dur);
     setRemainingSec(dur);
     setStartedAt(new Date(now));
-    setEndsAt(now + dur * 1000);
+    const nextEndsAt = now + dur * 1000;
+    endsAtRef.current = nextEndsAt;
+    setEndsAt(nextEndsAt);
     setPhase("running");
+    void unlockChime();
+    requestWakeLock();
   };
 
   const pause = () => {
@@ -229,14 +397,20 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       const remaining = Math.max(0, Math.round((ends - Date.now()) / 1000));
       setRemainingSec(remaining);
     }
+    clearFinishScheduler();
+    releaseWakeLock();
     setPhase("paused");
   };
 
   const resume = () => {
     if (phase !== "paused") return;
     const now = Date.now();
-    setEndsAt(now + remainingSec * 1000);
+    const nextEndsAt = now + remainingSec * 1000;
+    endsAtRef.current = nextEndsAt;
+    setEndsAt(nextEndsAt);
     setPhase("running");
+    void unlockChime();
+    requestWakeLock();
   };
 
   // Manual completion: save partial session, switch to next phase but DON'T auto-start
@@ -247,9 +421,14 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     const elapsedFromClock = Math.round((ended.getTime() - started.getTime()) / 1000);
     const elapsed = Math.min(Math.max(elapsedFromClock, 0), durationSec);
     if (elapsed >= 1) {
-      persistSession(kind, started, ended, elapsed);
+      void persistSession(kind, started, ended, elapsed).catch((error) => {
+        console.warn("[pomodoro] Session persist failed", error);
+      });
     }
     clearTimer();
+    clearFinishScheduler();
+    completedSessionIdRef.current = activeSessionIdRef.current;
+    releaseWakeLock();
     playChime();
 
     if (kind === "work") {
@@ -265,14 +444,20 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     }
     setStartedAt(null);
     setEndsAt(null);
+    endsAtRef.current = null;
     setPhase("idle");
   };
 
   const reset = () => {
     clearTimer();
+    clearFinishScheduler();
+    activeSessionIdRef.current += 1;
+    completedSessionIdRef.current = null;
+    releaseWakeLock();
     setPhase("idle");
     setStartedAt(null);
     setEndsAt(null);
+    endsAtRef.current = null;
     setKind("work");
     setDurationSec(workDurationSec);
     setRemainingSec(workDurationSec);
@@ -281,11 +466,16 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const skipBreak = () => {
     if (kind !== "break") return;
     clearTimer();
+    clearFinishScheduler();
+    activeSessionIdRef.current += 1;
+    completedSessionIdRef.current = null;
+    releaseWakeLock();
     setKind("work");
     setDurationSec(workDurationSec);
     setRemainingSec(workDurationSec);
     setStartedAt(null);
     setEndsAt(null);
+    endsAtRef.current = null;
     setPhase("idle");
     toast("Mola atlandı. Çalışma için başlat'a basın.");
   };
