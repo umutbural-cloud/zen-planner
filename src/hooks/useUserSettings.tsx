@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
+import { DEFAULT_HOME_FOCUS_OPTIONS, type DailyFocusOption } from "@/features/home/types";
 
 export type StartupPageSetting =
   | { type: "module"; value: "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" }
@@ -19,6 +20,7 @@ export type UserSettings = {
   module_labels: Record<string, string>;
   startup_page: StartupPageSetting;
   default_pomodoro_project_id: string | null;
+  home_focus_options: DailyFocusOption[];
 };
 
 const DEFAULTS: UserSettings = {
@@ -32,6 +34,7 @@ const DEFAULTS: UserSettings = {
   module_labels: {},
   startup_page: { type: "default" },
   default_pomodoro_project_id: null,
+  home_focus_options: DEFAULT_HOME_FOCUS_OPTIONS,
 };
 
 const CACHE_KEY = "keikaku.userSettings.v1";
@@ -76,6 +79,28 @@ const isStringRecord = (value: unknown): value is Record<string, string> => {
   return Object.values(value).every((entry) => typeof entry === "string");
 };
 
+const isDailyFocusOption = (value: unknown): value is DailyFocusOption => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.id === "string" &&
+    typeof candidate.label === "string" &&
+    (candidate.color === undefined || typeof candidate.color === "string") &&
+    (candidate.allowsCustomText === undefined || typeof candidate.allowsCustomText === "boolean");
+};
+
+const normalizeFocusOptions = (value: unknown): DailyFocusOption[] => {
+  if (!Array.isArray(value)) return DEFAULT_HOME_FOCUS_OPTIONS;
+  const options = value.filter(isDailyFocusOption)
+    .map((option) => ({
+      id: option.id,
+      label: option.label.trim(),
+      color: option.color || "stone",
+      allowsCustomText: option.allowsCustomText,
+    }))
+    .filter((option) => option.label.length > 0);
+  return options.length > 0 ? options : DEFAULT_HOME_FOCUS_OPTIONS;
+};
+
 export const useUserSettings = () => {
   const { user } = useAuth();
   const [settings, setSettings] = useState<UserSettings>(readCache);
@@ -93,7 +118,7 @@ export const useUserSettings = () => {
     (async () => {
       const { data } = await supabase
         .from("user_settings")
-        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id")
+        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,home_focus_options")
         .eq("user_id", user.id)
         .maybeSingle();
       if (cancelled) return;
@@ -109,6 +134,7 @@ export const useUserSettings = () => {
           module_labels: isStringRecord(data.module_labels) ? data.module_labels : {},
           startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
           default_pomodoro_project_id: data.default_pomodoro_project_id,
+          home_focus_options: normalizeFocusOptions(data.home_focus_options),
         };
         setSettings(next);
         writeCache(next);

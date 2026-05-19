@@ -14,14 +14,15 @@ type Props = {
   onOpenJournal: () => void;
   onOpenHabits: () => void;
   onOpenRetreat: () => void;
+  onOpenQuickNotes: () => void;
 };
 
-const HomeQuickActions = ({ onOpenJournal, onOpenHabits, onOpenRetreat }: Props) => {
+const HomeQuickActions = ({ onOpenJournal, onOpenHabits, onOpenRetreat, onOpenQuickNotes }: Props) => {
   const actions: QuickAction[] = [
     { id: "journal", title: "Günlük", description: "Bugünün notunu aç", icon: BookOpen, onClick: onOpenJournal },
     { id: "habits", title: "Alışkanlıklar", description: "Rutinlerini kontrol et", icon: Repeat, onClick: onOpenHabits },
     { id: "retreat", title: "İnziva", description: "Sakinleşme alanı", icon: Leaf, onClick: onOpenRetreat },
-    { id: "quick-note", title: "Not Al", description: "Hızlı not oluştur", icon: Feather, disabled: true },
+    { id: "quick-note", title: "Not Al", description: "Hızlı not oluştur", icon: Feather, onClick: onOpenQuickNotes },
   ];
 
   return (

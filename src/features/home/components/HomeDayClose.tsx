@@ -1,8 +1,13 @@
 import { Moon } from "lucide-react";
-import type { HomeDashboardData } from "@/features/home/types";
+import type { HomeSectionState } from "@/features/home/types";
+
+type DayCloseData = {
+  summary: string;
+  actions: string[];
+};
 
 type Props = {
-  dayClose: HomeDashboardData["dayClose"];
+  dayClose: HomeSectionState<DayCloseData>;
 };
 
 const HomeDayClose = ({ dayClose }: Props) => {

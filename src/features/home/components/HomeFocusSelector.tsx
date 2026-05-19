@@ -5,14 +5,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { DailyFocusOption } from "@/features/home/types";
+import { colorHex } from "@/hooks/useHabitCategories";
 
 type Props = {
   selectedFocus: string;
+  selectedFocusOption?: DailyFocusOption;
   focusOptions: DailyFocusOption[];
   onSelectFocus: (focus: string) => void;
 };
 
-const HomeFocusSelector = ({ selectedFocus, focusOptions, onSelectFocus }: Props) => {
+const HomeFocusSelector = ({ selectedFocus, selectedFocusOption, focusOptions, onSelectFocus }: Props) => {
+  const selectedColor = selectedFocusOption?.color ? colorHex(selectedFocusOption.color) : undefined;
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -22,6 +26,7 @@ const HomeFocusSelector = ({ selectedFocus, focusOptions, onSelectFocus }: Props
         >
           <Target className="h-3 w-3" />
           <span className="shrink-0 text-xs text-muted-foreground">Bugünün odağı:</span>
+          {selectedColor && <span className="h-2 w-2 rounded-full" style={{ background: selectedColor }} />}
           <span className="min-w-0 truncate text-xs text-foreground tracking-wide">{selectedFocus}</span>
           <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
         </button>
@@ -39,6 +44,7 @@ const HomeFocusSelector = ({ selectedFocus, focusOptions, onSelectFocus }: Props
                 active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               }`}
             >
+              <span className="h-2 w-2 rounded-full" style={{ background: colorHex(focus.color || "stone") }} />
               <span className="flex-1">{focus.label}</span>
               {active && <Check className="h-3 w-3" />}
             </button>

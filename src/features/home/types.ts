@@ -11,8 +11,19 @@ export type HomeSectionState<T> = {
 export type DailyFocusOption = {
   id: string;
   label: string;
+  color?: string;
   allowsCustomText?: boolean;
 };
+
+export const DEFAULT_HOME_FOCUS_OPTIONS: DailyFocusOption[] = [
+  { id: "deep-work", label: "Derin Çalışma", color: "blue" },
+  { id: "publishing", label: "Yayın Yönetimi", color: "purple" },
+  { id: "content", label: "İçerik Üretimi", color: "orange" },
+  { id: "community", label: "Topluluk", color: "green" },
+  { id: "sessions", label: "Seanslar", color: "rose" },
+  { id: "personal", label: "Kişisel İşler", color: "teal" },
+  { id: "other", label: "Diğer", color: "stone", allowsCustomText: true },
+];
 
 export type HomeMetric = {
   id: string;
@@ -25,17 +36,30 @@ export type HomeMetric = {
 export type HomePlanTask = {
   id: string;
   title: string;
-  tag?: string;
-  done?: boolean;
+  status: "todo" | "in_progress";
+  completed_at: string | null;
+  position: number;
+};
+
+export type HomeTasksData = {
+  completedTodayCount: number;
+  todo: HomePlanTask[];
+  inProgress: HomePlanTask[];
+};
+
+export type HomePlanState = HomeSectionState<HomePlanTask[]> & {
+  inProgress: HomePlanTask[];
+  reorderTasks: (status: HomePlanTask["status"], activeId: string, overId: string) => void;
 };
 
 export type HomeStudySession = {
   id: string;
   label: string;
   minutes: number;
+  endedAtLabel?: string;
 };
 
-export type HomeHabitTimeOfDay = "morning" | "noon" | "evening" | "night";
+export type HomeHabitTimeOfDay = "morning" | "noon" | "evening" | "night" | "any";
 
 export type HomeHabit = {
   id: string;
@@ -46,17 +70,7 @@ export type HomeHabit = {
   timeOfDay?: HomeHabitTimeOfDay;
 };
 
-export type HomePomodoroSummary = {
-  completed: number;
-  goal: number;
-};
-
-export type HomeNotePreview = {
-  id: string;
-  title: string;
-  source: string;
-  updatedLabel: string;
-};
+export type HomePomodoroSummary = Record<string, never>;
 
 export type HomeRecentWorkItem = {
   id: string;
@@ -67,16 +81,13 @@ export type HomeRecentWorkItem = {
 
 export type HomeDashboardData = {
   userName: string;
+  greetingLabel: string;
   dateLabel: string;
   metrics: HomeSectionState<HomeMetric[]>;
-  plan: HomeSectionState<HomePlanTask[]>;
+  plan: HomePlanState;
   study: HomeSectionState<HomeStudySession[]>;
   habits: HomeSectionState<HomeHabit[]>;
+  habitsDefaultFilter: Exclude<HomeHabitTimeOfDay, "any">;
   pomodoro: HomeSectionState<HomePomodoroSummary | null>;
   recentWork: HomeSectionState<HomeRecentWorkItem[]>;
-  notes: HomeSectionState<HomeNotePreview[]>;
-  dayClose: HomeSectionState<{
-    summary: string;
-    actions: string[];
-  }>;
 };

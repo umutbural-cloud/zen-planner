@@ -39,9 +39,6 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
           <Timer className="h-3.5 w-3.5 text-muted-foreground" />
           <h3 className="text-sm font-light tracking-wide">Pomodoro</h3>
         </div>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {pomodoro.data ? `${pomodoro.data.completed} / ${pomodoro.data.goal} hedef` : "-"}
-        </span>
       </header>
 
       {pomodoro.status === "loading" && <div className="mx-5 mb-5 h-24 rounded-xl bg-muted/40 animate-pulse" />}

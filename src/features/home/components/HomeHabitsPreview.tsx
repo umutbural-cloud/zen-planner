@@ -1,9 +1,10 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { HomeHabit, HomeSectionState } from "@/features/home/types";
+import type { HomeHabit, HomeHabitTimeOfDay, HomeSectionState } from "@/features/home/types";
 import { useState } from "react";
 
 type Props = {
   habits: HomeSectionState<HomeHabit[]>;
+  defaultFilter: Exclude<HomeHabitTimeOfDay, "any">;
 };
 
 const FILTERS = [
@@ -16,12 +17,14 @@ const FILTERS = [
 
 type FilterId = (typeof FILTERS)[number]["id"];
 
-const HomeHabitsPreview = ({ habits }: Props) => {
-  const [filter, setFilter] = useState<FilterId>("all");
+const HomeHabitsPreview = ({ habits, defaultFilter }: Props) => {
+  const [filter, setFilter] = useState<FilterId>(defaultFilter);
   const doneCount = habits.data.filter((habit) => habit.done).length;
   const filterIndex = FILTERS.findIndex((item) => item.id === filter);
   const activeFilter = FILTERS[filterIndex] || FILTERS[0];
-  const filteredHabits = filter === "all" ? habits.data : habits.data.filter((habit) => habit.timeOfDay === filter);
+  const filteredHabits = filter === "all"
+    ? habits.data
+    : habits.data.filter((habit) => habit.timeOfDay === filter || habit.timeOfDay === "any");
 
   const moveFilter = (direction: -1 | 1) => {
     const next = (filterIndex + direction + FILTERS.length) % FILTERS.length;
@@ -48,7 +51,7 @@ const HomeHabitsPreview = ({ habits }: Props) => {
 
       {habits.status === "loading" && <div className="mx-4 mb-4 h-36 rounded-xl bg-muted/40 animate-pulse" />}
       {habits.status === "error" && <div className="px-5 pb-5 text-xs text-destructive">{habits.error || "Alışkanlıklar yüklenemedi."}</div>}
-      {(habits.status === "empty" || habits.data.length === 0) && <div className="px-5 pb-5 text-xs text-muted-foreground">Bugün için alışkanlık yok.</div>}
+      {(habits.status === "empty" || habits.data.length === 0) && <div className="px-5 pb-5 text-xs text-muted-foreground">Bu zaman diliminde alışkanlık yok.</div>}
       {habits.status === "ready" && filteredHabits.length === 0 && (
         <div className="px-5 pb-5 text-xs text-muted-foreground">Bu zaman diliminde alışkanlık yok.</div>
       )}
@@ -64,9 +67,6 @@ const HomeHabitsPreview = ({ habits }: Props) => {
                 </span>
                 <span className={`flex-1 text-sm tracking-wide ${habit.done ? "text-foreground" : "text-muted-foreground"}`}>
                   {habit.label}
-                </span>
-                <span className="text-[11px] tabular-nums text-muted-foreground/80">
-                  {habit.streak ? `${habit.streak} gün` : "-"}
                 </span>
               </li>
             );

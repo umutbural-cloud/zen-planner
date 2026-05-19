@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Moon, Sun, Bell, BellOff, Sprout, LayoutGrid, User, SlidersHorizontal, Trash2, RotateCcw, Plus, Sunrise, MapPin, Search, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Moon, Sun, Bell, BellOff, Sprout, LayoutGrid, User, SlidersHorizontal, Trash2, RotateCcw, Plus, Sunrise, MapPin, Search, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,12 +27,14 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { useUiScale } from "@/hooks/useUiScale";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
+import { CATEGORY_COLORS, colorHex } from "@/hooks/useHabitCategories";
 import { searchTurkeyCities, TURKEY_CITIES } from "@/lib/turkeyCities";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DataPortabilityPanel } from "@/features/data-portability/components/DataPortabilityPanel";
+import { DEFAULT_HOME_FOCUS_OPTIONS, type DailyFocusOption } from "@/features/home/types";
 
 type Props = {
   open: boolean;
@@ -51,6 +53,12 @@ const SECTIONS: { key: SectionKey; label: string; jp: string; icon: React.Compon
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase mb-2 sm:hidden">{children}</div>
 );
+
+const fallbackFullName = (email?: string, fullName?: unknown) => {
+  if (typeof fullName === "string" && fullName.trim()) return fullName.trim();
+  if (email) return email.split("@")[0] || "Kullanıcı";
+  return "Kullanıcı";
+};
 
 const SettingsDialog = ({ open, onOpenChange }: Props) => {
   const { theme, toggle: toggleTheme } = useTheme();
@@ -96,12 +104,46 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
   };
   const [section, setSection] = useState<SectionKey>("habits");
   const [email, setEmail] = useState(user?.email || "");
+  const [fullName, setFullName] = useState(fallbackFullName(user?.email, user?.user_metadata?.full_name));
   const [password, setPassword] = useState("");
+  const [savingFullName, setSavingFullName] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
+
+  useEffect(() => {
+    setEmail(user?.email || "");
+    setFullName(fallbackFullName(user?.email, user?.user_metadata?.full_name));
+  }, [user?.email, user?.user_metadata?.full_name]);
+
+  const focusOptions = userSettings.home_focus_options?.length ? userSettings.home_focus_options : DEFAULT_HOME_FOCUS_OPTIONS;
+
+  const updateFocusOption = (index: number, patch: Partial<DailyFocusOption>) => {
+    const next = focusOptions.map((option, i) => i === index ? { ...option, ...patch } : option);
+    updateUserSettings({ home_focus_options: next });
+  };
+
+  const addFocusOption = () => {
+    updateUserSettings({
+      home_focus_options: [
+        ...focusOptions,
+        { id: crypto.randomUUID(), label: "Yeni Odak", color: "stone" },
+      ],
+    });
+  };
+
+  const removeFocusOption = (index: number) => {
+    const option = focusOptions[index];
+    if (option?.allowsCustomText) return;
+    const next = focusOptions.filter((_, i) => i !== index);
+    updateUserSettings({ home_focus_options: next.length ? next : DEFAULT_HOME_FOCUS_OPTIONS });
+  };
+
+  const resetFocusOptions = () => {
+    updateUserSettings({ home_focus_options: DEFAULT_HOME_FOCUS_OPTIONS });
+  };
 
   const requestNotif = async () => {
     if (typeof Notification === "undefined") {
@@ -137,6 +179,20 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
     setSavingEmail(false);
     if (error) toast.error(error.message);
     else toast.success("Doğrulama e-postası gönderildi");
+  };
+
+  const handleFullName = async () => {
+    const value = fullName.trim();
+    if (!value) {
+      toast.error("Ad Soyad boş olamaz.");
+      return;
+    }
+    if (value === fallbackFullName(user?.email, user?.user_metadata?.full_name)) return;
+    setSavingFullName(true);
+    const { error } = await supabase.auth.updateUser({ data: { full_name: value } });
+    setSavingFullName(false);
+    if (error) toast.error(error.message);
+    else toast.success("Ad Soyad güncellendi");
   };
 
   const handlePassword = async () => {
@@ -518,6 +574,28 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
               <div className="space-y-5">
                 <SectionTitle>個人 — Hesap</SectionTitle>
                 <div className="space-y-2">
+                  <div className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase">Ad Soyad</div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Ad Soyad"
+                      className="bg-transparent h-9 text-sm flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleFullName}
+                      disabled={savingFullName || !fullName.trim() || fullName.trim() === fallbackFullName(user?.email, user?.user_metadata?.full_name)}
+                      className="shrink-0"
+                    >
+                      Güncelle
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <div className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase">E-posta</div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Input
@@ -653,6 +731,70 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="border-t border-border/60" />
+
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-light">Günün Odağı</div>
+                      <div className="text-[10px] text-muted-foreground tracking-wide">
+                        Ana Sayfa odak seçiminde görünen seçenekler
+                      </div>
+                    </div>
+                    <button
+                      onClick={resetFocusOptions}
+                      className="flex items-center gap-1 text-[10px] tracking-wide text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Sıfırla
+                    </button>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    {focusOptions.map((option, index) => (
+                      <div key={option.id} className="flex flex-col sm:flex-row gap-2 rounded-md border border-border/60 bg-card/30 p-2">
+                        <Input
+                          value={option.label}
+                          onChange={(e) => updateFocusOption(index, { label: e.target.value })}
+                          className="h-8 text-xs bg-transparent flex-1"
+                        />
+                        <Select
+                          value={option.color || "stone"}
+                          onValueChange={(color) => updateFocusOption(index, { color })}
+                        >
+                          <SelectTrigger className="h-8 text-xs sm:w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            {CATEGORY_COLORS.map((color) => (
+                              <SelectItem key={color.key} value={color.key}>
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
+                                  {color.label}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <button
+                          onClick={() => removeFocusOption(index)}
+                          disabled={option.allowsCustomText || focusOptions.length <= 1}
+                          title={option.allowsCustomText ? "Diğer seçeneği korunur" : "Seçeneği kaldır"}
+                          className="inline-flex h-8 items-center justify-center rounded-sm px-2 text-muted-foreground hover:text-destructive hover:bg-accent/40 transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={addFocusOption}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Odak ekle
+                  </button>
                 </div>
 
                 <div className="border-t border-border/60" />

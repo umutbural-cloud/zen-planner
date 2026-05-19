@@ -56,7 +56,7 @@ const USER_SETTINGS_COLUMNS = new Set([
   "auto_prayer_times", "calculation_method", "city", "country", "default_pomodoro_project_id",
   "latitude", "location_permission", "longitude", "module_labels", "notify_habits",
   "notify_pomodoro", "notify_tasks", "quiet_hours_end", "quiet_hours_start", "startup_page",
-  "timezone", "ui_scale", "user_id",
+  "timezone", "ui_scale", "home_focus_options", "user_id",
 ]);
 
 const isImportedDefaultProject = (row: Record<string, unknown>) =>

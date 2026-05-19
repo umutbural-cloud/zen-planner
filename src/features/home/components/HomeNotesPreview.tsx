@@ -1,5 +1,12 @@
 import { FileText } from "lucide-react";
-import type { HomeNotePreview, HomeSectionState } from "@/features/home/types";
+import type { HomeSectionState } from "@/features/home/types";
+
+type HomeNotePreview = {
+  id: string;
+  title: string;
+  source: string;
+  updatedLabel: string;
+};
 
 type Props = {
   notes: HomeSectionState<HomeNotePreview[]>;

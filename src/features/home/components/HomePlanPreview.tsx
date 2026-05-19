@@ -1,9 +1,25 @@
 import { useState } from "react";
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { CheckCircle2, Circle, Clock, ListTodo, Loader2, TrendingUp } from "lucide-react";
-import type { HomePlanTask, HomeSectionState, HomeStudySession } from "@/features/home/types";
+import type { HomePlanState, HomePlanTask, HomeSectionState, HomeStudySession } from "@/features/home/types";
 
 type Props = {
-  plan: HomeSectionState<HomePlanTask[]>;
+  plan: HomePlanState;
   study: HomeSectionState<HomeStudySession[]>;
 };
 
@@ -14,14 +30,62 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+const TaskRow = ({ task }: { task: HomePlanTask }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-accent/30 transition-colors ${
+        isDragging ? "bg-accent/50 shadow-sm" : ""
+      }`}
+      {...attributes}
+      {...listeners}
+    >
+      {task.status === "in_progress" ? (
+        <CheckCircle2 className="h-4 w-4 mt-0.5 text-amber-500/80 shrink-0" />
+      ) : (
+        <Circle className="h-4 w-4 mt-0.5 text-muted-foreground/60 shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="truncate text-sm tracking-wide text-foreground">
+          {task.title}
+        </div>
+      </div>
+    </li>
+  );
+};
+
 const HomePlanPreview = ({ plan, study }: Props) => {
   const [tab, setTab] = useState<TabId>("tasks");
-  const completedCount = plan.data.filter((task) => task.done).length;
+  const [expanded, setExpanded] = useState<Record<TabId, boolean>>({ tasks: false, doing: false });
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const totalMinutes = study.data.reduce((sum, row) => sum + row.minutes, 0);
-  const goal = 180;
-  const pct = Math.min(100, Math.round((totalMinutes / goal) * 100));
-  const visibleTasks = plan.data.slice(0, 5);
-  const hasMoreTasks = plan.data.length > visibleTasks.length;
+  const activeStatus: HomePlanTask["status"] = tab === "tasks" ? "todo" : "in_progress";
+  const activeTasks = tab === "tasks" ? plan.data : plan.inProgress;
+  const visibleTasks = expanded[tab] ? activeTasks : activeTasks.slice(0, 5);
+  const hasMoreTasks = activeTasks.length > visibleTasks.length;
+  const isPlanReady = plan.status === "ready" || plan.status === "empty";
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = activeTasks.findIndex((task) => task.id === active.id);
+    const newIndex = activeTasks.findIndex((task) => task.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    plan.reorderTasks(activeStatus, String(active.id), String(over.id));
+  };
 
   return (
     <div className="space-y-5">
@@ -47,42 +111,40 @@ const HomePlanPreview = ({ plan, study }: Props) => {
             );
           })}
           <div className="ml-auto pr-2 text-[10px] text-muted-foreground tracking-wide">
-            {completedCount} / {plan.data.length} tamamlandı
+            {activeTasks.length} görev
           </div>
         </header>
 
         <div className="p-2">
           {plan.status === "loading" && <div className="h-52 rounded-xl bg-muted/40 animate-pulse" />}
           {plan.status === "error" && <div className="px-4 py-10 text-center text-xs text-destructive">{plan.error || "Plan yüklenemedi."}</div>}
-          {(plan.status === "empty" || plan.data.length === 0) && <div className="px-4 py-10 text-center text-xs text-muted-foreground">Bugün için plan yok.</div>}
-          {plan.status === "ready" && tab === "tasks" && (
-            <ul className="divide-y divide-border/50">
-              {visibleTasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="group flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-accent/30 transition-colors cursor-pointer"
-                >
-                  {task.done ? (
-                    <CheckCircle2 className="h-4 w-4 mt-0.5 text-emerald-500/80 shrink-0" />
-                  ) : (
-                    <Circle className="h-4 w-4 mt-0.5 text-muted-foreground/60 shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm tracking-wide ${task.done ? "line-through text-muted-foreground/70" : "text-foreground"}`}>
-                      {task.title}
-                    </div>
-                    {task.tag && <div className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">{task.tag}</div>}
-                  </div>
-                </li>
-              ))}
-              {hasMoreTasks && (
-                <li className="px-3 py-2 text-center text-xs text-muted-foreground">
-                  Devamını göster
-                </li>
-              )}
-            </ul>
+          {isPlanReady && activeTasks.length === 0 && (
+            <div className="px-4 py-10 text-center text-xs text-muted-foreground tracking-wide">
+              {tab === "tasks" ? "Yapılacak görev görünmüyor." : "Devam eden görev görünmüyor."}
+            </div>
           )}
-          {plan.status === "ready" && tab === "doing" && <div className="px-4 py-10 text-center text-xs text-muted-foreground tracking-wide">Şu anda yapılan görev yok.</div>}
+          {isPlanReady && activeTasks.length > 0 && (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={visibleTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+                <ul className="divide-y divide-border/50">
+                  {visibleTasks.map((task) => (
+                    <TaskRow key={task.id} task={task} />
+                  ))}
+                  {hasMoreTasks && (
+                    <li className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setExpanded((prev) => ({ ...prev, [tab]: true }))}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        Devamını göster
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
       </section>
 
@@ -105,15 +167,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
           <div className="px-5 pb-5 text-xs text-muted-foreground">Bugün çalışma oturumu yok.</div>
         ) : (
           <>
-            <div className="px-5">
-              <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-orange-400/80 to-amber-300/70" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="mt-2 text-[11px] text-muted-foreground tracking-wide">
-                Günlük hedefin %{pct}'i · Şu an: <span className="text-foreground">{study.data[study.data.length - 1]?.label}</span>
-              </p>
-            </div>
-            <div className="mt-4 border-t border-border/60">
+            <div className="border-t border-border/60">
               <div className="px-2 py-1.5">
                 <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
                   <TrendingUp className="h-3 w-3" />
@@ -122,8 +176,10 @@ const HomePlanPreview = ({ plan, study }: Props) => {
                 <ul className="divide-y divide-border/40">
                   {study.data.map((row) => (
                     <li key={row.id} className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent/30 transition-colors">
-                      <span className="text-sm tracking-wide text-foreground/90">{row.label}</span>
-                      <span className="text-xs tabular-nums text-muted-foreground">{row.minutes} dk</span>
+                      <span className="min-w-0 truncate text-sm tracking-wide text-foreground/90">{row.label}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {row.minutes} dk{row.endedAtLabel ? ` · ${row.endedAtLabel}` : ""}
+                      </span>
                     </li>
                   ))}
                 </ul>

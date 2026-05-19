@@ -3,16 +3,20 @@ import type { DailyFocusOption } from "@/features/home/types";
 
 type Props = {
   name: string;
+  greetingLabel: string;
   dateLabel: string;
   selectedFocus: string;
+  selectedFocusOption?: DailyFocusOption;
   focusOptions: DailyFocusOption[];
   onSelectFocus: (focus: string) => void;
 };
 
 const HomeHero = ({
   name,
+  greetingLabel,
   dateLabel,
   selectedFocus,
+  selectedFocusOption,
   focusOptions,
   onSelectFocus,
 }: Props) => {
@@ -26,7 +30,7 @@ const HomeHero = ({
             {dateLabel}
           </div>
           <h1 className="mt-3 text-2xl sm:text-3xl font-light tracking-wide text-foreground">
-            Günaydın, <span className="font-normal">{name}</span>
+            {greetingLabel}, <span className="font-normal">{name}</span>
             <span className="ml-2 text-muted-foreground">👋</span>
           </h1>
           <p className="mt-2 text-sm text-muted-foreground font-light">
@@ -35,6 +39,7 @@ const HomeHero = ({
 
           <HomeFocusSelector
             selectedFocus={selectedFocus}
+            selectedFocusOption={selectedFocusOption}
             focusOptions={focusOptions}
             onSelectFocus={onSelectFocus}
           />
