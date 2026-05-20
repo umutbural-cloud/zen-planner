@@ -68,6 +68,17 @@ if orphan or cross-user parent rows already exist.
 The triggers block self-parent references, but they do not perform full recursive
 cycle detection; handle deeper hierarchy cycles as a separate migration if needed.
 
+## Pomodoro Active State
+
+`pomodoro_active_state` stores one active timer state row per user. It does not
+replace `pomodoro_sessions`, which remains the completed/manual session history.
+The client should not write `remainingSec` every second; countdown display should
+continue to be calculated locally from server-backed timestamps. The
+`active_session_token` field is reserved to make final session writes idempotent
+and reduce duplicate history rows across tabs/devices. This migration does not
+add realtime behavior, and reset flows should update the row to `idle` rather
+than delete it. Ghost timer hydration/finalization is handled in the hook layer.
+
 ## Indexing
 
 Add indexes for common filters:

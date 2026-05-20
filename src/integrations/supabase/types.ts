@@ -450,8 +450,62 @@ export type Database = {
         }
         Relationships: []
       }
+      pomodoro_active_state: {
+        Row: {
+          accumulated_elapsed_seconds: number
+          active_session_token: string | null
+          break_duration_seconds: number
+          duration_seconds: number
+          ends_at: string | null
+          kind: Database["public"]["Enums"]["pomodoro_kind"]
+          paused_remaining_seconds: number | null
+          phase: string
+          started_at: string | null
+          updated_at: string
+          user_id: string
+          work_duration_seconds: number
+        }
+        Insert: {
+          accumulated_elapsed_seconds?: number
+          active_session_token?: string | null
+          break_duration_seconds?: number
+          duration_seconds?: number
+          ends_at?: string | null
+          kind?: Database["public"]["Enums"]["pomodoro_kind"]
+          paused_remaining_seconds?: number | null
+          phase?: string
+          started_at?: string | null
+          updated_at?: string
+          user_id: string
+          work_duration_seconds?: number
+        }
+        Update: {
+          accumulated_elapsed_seconds?: number
+          active_session_token?: string | null
+          break_duration_seconds?: number
+          duration_seconds?: number
+          ends_at?: string | null
+          kind?: Database["public"]["Enums"]["pomodoro_kind"]
+          paused_remaining_seconds?: number | null
+          phase?: string
+          started_at?: string | null
+          updated_at?: string
+          user_id?: string
+          work_duration_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pomodoro_active_state_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pomodoro_sessions: {
         Row: {
+          active_session_token: string | null
           category_id: string | null
           created_at: string
           duration_seconds: number
@@ -466,6 +520,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_session_token?: string | null
           category_id?: string | null
           created_at?: string
           duration_seconds: number
@@ -480,6 +535,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_session_token?: string | null
           category_id?: string | null
           created_at?: string
           duration_seconds?: number
@@ -869,6 +925,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_server_time: { Args: never; Returns: string }
       purge_soft_deleted: { Args: never; Returns: undefined }
     }
     Enums: {

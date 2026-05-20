@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 
@@ -12,15 +13,19 @@ type Ctx = {
   phase: PomodoroPhase;
   kind: PomodoroKind;
   startedAt: Date | null;
-  workDurationSec: number;     // user-configured work duration
-  breakDurationSec: number;    // user-configured break duration
+  workDurationSec: number;
+  breakDurationSec: number;
   setDuration: (sec: number) => void;
   start: () => void;
   pause: () => void;
   resume: () => void;
-  complete: () => void;        // saves & moves to next phase
+  complete: () => void;
   reset: () => void;
-  skipBreak: () => void;       // during a break, jump straight to work
+  skipBreak: () => void;
+  isLoading: boolean;
+  isSyncing: boolean;
+  syncError: string | null;
+  lastSyncedAt: Date | null;
 };
 
 type WakeLockSentinelLike = EventTarget & {
@@ -33,6 +38,10 @@ type NavigatorWithWakeLock = Navigator & {
     request: (type: "screen") => Promise<WakeLockSentinelLike>;
   };
 };
+
+type ActiveStateRow = Database["public"]["Tables"]["pomodoro_active_state"]["Row"];
+type ActiveStateInsert = Database["public"]["Tables"]["pomodoro_active_state"]["Insert"];
+type PomodoroSessionInsert = Database["public"]["Tables"]["pomodoro_sessions"]["Insert"];
 
 const PomodoroContext = createContext<Ctx | null>(null);
 
@@ -103,6 +112,9 @@ function playChime() {
   }
 }
 
+const isDuplicateError = (error: { code?: string; message?: string }) =>
+  error.code === "23505" || /duplicate|unique/i.test(error.message || "");
+
 export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [workDurationSec, setWorkDurationSec] = useState(DEFAULT_WORK);
@@ -112,24 +124,36 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const [phase, setPhase] = useState<PomodoroPhase>("idle");
   const [kind, setKind] = useState<PomodoroKind>("work");
   const [startedAt, setStartedAt] = useState<Date | null>(null);
-  // Wall-clock based tracking — survives backgrounded tabs / OS throttling
-  const [endsAt, setEndsAt] = useState<number | null>(null);   // ms epoch when current phase ends
+  const [endsAt, setEndsAt] = useState<number | null>(null);
+  const [pausedRemainingSec, setPausedRemainingSec] = useState<number | null>(null);
+  const [accumulatedElapsedSec, setAccumulatedElapsedSec] = useState(0);
+  const [activeSessionToken, setActiveSessionToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+
   const intervalRef = useRef<number | null>(null);
   const finishTimeoutRef = useRef<number | null>(null);
   const finishingRef = useRef(false);
   const activeSessionIdRef = useRef(0);
   const completedSessionIdRef = useRef<number | null>(null);
+  const clockOffsetMsRef = useRef(0);
+  const hydratingRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
   const wakeLockRequestRef = useRef<Promise<void> | null>(null);
   const wakeLockUnsupportedLoggedRef = useRef(false);
 
-  // refs mirror state so timer callbacks see fresh values
   const phaseRef = useRef(phase);
   const kindRef = useRef(kind);
-  const startedAtRef = useRef<Date | null>(null);
+  const startedAtRef = useRef<Date | null>(startedAt);
   const durationRef = useRef(durationSec);
   const workDurRef = useRef(workDurationSec);
   const breakDurRef = useRef(breakDurationSec);
+  const endsAtRef = useRef<number | null>(endsAt);
+  const pausedRemainingRef = useRef<number | null>(pausedRemainingSec);
+  const accumulatedElapsedRef = useRef(accumulatedElapsedSec);
+  const activeTokenRef = useRef<string | null>(activeSessionToken);
 
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { kindRef.current = kind; }, [kind]);
@@ -137,6 +161,10 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { durationRef.current = durationSec; }, [durationSec]);
   useEffect(() => { workDurRef.current = workDurationSec; }, [workDurationSec]);
   useEffect(() => { breakDurRef.current = breakDurationSec; }, [breakDurationSec]);
+  useEffect(() => { endsAtRef.current = endsAt; }, [endsAt]);
+  useEffect(() => { pausedRemainingRef.current = pausedRemainingSec; }, [pausedRemainingSec]);
+  useEffect(() => { accumulatedElapsedRef.current = accumulatedElapsedSec; }, [accumulatedElapsedSec]);
+  useEffect(() => { activeTokenRef.current = activeSessionToken; }, [activeSessionToken]);
 
   const clearTimer = () => {
     if (intervalRef.current) {
@@ -198,97 +226,251 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       });
   }, []);
 
-  const persistSession = useCallback(async (k: PomodoroKind, started: Date, ended: Date, durationS: number) => {
+  const adjustedNow = useCallback(() => Date.now() + clockOffsetMsRef.current, []);
+
+  const resetLocalState = useCallback(() => {
+    clearTimer();
+    clearFinishScheduler();
+    activeSessionIdRef.current += 1;
+    completedSessionIdRef.current = null;
+    finishingRef.current = false;
+    releaseWakeLock();
+    setPhase("idle");
+    setKind("work");
+    setDurationSec(DEFAULT_WORK);
+    setRemainingSec(DEFAULT_WORK);
+    setWorkDurationSec(DEFAULT_WORK);
+    setStartedAt(null);
+    setEndsAt(null);
+    endsAtRef.current = null;
+    setPausedRemainingSec(null);
+    setAccumulatedElapsedSec(0);
+    setActiveSessionToken(null);
+  }, [releaseWakeLock]);
+
+  const syncServerClock = useCallback(async () => {
+    const before = Date.now();
+    const { data, error } = await supabase.rpc("get_server_time");
+    if (error || !data) {
+      clockOffsetMsRef.current = 0;
+      console.warn("[pomodoro] Server time sync failed", error);
+      return;
+    }
+    const after = Date.now();
+    const serverMs = new Date(data).getTime();
+    const midpoint = before + (after - before) / 2;
+    clockOffsetMsRef.current = serverMs - midpoint;
+  }, []);
+
+  const currentRunElapsed = useCallback((row: ActiveStateRow, nowMs: number) => {
+    if (row.phase !== "running" || !row.started_at) return 0;
+    return Math.max(0, Math.round((nowMs - new Date(row.started_at).getTime()) / 1000));
+  }, []);
+
+  const applyActiveState = useCallback((row: ActiveStateRow | null) => {
+    if (!row) {
+      resetLocalState();
+      setIsLoading(false);
+      return;
+    }
+
+    const nextEndsAt = row.ends_at ? new Date(row.ends_at).getTime() : null;
+    const nowMs = adjustedNow();
+    const nextRemaining = row.phase === "running" && nextEndsAt != null
+      ? Math.max(0, Math.round((nextEndsAt - nowMs) / 1000))
+      : row.phase === "paused"
+        ? row.paused_remaining_seconds ?? Math.max(0, row.duration_seconds - row.accumulated_elapsed_seconds)
+        : row.duration_seconds;
+
+    setKind(row.kind);
+    setPhase(row.phase as PomodoroPhase);
+    setWorkDurationSec(row.work_duration_seconds);
+    setDurationSec(row.duration_seconds);
+    setRemainingSec(nextRemaining);
+    setStartedAt(row.started_at ? new Date(row.started_at) : null);
+    setEndsAt(nextEndsAt);
+    endsAtRef.current = nextEndsAt;
+    setPausedRemainingSec(row.paused_remaining_seconds);
+    setAccumulatedElapsedSec(row.accumulated_elapsed_seconds);
+    setActiveSessionToken(row.active_session_token);
+    setLastSyncedAt(new Date());
+    setIsLoading(false);
+  }, [adjustedNow, resetLocalState]);
+
+  const writeActiveState = useCallback(async (payload: ActiveStateInsert) => {
+    const { data, error } = await supabase
+      .from("pomodoro_active_state")
+      .upsert(payload, { onConflict: "user_id" })
+      .select()
+      .single();
+    if (error) throw error;
+    applyActiveState(data);
+    return data;
+  }, [applyActiveState]);
+
+  const persistSession = useCallback(async (
+    k: PomodoroKind,
+    started: Date,
+    ended: Date,
+    durationS: number,
+    token: string | null,
+  ) => {
     if (!user || durationS < 1) return;
-    await supabase.from("pomodoro_sessions").insert({
+    const payload: PomodoroSessionInsert = {
       user_id: user.id,
       started_at: started.toISOString(),
       ended_at: ended.toISOString(),
       duration_seconds: durationS,
       kind: k,
-    });
+      active_session_token: token,
+    };
+    const { error } = await supabase.from("pomodoro_sessions").insert(payload);
+    if (error) {
+      if (!isDuplicateError(error)) throw error;
+      console.info("[pomodoro] Session was already saved for this active token");
+    }
     window.dispatchEvent(new CustomEvent("pomodoro:session-saved"));
   }, [user]);
 
-  // Phase finished naturally: save it, switch to the next phase but WAIT for user to start
-  const handleAutoFinish = useCallback((sessionId: number) => {
-    if (finishingRef.current) return;
-    if (completedSessionIdRef.current === sessionId) return;
-    if (activeSessionIdRef.current !== sessionId) return;
+  const nextIdlePayload = useCallback((
+    userId: string,
+    finishedKind: PomodoroKind,
+    workDuration: number,
+    breakDuration: number,
+  ): ActiveStateInsert => {
+    const nextKind: PomodoroKind = finishedKind === "work" ? "break" : "work";
+    const nextDuration = nextKind === "break" ? breakDuration : workDuration;
+    return {
+      user_id: userId,
+      phase: "idle",
+      kind: nextKind,
+      duration_seconds: nextDuration,
+      work_duration_seconds: workDuration,
+      break_duration_seconds: breakDuration,
+      started_at: null,
+      ends_at: null,
+      paused_remaining_seconds: null,
+      accumulated_elapsed_seconds: 0,
+      active_session_token: null,
+    };
+  }, []);
+
+  const finalizeRow = useCallback(async (row: ActiveStateRow, options: { notifyUser: boolean }) => {
+    if (!user || finishingRef.current) return;
     finishingRef.current = true;
-    completedSessionIdRef.current = sessionId;
-    const finishedKind = kindRef.current;
-    const dur = durationRef.current;
-    const started = startedAtRef.current || new Date(Date.now() - dur * 1000);
-    const ended = new Date(started.getTime() + dur * 1000);
-    void persistSession(finishedKind, started, ended, dur).catch((error) => {
-      console.warn("[pomodoro] Session persist failed", error);
-    });
-    playChime();
+    try {
+      const nowMs = adjustedNow();
+      const runElapsed = row.phase === "running" ? currentRunElapsed(row, nowMs) : 0;
+      const elapsed = Math.min(Math.max(row.accumulated_elapsed_seconds + runElapsed, 0), row.duration_seconds);
+      const ended = new Date(row.phase === "running" && row.ends_at ? new Date(row.ends_at).getTime() : nowMs);
+      const started = row.started_at
+        ? new Date(row.started_at)
+        : new Date(ended.getTime() - elapsed * 1000);
 
-    if (finishedKind === "work") {
-      toast.success("Pomodoro tamamlandı! Mola için başlat'a basın.");
-      notify("Pomodoro tamamlandı 🍵", "Mola zamanı. Başlat'a basın.");
-      setKind("break");
-      setDurationSec(breakDurRef.current);
-      setRemainingSec(breakDurRef.current);
-    } else {
-      toast.success("Mola bitti! Çalışma için başlat'a basın.");
-      notify("Mola bitti ⛩", "Çalışma zamanı. Başlat'a basın.");
-      setKind("work");
-      setDurationSec(workDurRef.current);
-      setRemainingSec(workDurRef.current);
+      if (elapsed >= 1) {
+        await persistSession(row.kind, started, ended, elapsed, row.active_session_token);
+      }
+
+      await writeActiveState(nextIdlePayload(user.id, row.kind, row.work_duration_seconds, row.break_duration_seconds));
+
+      if (options.notifyUser) {
+        playChime();
+        if (row.kind === "work") {
+          toast.success("Pomodoro tamamlandı! Mola için başlat'a basın.");
+          notify("Pomodoro tamamlandı 🍵", "Mola zamanı. Başlat'a basın.");
+        } else {
+          toast.success("Mola bitti! Çalışma için başlat'a basın.");
+          notify("Mola bitti ⛩", "Çalışma zamanı. Başlat'a basın.");
+        }
+      }
+    } catch (error) {
+      console.warn("[pomodoro] Finish sync failed", error);
+      setSyncError("Pomodoro tamamlanamadı. Bağlantınızı kontrol edin.");
+      toast.error("Pomodoro tamamlanamadı. Bağlantınızı kontrol edin.");
+    } finally {
+      releaseWakeLock();
+      setTimeout(() => { finishingRef.current = false; }, 50);
     }
-    setStartedAt(null);
-    setEndsAt(null);
-    endsAtRef.current = null;
-    releaseWakeLock();
-    setPhase("idle");
-    setTimeout(() => { finishingRef.current = false; }, 50);
-  }, [persistSession, releaseWakeLock]);
+  }, [adjustedNow, currentRunElapsed, nextIdlePayload, persistSession, releaseWakeLock, user, writeActiveState]);
 
-  // keep endsAt accessible to tick without re-binding interval
-  const endsAtRef = useRef<number | null>(null);
-  useEffect(() => { endsAtRef.current = endsAt; }, [endsAt]);
+  const fetchActiveState = useCallback(async (source: "load" | "revalidate" = "revalidate") => {
+    if (!user || hydratingRef.current) return;
+    hydratingRef.current = true;
+    if (source === "load") setIsLoading(true);
+    setSyncError(null);
+    try {
+      await syncServerClock();
+      const { data, error } = await supabase
+        .from("pomodoro_active_state")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data?.phase === "running" && data.ends_at && new Date(data.ends_at).getTime() <= adjustedNow()) {
+        await finalizeRow(data, { notifyUser: false });
+      } else {
+        applyActiveState(data);
+      }
+    } catch (error) {
+      console.warn("[pomodoro] Active state sync failed", error);
+      setSyncError("Pomodoro durumu senkronize edilemedi.");
+      if (source === "load") setIsLoading(false);
+    } finally {
+      hydratingRef.current = false;
+    }
+  }, [adjustedNow, applyActiveState, finalizeRow, syncServerClock, user]);
 
   const finishIfDue = useCallback(() => {
     if (phaseRef.current !== "running") return false;
     const ends = endsAtRef.current;
-    if (ends == null || Date.now() < ends) return false;
+    if (ends == null || adjustedNow() < ends) return false;
     setRemainingSec(0);
     clearTimer();
     clearFinishScheduler();
-    handleAutoFinish(activeSessionIdRef.current);
+    const row: ActiveStateRow = {
+      user_id: user?.id || "",
+      phase: "running",
+      kind: kindRef.current,
+      duration_seconds: durationRef.current,
+      work_duration_seconds: workDurRef.current,
+      break_duration_seconds: breakDurRef.current,
+      started_at: startedAtRef.current?.toISOString() || null,
+      ends_at: new Date(ends).toISOString(),
+      paused_remaining_seconds: null,
+      accumulated_elapsed_seconds: accumulatedElapsedRef.current,
+      active_session_token: activeTokenRef.current,
+      updated_at: new Date().toISOString(),
+    };
+    void finalizeRow(row, { notifyUser: true });
     return true;
-  }, [handleAutoFinish]);
+  }, [adjustedNow, finalizeRow, user]);
 
   const scheduleFinish = useCallback(() => {
     clearFinishScheduler();
     if (phaseRef.current !== "running") return;
     const ends = endsAtRef.current;
     if (ends == null) return;
-    const delay = Math.max(0, ends - Date.now());
+    const delay = Math.max(0, ends - adjustedNow());
     finishTimeoutRef.current = window.setTimeout(() => {
       finishIfDue();
     }, delay);
-  }, [finishIfDue]);
+  }, [adjustedNow, finishIfDue]);
 
-  // Tick: derive remaining from wall-clock difference (immune to setInterval throttling)
   const tick = useCallback(() => {
     if (phaseRef.current !== "running") return;
     const ends = endsAtRef.current;
     if (ends == null) return;
-    const remaining = Math.max(0, Math.round((ends - Date.now()) / 1000));
+    const remaining = Math.max(0, Math.round((ends - adjustedNow()) / 1000));
     setRemainingSec(remaining);
     if (remaining <= 0) {
       finishIfDue();
     }
-  }, [finishIfDue]);
+  }, [adjustedNow, finishIfDue]);
 
   useEffect(() => {
     if (phase === "running") {
       clearTimer();
-      tick(); // immediate sync (covers tab refocus)
+      tick();
       scheduleFinish();
       intervalRef.current = window.setInterval(tick, 500);
     } else {
@@ -301,31 +483,40 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [phase, scheduleFinish, tick]);
 
-  // Re-sync immediately when tab becomes visible again (handles background throttling/sleep)
   useEffect(() => {
-    const syncIfActive = () => {
-      if (phaseRef.current !== "running") return;
+    const syncVisibleState = () => {
       if (!finishIfDue()) tick();
+      void fetchActiveState("revalidate");
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        syncIfActive();
+        syncVisibleState();
         if (phaseRef.current === "running") requestWakeLock();
       }
     };
     const onPageShow = () => {
-      syncIfActive();
+      syncVisibleState();
       if (phaseRef.current === "running") requestWakeLock();
     };
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", syncIfActive);
+    window.addEventListener("focus", syncVisibleState);
     window.addEventListener("pageshow", onPageShow);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", syncIfActive);
+      window.removeEventListener("focus", syncVisibleState);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [finishIfDue, requestWakeLock, tick]);
+  }, [fetchActiveState, finishIfDue, requestWakeLock, tick]);
+
+  useEffect(() => {
+    resetLocalState();
+    setSyncError(null);
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+    void fetchActiveState("load");
+  }, [fetchActiveState, resetLocalState, user]);
 
   useEffect(() => {
     if (phase === "running") {
@@ -350,7 +541,6 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Live tab title: "Zen 24:59 — Keikaku" while running, restore when idle
   useEffect(() => {
     const original = document.title;
     if (phase === "idle") return;
@@ -362,122 +552,209 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [phase, kind, remainingSec]);
 
+  const blockIfBusy = useCallback(() => {
+    if (isLoading || isSyncing) {
+      toast("Pomodoro senkronizasyonu bekleniyor.");
+      return true;
+    }
+    if (!user) {
+      toast.error("Pomodoro için oturum gerekli.");
+      return true;
+    }
+    return false;
+  }, [isLoading, isSyncing, user]);
+
+  const withSync = useCallback(async (fn: () => Promise<void>) => {
+    if (blockIfBusy()) return;
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      await syncServerClock();
+      await fn();
+      setLastSyncedAt(new Date());
+    } catch (error) {
+      console.warn("[pomodoro] Active state write failed", error);
+      setSyncError("Pomodoro durumu kaydedilemedi.");
+      toast.error("Pomodoro durumu kaydedilemedi. Bağlantınızı kontrol edin.");
+      await fetchActiveState("revalidate");
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [blockIfBusy, fetchActiveState, syncServerClock]);
 
   const setDuration = (sec: number) => {
     if (phase === "running" || phase === "paused") return;
     const v = Math.max(10, Math.min(sec, 180 * 60));
-    if (kind === "work") setWorkDurationSec(v);
-    setDurationSec(v);
-    setRemainingSec(v);
+    void withSync(async () => {
+      if (!user) return;
+      const nextWorkDuration = kind === "work" ? v : workDurationSec;
+      await writeActiveState({
+        user_id: user.id,
+        phase: "idle",
+        kind,
+        duration_seconds: kind === "work" ? v : durationSec,
+        work_duration_seconds: nextWorkDuration,
+        break_duration_seconds: breakDurationSec,
+        started_at: null,
+        ends_at: null,
+        paused_remaining_seconds: null,
+        accumulated_elapsed_seconds: 0,
+        active_session_token: null,
+      });
+    });
   };
 
   const start = () => {
     if (phase === "running") return;
-    const now = Date.now();
-    const dur = kind === "break" ? breakDurationSec : workDurationSec;
-    activeSessionIdRef.current += 1;
-    completedSessionIdRef.current = null;
-    setKind(kind === "break" ? "break" : "work");
-    setDurationSec(dur);
-    setRemainingSec(dur);
-    setStartedAt(new Date(now));
-    const nextEndsAt = now + dur * 1000;
-    endsAtRef.current = nextEndsAt;
-    setEndsAt(nextEndsAt);
-    setPhase("running");
-    void unlockChime();
-    requestWakeLock();
+    void withSync(async () => {
+      if (!user) return;
+      const now = adjustedNow();
+      const dur = kind === "break" ? breakDurationSec : workDurationSec;
+      await writeActiveState({
+        user_id: user.id,
+        phase: "running",
+        kind,
+        duration_seconds: dur,
+        work_duration_seconds: workDurationSec,
+        break_duration_seconds: breakDurationSec,
+        started_at: new Date(now).toISOString(),
+        ends_at: new Date(now + dur * 1000).toISOString(),
+        paused_remaining_seconds: null,
+        accumulated_elapsed_seconds: 0,
+        active_session_token: crypto.randomUUID(),
+      });
+      activeSessionIdRef.current += 1;
+      completedSessionIdRef.current = null;
+      void unlockChime();
+      requestWakeLock();
+    });
   };
 
   const pause = () => {
     if (phase !== "running") return;
-    // freeze remaining at current wall-clock value
-    const ends = endsAtRef.current;
-    if (ends != null) {
-      const remaining = Math.max(0, Math.round((ends - Date.now()) / 1000));
-      setRemainingSec(remaining);
-    }
-    clearFinishScheduler();
-    releaseWakeLock();
-    setPhase("paused");
+    void withSync(async () => {
+      if (!user || !startedAt) return;
+      const now = adjustedNow();
+      const runElapsed = Math.max(0, Math.round((now - startedAt.getTime()) / 1000));
+      const nextAccumulated = Math.min(durationSec, accumulatedElapsedSec + runElapsed);
+      const pausedRemaining = Math.max(0, durationSec - nextAccumulated);
+      await writeActiveState({
+        user_id: user.id,
+        phase: "paused",
+        kind,
+        duration_seconds: durationSec,
+        work_duration_seconds: workDurationSec,
+        break_duration_seconds: breakDurationSec,
+        started_at: startedAt.toISOString(),
+        ends_at: null,
+        paused_remaining_seconds: pausedRemaining,
+        accumulated_elapsed_seconds: nextAccumulated,
+        active_session_token: activeSessionToken,
+      });
+      clearFinishScheduler();
+      releaseWakeLock();
+    });
   };
 
   const resume = () => {
-    if (phase !== "paused") return;
-    const now = Date.now();
-    const nextEndsAt = now + remainingSec * 1000;
-    endsAtRef.current = nextEndsAt;
-    setEndsAt(nextEndsAt);
-    setPhase("running");
-    void unlockChime();
-    requestWakeLock();
+    if (phase !== "paused" || pausedRemainingSec == null) return;
+    void withSync(async () => {
+      if (!user) return;
+      const now = adjustedNow();
+      await writeActiveState({
+        user_id: user.id,
+        phase: "running",
+        kind,
+        duration_seconds: durationSec,
+        work_duration_seconds: workDurationSec,
+        break_duration_seconds: breakDurationSec,
+        started_at: new Date(now).toISOString(),
+        ends_at: new Date(now + pausedRemainingSec * 1000).toISOString(),
+        paused_remaining_seconds: null,
+        accumulated_elapsed_seconds: accumulatedElapsedSec,
+        active_session_token: activeSessionToken,
+      });
+      void unlockChime();
+      requestWakeLock();
+    });
   };
 
-  // Manual completion: save partial session, switch to next phase but DON'T auto-start
   const complete = () => {
     if (phase !== "running" && phase !== "paused") return;
-    const ended = new Date();
-    const started = startedAt || new Date(ended.getTime() - (durationSec - remainingSec) * 1000);
-    const elapsedFromClock = Math.round((ended.getTime() - started.getTime()) / 1000);
-    const elapsed = Math.min(Math.max(elapsedFromClock, 0), durationSec);
-    if (elapsed >= 1) {
-      void persistSession(kind, started, ended, elapsed).catch((error) => {
-        console.warn("[pomodoro] Session persist failed", error);
-      });
-    }
-    clearTimer();
-    clearFinishScheduler();
-    completedSessionIdRef.current = activeSessionIdRef.current;
-    releaseWakeLock();
-    playChime();
-
-    if (kind === "work") {
-      toast.success("Çalışma kaydedildi. Mola için başlat'a basın.");
-      setKind("break");
-      setDurationSec(breakDurationSec);
-      setRemainingSec(breakDurationSec);
-    } else {
-      toast.success("Mola bitti.");
-      setKind("work");
-      setDurationSec(workDurationSec);
-      setRemainingSec(workDurationSec);
-    }
-    setStartedAt(null);
-    setEndsAt(null);
-    endsAtRef.current = null;
-    setPhase("idle");
+    void withSync(async () => {
+      if (!user) return;
+      const row: ActiveStateRow = {
+        user_id: user.id,
+        phase,
+        kind,
+        duration_seconds: durationSec,
+        work_duration_seconds: workDurationSec,
+        break_duration_seconds: breakDurationSec,
+        started_at: startedAt?.toISOString() || null,
+        ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+        paused_remaining_seconds: pausedRemainingSec,
+        accumulated_elapsed_seconds: accumulatedElapsedSec,
+        active_session_token: activeSessionToken,
+        updated_at: new Date().toISOString(),
+      };
+      await finalizeRow(row, { notifyUser: false });
+      clearTimer();
+      clearFinishScheduler();
+      completedSessionIdRef.current = activeSessionIdRef.current;
+      releaseWakeLock();
+      playChime();
+      toast.success(kind === "work" ? "Çalışma kaydedildi. Mola için başlat'a basın." : "Mola bitti.");
+    });
   };
 
   const reset = () => {
-    clearTimer();
-    clearFinishScheduler();
-    activeSessionIdRef.current += 1;
-    completedSessionIdRef.current = null;
-    releaseWakeLock();
-    setPhase("idle");
-    setStartedAt(null);
-    setEndsAt(null);
-    endsAtRef.current = null;
-    setKind("work");
-    setDurationSec(workDurationSec);
-    setRemainingSec(workDurationSec);
+    void withSync(async () => {
+      if (!user) return;
+      await writeActiveState({
+        user_id: user.id,
+        phase: "idle",
+        kind: "work",
+        duration_seconds: workDurationSec,
+        work_duration_seconds: workDurationSec,
+        break_duration_seconds: breakDurationSec,
+        started_at: null,
+        ends_at: null,
+        paused_remaining_seconds: null,
+        accumulated_elapsed_seconds: 0,
+        active_session_token: null,
+      });
+      clearTimer();
+      clearFinishScheduler();
+      activeSessionIdRef.current += 1;
+      completedSessionIdRef.current = null;
+      releaseWakeLock();
+    });
   };
 
   const skipBreak = () => {
     if (kind !== "break") return;
-    clearTimer();
-    clearFinishScheduler();
-    activeSessionIdRef.current += 1;
-    completedSessionIdRef.current = null;
-    releaseWakeLock();
-    setKind("work");
-    setDurationSec(workDurationSec);
-    setRemainingSec(workDurationSec);
-    setStartedAt(null);
-    setEndsAt(null);
-    endsAtRef.current = null;
-    setPhase("idle");
-    toast("Mola atlandı. Çalışma için başlat'a basın.");
+    void withSync(async () => {
+      if (!user) return;
+      await writeActiveState({
+        user_id: user.id,
+        phase: "idle",
+        kind: "work",
+        duration_seconds: workDurationSec,
+        work_duration_seconds: workDurationSec,
+        break_duration_seconds: breakDurationSec,
+        started_at: null,
+        ends_at: null,
+        paused_remaining_seconds: null,
+        accumulated_elapsed_seconds: 0,
+        active_session_token: null,
+      });
+      clearTimer();
+      clearFinishScheduler();
+      activeSessionIdRef.current += 1;
+      completedSessionIdRef.current = null;
+      releaseWakeLock();
+      toast("Mola atlandı. Çalışma için başlat'a basın.");
+    });
   };
 
   return (
@@ -486,6 +763,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         durationSec, remainingSec, phase, kind, startedAt,
         workDurationSec, breakDurationSec,
         setDuration, start, pause, resume, complete, reset, skipBreak,
+        isLoading, isSyncing, syncError, lastSyncedAt,
       }}
     >
       {children}
