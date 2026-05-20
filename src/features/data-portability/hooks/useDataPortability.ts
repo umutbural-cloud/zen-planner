@@ -4,6 +4,8 @@ import { exportUserData, downloadExport } from "../exporter";
 import { importUserData, type ImportProgress } from "../importer";
 import { isExportFile, summarize, type ExportFile, type ImportSummary } from "../schema";
 
+const MAX_IMPORT_FILE_BYTES = 5 * 1024 * 1024;
+
 export type PendingImport = {
   file: ExportFile;
   summary: ImportSummary;
@@ -29,6 +31,9 @@ export function useDataPortability() {
   }, [user]);
 
   const previewImport = useCallback(async (raw: File) => {
+    if (raw.size > MAX_IMPORT_FILE_BYTES) {
+      throw new Error("Yedek dosyası çok büyük. Lütfen daha küçük bir dosya deneyin.");
+    }
     const text = await raw.text();
     let parsed: unknown;
     try {

@@ -51,12 +51,22 @@ WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users update own example rows"
 ON public.example_table FOR UPDATE
-USING (auth.uid() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users delete own example rows"
 ON public.example_table FOR DELETE
 USING (auth.uid() = user_id);
 ```
+
+## Relationship Ownership
+
+Parent references that cross user-owned tables must also preserve tenant ownership.
+`projects.parent_id` and `notebooks.parent_id` are protected by same-user triggers.
+The parent ownership migration runs preflight checks and stops without changing data
+if orphan or cross-user parent rows already exist.
+The triggers block self-parent references, but they do not perform full recursive
+cycle detection; handle deeper hierarchy cycles as a separate migration if needed.
 
 ## Indexing
 

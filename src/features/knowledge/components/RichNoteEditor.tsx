@@ -11,6 +11,29 @@ import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
 
 const lowlight = createLowlight(common);
+const SAFE_LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
+const UNSAFE_LINK_PROTOCOLS = new Set(["javascript:", "data:", "vbscript:", "file:", "blob:"]);
+
+const hasControlCharacter = (value: string) => {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 31 || code === 127) return true;
+  }
+  return false;
+};
+
+const normalizeSafeLinkUrl = (rawUrl: string) => {
+  const trimmed = rawUrl.trim();
+  if (!trimmed || hasControlCharacter(trimmed)) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (UNSAFE_LINK_PROTOCOLS.has(parsed.protocol) || !SAFE_LINK_PROTOCOLS.has(parsed.protocol)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+};
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -131,7 +154,11 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
       FontSize,
       LineHeight,
       Placeholder.configure({ placeholder: placeholder || "Yazmaya başla, ya da bir blok ekle..." }),
-      Link.configure({ openOnClick: false, autolink: true }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        validate: (href) => normalizeSafeLinkUrl(href) !== null,
+      }),
     ],
     content: value && Object.keys(value || {}).length ? value : { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
@@ -173,7 +200,12 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
   const insertLink = () => {
     const url = window.prompt("URL");
     if (!url) return;
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    const safeUrl = normalizeSafeLinkUrl(url);
+    if (!safeUrl) {
+      console.warn("Invalid or unsafe link URL rejected.");
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: safeUrl }).run();
   };
 
   return (

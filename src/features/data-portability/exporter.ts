@@ -2,19 +2,32 @@
 import { supabase } from "@/integrations/supabase/client";
 import { APP_NAME, SCHEMA_VERSION, TABLES, type ExportFile, type TableName } from "./schema";
 
+const PAGE_SIZE = 500;
+const MAX_EXPORT_ROWS_PER_TABLE = 10000;
+const EXPORT_TOO_LARGE_MESSAGE = "Dışa aktarılacak veri çok büyük. Lütfen veriyi parçalara bölün veya destek alın.";
+
 // Pull all rows for the current user across whitelisted tables.
 export async function exportUserData(userId: string): Promise<ExportFile> {
   const data: Record<string, any[]> = {};
   const counts: Record<string, number> = {};
 
   for (const t of TABLES) {
-    const { data: rows, error } = await supabase
-      .from(t.name as any)
-      .select("*")
-      .eq("user_id", userId);
-    if (error) throw new Error(`${t.name}: ${error.message}`);
+    const rows: any[] = [];
+    for (let offset = 0; offset <= MAX_EXPORT_ROWS_PER_TABLE; offset += PAGE_SIZE) {
+      const { data: page, error } = await supabase
+        .from(t.name as any)
+        .select("*")
+        .eq("user_id", userId)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw new Error(`${t.name}: ${error.message}`);
+      rows.push(...(page || []));
+      if (!page || page.length < PAGE_SIZE) break;
+      if (rows.length >= MAX_EXPORT_ROWS_PER_TABLE) {
+        throw new Error(EXPORT_TOO_LARGE_MESSAGE);
+      }
+    }
     // Strip server-managed user_id; keep everything else (including stable_export_id, deleted_at).
-    const cleaned = (rows || []).map((r: any) => {
+    const cleaned = rows.map((r: any) => {
       const { user_id, ...rest } = r;
       return rest;
     });

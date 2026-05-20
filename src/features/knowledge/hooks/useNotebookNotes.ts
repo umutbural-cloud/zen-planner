@@ -96,11 +96,13 @@ export const useNotebookNotes = (notebookId: string | null, type?: NoteType) => 
   };
 
   const updateNote = async (id: string, updates: Partial<Pick<NotebookNote, "title" | "content" | "color" | "pinned" | "parent_note_id" | "position">>) => {
+    if (!user) return;
     setNotes((p) => p.map((n) => (n.id === id ? { ...n, ...updates } as NotebookNote : n)));
-    await supabase.from("notebook_notes").update(updates as NotebookNoteUpdatePayload).eq("id", id).eq("user_id", user?.id ?? "");
+    await supabase.from("notebook_notes").update(updates as NotebookNoteUpdatePayload).eq("id", id).eq("user_id", user.id);
   };
 
   const reorderNotes = async (orderedIds: string[]) => {
+    if (!user) return;
     const positionMap = new Map(orderedIds.map((id, index) => [id, index + 1]));
     setNotes((prev) =>
       sortNotes(prev.map((note) => (
@@ -110,16 +112,17 @@ export const useNotebookNotes = (notebookId: string | null, type?: NoteType) => 
     await Promise.all(
       orderedIds.map((id, index) => {
         const payload: NotebookNoteUpdatePayload = { position: index + 1 };
-        return supabase.from("notebook_notes").update(payload).eq("id", id).eq("user_id", user?.id ?? "");
+        return supabase.from("notebook_notes").update(payload).eq("id", id).eq("user_id", user.id);
       })
     );
   };
 
   const deleteNote = async (id: string) => {
+    if (!user) return [];
     const idsToDelete = collectDeletedNoteIds(notes, id);
     setNotes((p) => p.filter((n) => !idsToDelete.includes(n.id)));
     const payload: NotebookNoteUpdatePayload = { deleted_at: new Date().toISOString() };
-    await supabase.from("notebook_notes").update(payload).eq("user_id", user?.id ?? "").in("id", idsToDelete);
+    await supabase.from("notebook_notes").update(payload).eq("user_id", user.id).in("id", idsToDelete);
     return idsToDelete;
   };
 
@@ -181,16 +184,18 @@ export const useKnowledgeNotes = () => {
   };
 
   const updateNote = async (id: string, updates: Partial<Pick<NotebookNote, "title" | "content" | "color" | "pinned" | "parent_note_id" | "position">>) => {
+    if (!user) return;
     setNotes((prev) => sortNotes(prev.map((note) => (note.id === id ? { ...note, ...updates } as NotebookNote : note))));
-    await supabase.from("notebook_notes").update(updates as NotebookNoteUpdatePayload).eq("id", id).eq("user_id", user?.id ?? "");
+    await supabase.from("notebook_notes").update(updates as NotebookNoteUpdatePayload).eq("id", id).eq("user_id", user.id);
     notifyKnowledgeNotesChanged();
   };
 
   const deleteNote = async (id: string) => {
+    if (!user) return [];
     const idsToDelete = collectDeletedNoteIds(notes, id);
     setNotes((prev) => prev.filter((note) => !idsToDelete.includes(note.id)));
     const payload: NotebookNoteUpdatePayload = { deleted_at: new Date().toISOString() };
-    await supabase.from("notebook_notes").update(payload).eq("user_id", user?.id ?? "").in("id", idsToDelete);
+    await supabase.from("notebook_notes").update(payload).eq("user_id", user.id).in("id", idsToDelete);
     notifyKnowledgeNotesChanged();
     return idsToDelete;
   };

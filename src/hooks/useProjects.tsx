@@ -80,11 +80,11 @@ export const useProjects = () => {
       push({
         label: kind === "knowledge" ? "Defter eklendi" : "Proje eklendi",
         undo: async () => {
-          await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq("id", created.id);
+          await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq("id", created.id).eq("user_id", user.id);
           setProjects((prev) => prev.filter((p) => p.id !== created.id));
         },
         redo: async () => {
-          await supabase.from("projects").update({ deleted_at: null }).eq("id", created.id);
+          await supabase.from("projects").update({ deleted_at: null }).eq("id", created.id).eq("user_id", user.id);
           fetchProjects();
         },
       });
@@ -93,9 +93,10 @@ export const useProjects = () => {
   };
 
   const updateProject = async (id: string, updates: Partial<Pick<Project, "name" | "emoji" | "icon" | "icon_color" | "enabled_views">>) => {
+    if (!user) return null;
     const before = projects.find((p) => p.id === id);
     const updatePayload: ProjectUpdate = updates;
-    const { data, error } = await supabase.from("projects").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
+    const { data, error } = await supabase.from("projects").update(updatePayload).eq("id", id).eq("user_id", user.id).select().single();
     if (!error && data) {
       const updated = normalizeProject(data);
       setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
@@ -104,11 +105,11 @@ export const useProjects = () => {
         push({
           label: "Proje düzenlendi",
           undo: async () => {
-            await supabase.from("projects").update(beforeSnap).eq("id", id).eq("user_id", user?.id ?? "");
+            await supabase.from("projects").update(beforeSnap).eq("id", id).eq("user_id", user.id);
             fetchProjects();
           },
           redo: async () => {
-            await supabase.from("projects").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "");
+            await supabase.from("projects").update(updatePayload).eq("id", id).eq("user_id", user.id);
             fetchProjects();
           },
         });
@@ -118,17 +119,18 @@ export const useProjects = () => {
   };
 
   const deleteProject = async (id: string) => {
-    const { error } = await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
+    if (!user) return;
+    const { error } = await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
     if (error) throw error;
     setProjects((prev) => prev.filter((p) => p.id !== id && p.parent_id !== id));
     push({
       label: "Proje silindi",
       undo: async () => {
-        await supabase.from("projects").update({ deleted_at: null }).eq("id", id).eq("user_id", user?.id ?? "");
+        await supabase.from("projects").update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
         fetchProjects();
       },
       redo: async () => {
-        await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
+        await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
         setProjects((prev) => prev.filter((p) => p.id !== id && p.parent_id !== id));
       },
     });

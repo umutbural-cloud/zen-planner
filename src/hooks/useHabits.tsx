@@ -75,6 +75,7 @@ export const useHabits = (projectId?: string | null) => {
       const { data: comps } = await supabase
         .from("habit_completions")
         .select("habit_id, completion_date")
+        .eq("user_id", user.id)
         .in("habit_id", ids)
         .gte("completion_date", since);
       (comps || [] as HabitCompletionRow[]).forEach((c) => {

@@ -66,11 +66,11 @@ export const useBacklog = () => {
       push({
         label: "Heybe görevi eklendi",
         undo: async () => {
-          await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", created.id);
+          await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", created.id).eq("user_id", user.id);
           setItems((prev) => prev.filter((t) => t.id !== created.id));
         },
         redo: async () => {
-          await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", created.id);
+          await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", created.id).eq("user_id", user.id);
           fetchItems();
         },
       });
@@ -79,10 +79,11 @@ export const useBacklog = () => {
   };
 
   const updateItem = async (id: string, updates: Partial<Omit<BacklogTask, "id" | "user_id" | "created_at" | "updated_at">>) => {
+    if (!user) return;
     const before = items.find((t) => t.id === id);
     if (!before) return;
     const updatePayload: BacklogTaskUpdate = updates;
-    const { data, error } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
+    const { data, error } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).eq("user_id", user.id).select().single();
     if (!error && data) {
       setItems((prev) => prev.map((t) => (t.id === id ? (data as BacklogTask) : t)));
       const beforeSnap = { ...before };
@@ -92,11 +93,11 @@ export const useBacklog = () => {
           const { data: r } = await supabase.from("backlog_tasks").update({
             title: beforeSnap.title, priority: beforeSnap.priority, urgency: beforeSnap.urgency,
             due_date: beforeSnap.due_date, description: beforeSnap.description,
-          }).eq("id", id).eq("user_id", user?.id ?? "").select().single();
+          }).eq("id", id).eq("user_id", user.id).select().single();
           if (r) setItems((prev) => prev.map((t) => (t.id === id ? (r as BacklogTask) : t)));
         },
         redo: async () => {
-          const { data: r } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
+          const { data: r } = await supabase.from("backlog_tasks").update(updatePayload).eq("id", id).eq("user_id", user.id).select().single();
           if (r) setItems((prev) => prev.map((t) => (t.id === id ? (r as BacklogTask) : t)));
         },
       });
@@ -104,18 +105,19 @@ export const useBacklog = () => {
   };
 
   const deleteItem = async (id: string) => {
+    if (!user) return;
     const before = items.find((t) => t.id === id);
     if (!before) return;
-    await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
+    await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
     setItems((prev) => prev.filter((t) => t.id !== id));
     push({
       label: "Heybe görevi silindi",
       undo: async () => {
-        await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id).eq("user_id", user?.id ?? "");
+        await supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
         setItems((prev) => [...prev, { ...before, deleted_at: null }].sort((a, b) => a.position - b.position));
       },
       redo: async () => {
-        await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user?.id ?? "");
+        await supabase.from("backlog_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
         setItems((prev) => prev.filter((t) => t.id !== id));
       },
     });

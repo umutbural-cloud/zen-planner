@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from "@/integrations/supabase/client";
-import { TABLES, type ExportFile } from "./schema";
+import { MAX_IMPORT_ROWS_PER_TABLE, MAX_IMPORT_TOTAL_ROWS, TABLES, validateImportDataLimits, type ExportFile } from "./schema";
 import { z } from "zod";
 
 export type ImportProgress = {
@@ -9,8 +9,8 @@ export type ImportProgress = {
   total: number;
 };
 
-const MAX_ROWS_PER_TABLE = 3000;
-const MAX_TOTAL_ROWS = 20000;
+const STABLE_ID_QUERY_CHUNK_SIZE = 200;
+const INSERT_CHUNK_SIZE = 100;
 
 const TABLE_COLUMNS: Record<string, Set<string>> = {
   projects: new Set([
@@ -141,10 +141,11 @@ const prepareExistingUpdate = (
 };
 
 const validateImportPayload = (file: ExportFile) => {
+  validateImportDataLimits(file);
   let total = 0;
   for (const t of TABLES) {
     const rows = (file.data[t.name] as unknown[]) || [];
-    if (rows.length > MAX_ROWS_PER_TABLE) {
+    if (rows.length > MAX_IMPORT_ROWS_PER_TABLE) {
       throw new Error(`${t.name}: row limit exceeded`);
     }
     rows.forEach((row, idx) => {
@@ -155,7 +156,7 @@ const validateImportPayload = (file: ExportFile) => {
     });
     total += rows.length;
   }
-  if (total > MAX_TOTAL_ROWS) {
+  if (total > MAX_IMPORT_TOTAL_ROWS) {
     throw new Error("Import payload too large");
   }
 };
@@ -187,8 +188,8 @@ export async function importUserData(
     const existing = new Map<string, string>();
     const existingNatural = new Map<string, string>();
     if (stableIds.length) {
-      for (let i = 0; i < stableIds.length; i += 500) {
-        const chunk = stableIds.slice(i, i + 500);
+      for (let i = 0; i < stableIds.length; i += STABLE_ID_QUERY_CHUNK_SIZE) {
+        const chunk = stableIds.slice(i, i + STABLE_ID_QUERY_CHUNK_SIZE);
         const { data: ex } = await supabase
           .from(t.name as any)
           .select("id, stable_export_id")
@@ -209,8 +210,8 @@ export async function importUserData(
     }
     if (t.name === "habit_categories" || t.name === "pomodoro_categories") {
       const names = rows.map((r) => r.name).filter((name): name is string => typeof name === "string");
-      for (let i = 0; i < names.length; i += 500) {
-        const chunk = names.slice(i, i + 500);
+      for (let i = 0; i < names.length; i += STABLE_ID_QUERY_CHUNK_SIZE) {
+        const chunk = names.slice(i, i + STABLE_ID_QUERY_CHUNK_SIZE);
         const { data: ex } = await supabase
           .from(t.name as any)
           .select("id, name")
@@ -221,8 +222,8 @@ export async function importUserData(
     }
     if (t.name === "journal_entries") {
       const dates = rows.map((r) => r.entry_date).filter((date): date is string => typeof date === "string");
-      for (let i = 0; i < dates.length; i += 500) {
-        const chunk = dates.slice(i, i + 500);
+      for (let i = 0; i < dates.length; i += STABLE_ID_QUERY_CHUNK_SIZE) {
+        const chunk = dates.slice(i, i + STABLE_ID_QUERY_CHUNK_SIZE);
         const { data: ex } = await supabase
           .from("journal_entries")
           .select("id, entry_date")
@@ -293,8 +294,8 @@ export async function importUserData(
     }
 
     let done = 0;
-    for (let i = 0; i < payloads.length; i += 200) {
-      const chunk = payloads.slice(i, i + 200).map((p) => p.payload);
+    for (let i = 0; i < payloads.length; i += INSERT_CHUNK_SIZE) {
+      const chunk = payloads.slice(i, i + INSERT_CHUNK_SIZE).map((p) => p.payload);
       const { error } = await supabase.from(t.name as any).insert(chunk);
       if (error) throw new Error(`${t.name}: ${error.message}`);
       inserted += chunk.length;

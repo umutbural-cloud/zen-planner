@@ -6,8 +6,10 @@ import { cn } from "@/lib/utils";
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
 const CHART_KEY_PATTERN = /^[a-zA-Z0-9_-]+$/;
-const CHART_COLOR_PATTERN = /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+\(.*\)|var\(--[a-zA-Z0-9_-]+\))$/;
-const isSafeChartColor = (color: string) => color.length <= 120 && !/[;{}<>]/.test(color) && CHART_COLOR_PATTERN.test(color);
+const CHART_COLOR_PATTERN =
+  /^(#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgb|rgba|hsl|hsla)\([0-9a-zA-Z%,.\s+-]+\)|var\(--[a-zA-Z0-9_-]+\))$/;
+const isSafeChartColor = (color: unknown): color is string =>
+  typeof color === "string" && color.length <= 120 && !/[;{}<>]/.test(color) && CHART_COLOR_PATTERN.test(color);
 
 export type ChartConfig = {
   [k in string]: {
@@ -71,8 +73,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   return (
     <style
       dangerouslySetInnerHTML={{
-        // Chart config is intended to be internal/static. Keep this whitelist if a
-        // future chart attempts to pass user-controlled keys or color values.
+        // Chart CSS is generated from internal config; keys/colors are filtered before injecting style.
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
@@ -80,7 +81,7 @@ ${prefix} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
     const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    if (!CHART_KEY_PATTERN.test(key) || !color || !isSafeChartColor(color)) return null;
+    if (!CHART_KEY_PATTERN.test(key) || !isSafeChartColor(color)) return null;
     return color ? `  --color-${key}: ${color};` : null;
   })
   .join("\n")}

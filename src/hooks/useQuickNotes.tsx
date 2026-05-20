@@ -50,9 +50,10 @@ export const useQuickNotes = () => {
   };
 
   const updateNote = async (id: string, updates: Partial<Pick<QuickNote, "content" | "color" | "pinned">>) => {
+    if (!user) return null;
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, ...updates } : n)));
     const payload: QuickNoteUpdate = updates;
-    const { data } = await supabase.from("quick_notes").update(payload).eq("id", id).eq("user_id", user?.id ?? "").select().single();
+    const { data } = await supabase.from("quick_notes").update(payload).eq("id", id).eq("user_id", user.id).select().single();
     if (data) {
       setNotes((prev) =>
         [...prev.map((n) => (n.id === id ? (data as QuickNote) : n))]
@@ -66,8 +67,9 @@ export const useQuickNotes = () => {
   };
 
   const deleteNote = async (id: string) => {
+    if (!user) return;
     setNotes((prev) => prev.filter((n) => n.id !== id));
-    await supabase.from("quick_notes").delete().eq("id", id).eq("user_id", user?.id ?? "");
+    await supabase.from("quick_notes").delete().eq("id", id).eq("user_id", user.id);
   };
 
   return { notes, loading, createNote, updateNote, deleteNote, refetch: fetchNotes };

@@ -30,6 +30,7 @@ const PomodoroTaskList = () => {
     const { data } = await supabase
       .from("tasks")
       .select("id,title,status,position")
+      .eq("user_id", user.id)
       .eq("project_id", proj.id)
       .is("deleted_at", null)
       .order("position", { ascending: true });
@@ -39,9 +40,10 @@ const PomodoroTaskList = () => {
   useEffect(() => { load(); }, [load]);
 
   const toggle = async (t: Task) => {
+    if (!user) return;
     const next: TaskStatus = t.status === "done" ? "todo" : "done";
     setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: next } : x)));
-    await supabase.from("tasks").update({ status: next }).eq("id", t.id);
+    await supabase.from("tasks").update({ status: next }).eq("id", t.id).eq("user_id", user.id);
   };
 
   const active = tasks.filter((t) => t.status !== "done");

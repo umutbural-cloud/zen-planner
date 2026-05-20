@@ -4,6 +4,8 @@
 
 export const APP_NAME = "Keikaku";
 export const SCHEMA_VERSION = 1;
+export const MAX_IMPORT_TOTAL_ROWS = 10000;
+export const MAX_IMPORT_ROWS_PER_TABLE = 3000;
 
 export type TableName =
   | "projects"
@@ -38,6 +40,7 @@ export const TABLES: TableSpec[] = [
   { name: "backlog_tasks", fk: {} },
   { name: "journal_entries", fk: {} },
 ];
+const TABLE_NAMES = new Set<TableName>(TABLES.map((table) => table.name));
 
 // Per-table column blacklist (sensitive / server-managed identifiers we won't export).
 export const ALWAYS_STRIP = ["user_id"] as const;
@@ -61,7 +64,32 @@ export function isExportFile(x: unknown): x is ExportFile {
   if (typeof candidate.exported_at !== "string") return false;
   if (candidate.user_data_only !== true) return false;
   if (!candidate.data || typeof candidate.data !== "object") return false;
+  if (!isValidImportData(candidate.data)) return false;
   return true;
+}
+
+export function isValidImportData(data: unknown): data is ExportFile["data"] {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return false;
+
+  let totalRows = 0;
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (key === "user_settings") {
+      if (value !== null && (typeof value !== "object" || Array.isArray(value))) return false;
+      continue;
+    }
+    if (!TABLE_NAMES.has(key as TableName) || !Array.isArray(value)) return false;
+    if (value.length > MAX_IMPORT_ROWS_PER_TABLE) return false;
+    totalRows += value.length;
+    if (totalRows > MAX_IMPORT_TOTAL_ROWS) return false;
+  }
+
+  return true;
+}
+
+export function validateImportDataLimits(file: ExportFile) {
+  if (!isValidImportData(file.data)) {
+    throw new Error("Bu yedek dosyası desteklenmeyen tablo veya veri şekli içeriyor");
+  }
 }
 
 export type ImportSummary = {
