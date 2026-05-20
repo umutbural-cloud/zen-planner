@@ -51,12 +51,15 @@ export type HomeTasksData = {
 export type HomePlanState = HomeSectionState<HomePlanTask[]> & {
   inProgress: HomePlanTask[];
   reorderTasks: (status: HomePlanTask["status"], activeId: string, overId: string) => void;
+  advanceTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: string) => Promise<void>;
 };
 
 export type HomeStudySession = {
   id: string;
   label: string;
   minutes: number;
+  categoryLabel: string;
   endedAtLabel?: string;
 };
 
@@ -89,6 +92,7 @@ export type HomeDashboardData = {
   study: HomeSectionState<HomeStudySession[]>;
   habits: HomeSectionState<HomeHabit[]>;
   habitsDefaultFilter: Exclude<HomeHabitTimeOfDay, "any">;
+  toggleHabit: (habitId: string) => Promise<void>;
   pomodoro: HomeSectionState<HomePomodoroSummary | null>;
   recentWork: HomeSectionState<HomeRecentWorkItem[]>;
 };

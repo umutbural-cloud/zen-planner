@@ -15,7 +15,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CheckCircle2, Circle, Clock, ListTodo, Loader2, TrendingUp } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Circle, Clock, ListTodo, Loader2, TrendingUp } from "lucide-react";
+import { toast } from "sonner";
 import type { HomePlanState, HomePlanTask, HomeSectionState, HomeStudySession } from "@/features/home/types";
 
 type Props = {
@@ -30,7 +31,16 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-const TaskRow = ({ task }: { task: HomePlanTask }) => {
+const TaskRow = ({
+  task,
+  onAdvance,
+  onComplete,
+}: {
+  task: HomePlanTask;
+  onAdvance: (taskId: string) => Promise<void>;
+  onComplete: (taskId: string) => Promise<void>;
+}) => {
+  const [isUpdating, setIsUpdating] = useState(false);
   const {
     attributes,
     listeners,
@@ -39,6 +49,19 @@ const TaskRow = ({ task }: { task: HomePlanTask }) => {
     transition,
     isDragging,
   } = useSortable({ id: task.id });
+  const isInProgress = task.status === "in_progress";
+  const handleAction = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      if (isInProgress) await onComplete(task.id);
+      else await onAdvance(task.id);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Görev güncellenemedi.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <li
@@ -60,6 +83,26 @@ const TaskRow = ({ task }: { task: HomePlanTask }) => {
           {task.title}
         </div>
       </div>
+      <button
+        type="button"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          void handleAction();
+        }}
+        disabled={isUpdating}
+        title={isInProgress ? "Görevi tamamla" : "Yapılıyor'a taşı"}
+        aria-label={isInProgress ? "Görevi tamamla" : "Görevi Yapılıyor'a taşı"}
+        className="shrink-0 rounded-sm border border-border/60 p-1 text-muted-foreground opacity-100 transition-colors hover:bg-accent/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100"
+      >
+        {isUpdating ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : isInProgress ? (
+          <Check className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowRight className="h-3.5 w-3.5" />
+        )}
+      </button>
     </li>
   );
 };
@@ -128,7 +171,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
               <SortableContext items={visibleTasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
                 <ul className="divide-y divide-border/50">
                   {visibleTasks.map((task) => (
-                    <TaskRow key={task.id} task={task} />
+                    <TaskRow key={task.id} task={task} onAdvance={plan.advanceTask} onComplete={plan.completeTask} />
                   ))}
                   {hasMoreTasks && (
                     <li className="px-3 py-2 text-center">
@@ -176,7 +219,12 @@ const HomePlanPreview = ({ plan, study }: Props) => {
                 <ul className="divide-y divide-border/40">
                   {study.data.map((row) => (
                     <li key={row.id} className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent/30 transition-colors">
-                      <span className="min-w-0 truncate text-sm tracking-wide text-foreground/90">{row.label}</span>
+                      <span className="min-w-0 truncate">
+                        <span className="block truncate text-sm tracking-wide text-foreground/90">{row.label}</span>
+                        <span className="block truncate text-[10px] tracking-wide text-muted-foreground">
+                          {row.categoryLabel}
+                        </span>
+                      </span>
                       <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                         {row.minutes} dk{row.endedAtLabel ? ` · ${row.endedAtLabel}` : ""}
                       </span>

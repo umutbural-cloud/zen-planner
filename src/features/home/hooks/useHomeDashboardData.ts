@@ -56,6 +56,8 @@ export const useHomeDashboardData = (): HomeDashboardData => {
       error: tasksData.error,
       inProgress: tasksData.data.inProgress,
       reorderTasks: tasksData.reorderTasks,
+      advanceTask: tasksData.advanceTask,
+      completeTask: tasksData.completeTask,
     },
     study: {
       status: workStats.status,
@@ -68,6 +70,7 @@ export const useHomeDashboardData = (): HomeDashboardData => {
       error: habitsData.error,
     },
     habitsDefaultFilter: habitsData.defaultFilter,
+    toggleHabit: habitsData.toggleHabit,
     pomodoro: {
       status: "ready",
       data: {},

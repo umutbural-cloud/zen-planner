@@ -43,7 +43,11 @@ const HomeView = () => {
         <div className="space-y-5">
           <HomePomodoroPreview pomodoro={dashboard.pomodoro} />
           <HomeRecentWorkPreview recentWork={dashboard.recentWork} />
-          <HomeHabitsPreview habits={dashboard.habits} defaultFilter={dashboard.habitsDefaultFilter} />
+          <HomeHabitsPreview
+            habits={dashboard.habits}
+            defaultFilter={dashboard.habitsDefaultFilter}
+            onToggleHabit={dashboard.toggleHabit}
+          />
         </div>
       </div>
     </div>

@@ -18,8 +18,9 @@ const toDefaultFilter = (): Exclude<HomeHabitTimeOfDay, "any"> => {
 
 export const useHomeHabitsData = (): HomeSectionState<HomeHabit[]> & {
   defaultFilter: Exclude<HomeHabitTimeOfDay, "any">;
+  toggleHabit: (habitId: string) => Promise<void>;
 } => {
-  const { habits, loading, today } = useHabits();
+  const { habits, loading, today, toggleCompletion } = useHabits();
 
   const data = useMemo(() => {
     const todayDate = parseISO(today);
@@ -39,5 +40,10 @@ export const useHomeHabitsData = (): HomeSectionState<HomeHabit[]> & {
     status: loading ? "loading" : data.length > 0 ? "ready" : "empty",
     data,
     defaultFilter: toDefaultFilter(),
+    toggleHabit: async (habitId: string) => {
+      const habit = habits.find((item) => item.id === habitId);
+      if (!habit) return;
+      await toggleCompletion(habit);
+    },
   };
 };

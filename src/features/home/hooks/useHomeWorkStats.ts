@@ -43,6 +43,11 @@ const getSessionName = (session: WorkSessionRow, categories: Map<string, string>
   return "Odak çalışması";
 };
 
+const getCategoryLabel = (session: WorkSessionRow, categories: Map<string, string>) => {
+  if (!session.category_id) return "Kategorisiz";
+  return categories.get(session.category_id) || "Kategorisiz";
+};
+
 export const useHomeWorkStats = (): HomeSectionState<WorkStatsData> => {
   const { user } = useAuth();
   const [state, setState] = useState<HomeSectionState<WorkStatsData>>({ status: "loading", data: emptyData });
@@ -63,7 +68,14 @@ export const useHomeWorkStats = (): HomeSectionState<WorkStatsData> => {
     let cancelled = false;
 
     (async () => {
-      setState({ status: "loading", data: emptyData });
+      setState((prev) => {
+        const hasVisibleData =
+          prev.data.todayCount > 0 ||
+          prev.data.todayDurationSeconds > 0 ||
+          prev.data.todaySessions.length > 0 ||
+          prev.data.recentWork.length > 0;
+        return hasVisibleData ? prev : { status: "loading", data: emptyData };
+      });
 
       const { data: sessions, error } = await supabase
         .from("pomodoro_sessions")
@@ -110,6 +122,7 @@ export const useHomeWorkStats = (): HomeSectionState<WorkStatsData> => {
           id: row.id,
           label: getSessionName(row, categories),
           minutes: Math.round(row.duration_seconds / 60),
+          categoryLabel: getCategoryLabel(row, categories),
           endedAtLabel: formatSessionEndTime(end),
         };
       });

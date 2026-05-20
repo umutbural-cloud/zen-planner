@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLocalDayRange } from "@/features/home/lib/dateRanges";
 import type { HomeSectionState, HomeTasksData, HomePlanTask } from "@/features/home/types";
 import { useAuth } from "@/hooks/useAuth";
-import { useProjects } from "@/hooks/useProjects";
 import { useUserSettings } from "@/hooks/useUserSettings";
 
 const emptyData: HomeTasksData = {
@@ -43,86 +42,100 @@ const applyOrder = (tasks: HomePlanTask[], order: string[]) => {
 
 export const useHomeTasksData = (): HomeSectionState<HomeTasksData> & {
   reorderTasks: (status: HomePlanTask["status"], activeId: string, overId: string) => void;
+  advanceTask: (taskId: string) => Promise<void>;
+  completeTask: (taskId: string) => Promise<void>;
 } => {
   const { user } = useAuth();
   const { settings } = useUserSettings();
-  const { projects } = useProjects();
   const [state, setState] = useState<HomeSectionState<HomeTasksData>>({ status: "loading", data: emptyData });
   const today = useMemo(() => getLocalDayRange(), []);
-  const projectIds = useMemo(
-    () => new Set(projects.filter((project) => project.kind === "project").map((project) => project.id)),
-    [projects]
+  const selectedProjectIdsKey = useMemo(
+    () => (settings.home_task_project_ids ?? []).filter(Boolean).join("|"),
+    [settings.home_task_project_ids]
   );
-  const selectedProjectIds = useMemo(
-    () => (settings.home_task_project_ids ?? []).filter((id) => projectIds.has(id)),
-    [projectIds, settings.home_task_project_ids]
-  );
-  const hasProjectFilter = selectedProjectIds.length > 0;
 
-  useEffect(() => {
+  const fetchTasks = useCallback(async () => {
     if (!user) {
       setState({ status: "empty", data: emptyData });
       return;
     }
 
-    let cancelled = false;
+    setState((prev) => {
+      const hasVisibleData =
+        prev.data.completedTodayCount > 0 ||
+        prev.data.todo.length > 0 ||
+        prev.data.inProgress.length > 0;
+      return hasVisibleData ? prev : { status: "loading", data: emptyData };
+    });
 
-    (async () => {
-      setState({ status: "loading", data: emptyData });
+    const selectedProjectIds = selectedProjectIdsKey.split("|").filter(Boolean);
+    const hasProjectFilter = selectedProjectIds.length > 0;
 
-      let openQuery = supabase
-          .from("tasks")
-          .select("id,title,status,completed_at,position,project_id")
-          .eq("user_id", user.id)
-          .is("deleted_at", null)
-          .is("parent_block_id", null)
-          .in("status", ["todo", "in_progress"])
-          .order("position", { ascending: true });
-      let doneQuery = supabase
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("status", "done")
-          .is("deleted_at", null)
-          .gte("completed_at", today.start.toISOString())
-          .lt("completed_at", today.end.toISOString());
+    let openQuery = supabase
+      .from("tasks")
+      .select("id,title,status,completed_at,position,project_id")
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .is("parent_block_id", null)
+      .in("status", ["todo", "in_progress"])
+      .order("position", { ascending: true });
+    let doneQuery = supabase
+      .from("tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "done")
+      .is("deleted_at", null)
+      .gte("completed_at", today.start.toISOString())
+      .lt("completed_at", today.end.toISOString());
 
-      if (hasProjectFilter) {
-        openQuery = openQuery.in("project_id", selectedProjectIds);
-        doneQuery = doneQuery.in("project_id", selectedProjectIds);
-      }
+    if (hasProjectFilter) {
+      openQuery = openQuery.in("project_id", selectedProjectIds);
+      doneQuery = doneQuery.in("project_id", selectedProjectIds);
+    }
 
-      const [openResult, doneResult] = await Promise.all([openQuery, doneQuery]);
+    const [openResult, doneResult] = await Promise.all([openQuery, doneQuery]);
 
-      if (cancelled) return;
-
-      if (openResult.error || doneResult.error) {
-        setState({
-          status: "error",
-          data: emptyData,
-          error: openResult.error?.message || doneResult.error?.message,
-        });
-        return;
-      }
-
-      const rows = (openResult.data || []) as HomePlanTask[];
-      const todo = applyOrder(rows.filter((task) => task.status === "todo"), readOrder("todo", user.id));
-      const inProgress = applyOrder(rows.filter((task) => task.status === "in_progress"), readOrder("in_progress", user.id));
-
+    if (openResult.error || doneResult.error) {
       setState({
-        status: "ready",
-        data: {
-          completedTodayCount: doneResult.count || 0,
-          todo,
-          inProgress,
-        },
+        status: "error",
+        data: emptyData,
+        error: openResult.error?.message || doneResult.error?.message,
       });
-    })();
+      return;
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [hasProjectFilter, selectedProjectIds, today.end, today.start, user]);
+    const rows = (openResult.data || []) as HomePlanTask[];
+    const todo = applyOrder(rows.filter((task) => task.status === "todo"), readOrder("todo", user.id));
+    const inProgress = applyOrder(rows.filter((task) => task.status === "in_progress"), readOrder("in_progress", user.id));
+
+    setState({
+      status: "ready",
+      data: {
+        completedTodayCount: doneResult.count || 0,
+        todo,
+        inProgress,
+      },
+    });
+  }, [selectedProjectIdsKey, today.end, today.start, user]);
+
+  useEffect(() => {
+    void fetchTasks();
+  }, [fetchTasks]);
+
+  const updateTaskStatus = useCallback(async (taskId: string, status: HomePlanTask["status"] | "done") => {
+    if (!user) return;
+    const { error } = await supabase
+      .from("tasks")
+      .update({
+        status,
+        completed_at: status === "done" ? new Date().toISOString() : null,
+      })
+      .eq("id", taskId)
+      .eq("user_id", user.id);
+
+    if (error) throw error;
+    await fetchTasks();
+  }, [fetchTasks, user]);
 
   const reorderTasks = useCallback((status: HomePlanTask["status"], activeId: string, overId: string) => {
     if (!user || activeId === overId) return;
@@ -148,5 +161,8 @@ export const useHomeTasksData = (): HomeSectionState<HomeTasksData> & {
     });
   }, [user]);
 
-  return { ...state, reorderTasks };
+  const advanceTask = useCallback((taskId: string) => updateTaskStatus(taskId, "in_progress"), [updateTaskStatus]);
+  const completeTask = useCallback((taskId: string) => updateTaskStatus(taskId, "done"), [updateTaskStatus]);
+
+  return { ...state, reorderTasks, advanceTask, completeTask };
 };

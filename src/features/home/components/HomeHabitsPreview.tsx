@@ -1,10 +1,12 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { HomeHabit, HomeHabitTimeOfDay, HomeSectionState } from "@/features/home/types";
 import { useState } from "react";
+import { toast } from "sonner";
 
 type Props = {
   habits: HomeSectionState<HomeHabit[]>;
   defaultFilter: Exclude<HomeHabitTimeOfDay, "any">;
+  onToggleHabit: (habitId: string) => Promise<void>;
 };
 
 const FILTERS = [
@@ -17,8 +19,9 @@ const FILTERS = [
 
 type FilterId = (typeof FILTERS)[number]["id"];
 
-const HomeHabitsPreview = ({ habits, defaultFilter }: Props) => {
+const HomeHabitsPreview = ({ habits, defaultFilter, onToggleHabit }: Props) => {
   const [filter, setFilter] = useState<FilterId>(defaultFilter);
+  const [updatingHabitId, setUpdatingHabitId] = useState<string | null>(null);
   const doneCount = habits.data.filter((habit) => habit.done).length;
   const filterIndex = FILTERS.findIndex((item) => item.id === filter);
   const activeFilter = FILTERS[filterIndex] || FILTERS[0];
@@ -29,6 +32,18 @@ const HomeHabitsPreview = ({ habits, defaultFilter }: Props) => {
   const moveFilter = (direction: -1 | 1) => {
     const next = (filterIndex + direction + FILTERS.length) % FILTERS.length;
     setFilter(FILTERS[next].id);
+  };
+
+  const toggleHabit = async (habitId: string) => {
+    if (updatingHabitId) return;
+    setUpdatingHabitId(habitId);
+    try {
+      await onToggleHabit(habitId);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Alışkanlık güncellenemedi.");
+    } finally {
+      setUpdatingHabitId(null);
+    }
   };
 
   return (
@@ -61,13 +76,21 @@ const HomeHabitsPreview = ({ habits, defaultFilter }: Props) => {
             const Icon = habit.icon;
 
             return (
-              <li key={habit.id} className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent/30 transition-colors cursor-pointer">
+              <li key={habit.id}>
+                <button
+                  type="button"
+                  onClick={() => toggleHabit(habit.id)}
+                  disabled={updatingHabitId === habit.id}
+                  title={habit.done ? "Bugünkü tamamlamayı geri al" : "Bugün tamamla"}
+                  className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-accent/30 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                >
                 <span className={`h-6 w-6 rounded-full flex items-center justify-center border ${habit.done ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400" : "border-border/70 text-muted-foreground/70"}`}>
                   <Icon className="h-3 w-3" />
                 </span>
                 <span className={`flex-1 text-sm tracking-wide ${habit.done ? "text-foreground" : "text-muted-foreground"}`}>
                   {habit.label}
                 </span>
+                </button>
               </li>
             );
           })}
