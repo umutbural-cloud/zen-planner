@@ -21,6 +21,7 @@ export type UserSettings = {
   startup_page: StartupPageSetting;
   default_pomodoro_project_id: string | null;
   home_focus_options: DailyFocusOption[];
+  home_task_project_ids: string[] | null;
 };
 
 const DEFAULTS: UserSettings = {
@@ -35,6 +36,7 @@ const DEFAULTS: UserSettings = {
   startup_page: { type: "default" },
   default_pomodoro_project_id: null,
   home_focus_options: DEFAULT_HOME_FOCUS_OPTIONS,
+  home_task_project_ids: null,
 };
 
 const CACHE_KEY = "keikaku.userSettings.v1";
@@ -101,6 +103,12 @@ const normalizeFocusOptions = (value: unknown): DailyFocusOption[] => {
   return options.length > 0 ? options : DEFAULT_HOME_FOCUS_OPTIONS;
 };
 
+const normalizeProjectIds = (value: unknown): string[] | null => {
+  if (!Array.isArray(value)) return null;
+  const ids = value.filter((id): id is string => typeof id === "string" && id.length > 0);
+  return ids.length > 0 ? Array.from(new Set(ids)) : null;
+};
+
 export const useUserSettings = () => {
   const { user } = useAuth();
   const [settings, setSettings] = useState<UserSettings>(readCache);
@@ -118,7 +126,7 @@ export const useUserSettings = () => {
     (async () => {
       const { data } = await supabase
         .from("user_settings")
-        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,home_focus_options")
+        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,home_focus_options,home_task_project_ids")
         .eq("user_id", user.id)
         .maybeSingle();
       if (cancelled) return;
@@ -135,6 +143,7 @@ export const useUserSettings = () => {
           startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
           default_pomodoro_project_id: data.default_pomodoro_project_id,
           home_focus_options: normalizeFocusOptions(data.home_focus_options),
+          home_task_project_ids: normalizeProjectIds(data.home_task_project_ids),
         };
         setSettings(next);
         writeCache(next);
@@ -145,14 +154,20 @@ export const useUserSettings = () => {
   }, [user]);
 
   const update = useCallback(async (patch: Partial<UserSettings>) => {
-    const next = { ...readCache(), ...patch };
+    const previous = readCache();
+    const next = { ...previous, ...patch };
     setSettings(next);
     writeCache(next);
-    if (!user) return;
+    if (!user) return { error: null };
     const payload: Database["public"]["Tables"]["user_settings"]["Insert"] = { user_id: user.id, ...next };
-    await supabase
+    const { error } = await supabase
       .from("user_settings")
       .upsert(payload, { onConflict: "user_id" });
+    if (error) {
+      setSettings(previous);
+      writeCache(previous);
+    }
+    return { error };
   }, [user]);
 
   return { settings, update, loading };

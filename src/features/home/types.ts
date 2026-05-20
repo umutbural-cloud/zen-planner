@@ -38,6 +38,7 @@ export type HomePlanTask = {
   title: string;
   status: "todo" | "in_progress";
   completed_at: string | null;
+  project_id: string | null;
   position: number;
 };
 

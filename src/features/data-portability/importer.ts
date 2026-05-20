@@ -56,7 +56,7 @@ const USER_SETTINGS_COLUMNS = new Set([
   "auto_prayer_times", "calculation_method", "city", "country", "default_pomodoro_project_id",
   "latitude", "location_permission", "longitude", "module_labels", "notify_habits",
   "notify_pomodoro", "notify_tasks", "quiet_hours_end", "quiet_hours_start", "startup_page",
-  "timezone", "ui_scale", "home_focus_options", "user_id",
+  "timezone", "ui_scale", "home_focus_options", "home_task_project_ids", "user_id",
 ]);
 
 const isImportedDefaultProject = (row: Record<string, unknown>) =>
@@ -327,6 +327,16 @@ export async function importUserData(
       rest.default_pomodoro_project_id = idMap.projects?.get(oldDefaultPomodoroProjectId) ?? null;
     } else {
       rest.default_pomodoro_project_id = defaultPomodoroProjectId;
+    }
+
+    if (Array.isArray(rest.home_task_project_ids)) {
+      const mappedProjectIds = rest.home_task_project_ids
+        .filter((id): id is string => typeof id === "string")
+        .map((id) => idMap.projects?.get(id))
+        .filter((id): id is string => typeof id === "string");
+      rest.home_task_project_ids = mappedProjectIds.length > 0 ? Array.from(new Set(mappedProjectIds)) : null;
+    } else {
+      rest.home_task_project_ids = null;
     }
 
     if (isStartupPage(rest.startup_page) && rest.startup_page.type === "project") {

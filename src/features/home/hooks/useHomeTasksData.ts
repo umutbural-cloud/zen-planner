@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLocalDayRange } from "@/features/home/lib/dateRanges";
 import type { HomeSectionState, HomeTasksData, HomePlanTask } from "@/features/home/types";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjects } from "@/hooks/useProjects";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 const emptyData: HomeTasksData = {
   completedTodayCount: 0,
@@ -43,8 +45,19 @@ export const useHomeTasksData = (): HomeSectionState<HomeTasksData> & {
   reorderTasks: (status: HomePlanTask["status"], activeId: string, overId: string) => void;
 } => {
   const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const { projects } = useProjects();
   const [state, setState] = useState<HomeSectionState<HomeTasksData>>({ status: "loading", data: emptyData });
   const today = useMemo(() => getLocalDayRange(), []);
+  const projectIds = useMemo(
+    () => new Set(projects.filter((project) => project.kind === "project").map((project) => project.id)),
+    [projects]
+  );
+  const selectedProjectIds = useMemo(
+    () => (settings.home_task_project_ids ?? []).filter((id) => projectIds.has(id)),
+    [projectIds, settings.home_task_project_ids]
+  );
+  const hasProjectFilter = selectedProjectIds.length > 0;
 
   useEffect(() => {
     if (!user) {
@@ -57,24 +70,29 @@ export const useHomeTasksData = (): HomeSectionState<HomeTasksData> & {
     (async () => {
       setState({ status: "loading", data: emptyData });
 
-      const [openResult, doneResult] = await Promise.all([
-        supabase
+      let openQuery = supabase
           .from("tasks")
-          .select("id,title,status,completed_at,position")
+          .select("id,title,status,completed_at,position,project_id")
           .eq("user_id", user.id)
           .is("deleted_at", null)
           .is("parent_block_id", null)
           .in("status", ["todo", "in_progress"])
-          .order("position", { ascending: true }),
-        supabase
+          .order("position", { ascending: true });
+      let doneQuery = supabase
           .from("tasks")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .eq("status", "done")
           .is("deleted_at", null)
           .gte("completed_at", today.start.toISOString())
-          .lt("completed_at", today.end.toISOString()),
-      ]);
+          .lt("completed_at", today.end.toISOString());
+
+      if (hasProjectFilter) {
+        openQuery = openQuery.in("project_id", selectedProjectIds);
+        doneQuery = doneQuery.in("project_id", selectedProjectIds);
+      }
+
+      const [openResult, doneResult] = await Promise.all([openQuery, doneQuery]);
 
       if (cancelled) return;
 
@@ -104,7 +122,7 @@ export const useHomeTasksData = (): HomeSectionState<HomeTasksData> & {
     return () => {
       cancelled = true;
     };
-  }, [today.end, today.start, user]);
+  }, [hasProjectFilter, selectedProjectIds, today.end, today.start, user]);
 
   const reorderTasks = useCallback((status: HomePlanTask["status"], activeId: string, overId: string) => {
     if (!user || activeId === overId) return;

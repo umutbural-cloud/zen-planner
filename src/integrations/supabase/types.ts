@@ -857,6 +857,7 @@ export type Database = {
           created_at: string
           default_pomodoro_project_id: string | null
           home_focus_options: Json
+          home_task_project_ids: string[] | null
           latitude: number | null
           location_permission: boolean
           longitude: number | null
@@ -880,6 +881,7 @@ export type Database = {
           created_at?: string
           default_pomodoro_project_id?: string | null
           home_focus_options?: Json
+          home_task_project_ids?: string[] | null
           latitude?: number | null
           location_permission?: boolean
           longitude?: number | null
@@ -903,6 +905,7 @@ export type Database = {
           created_at?: string
           default_pomodoro_project_id?: string | null
           home_focus_options?: Json
+          home_task_project_ids?: string[] | null
           latitude?: number | null
           location_permission?: boolean
           longitude?: number | null

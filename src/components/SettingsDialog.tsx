@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Moon, Sun, Bell, BellOff, Sprout, LayoutGrid, User, SlidersHorizontal, Trash2, RotateCcw, Plus, Sunrise, MapPin, Search, Loader2, X } from "lucide-react";
+import { Moon, Sun, Bell, BellOff, Sprout, LayoutGrid, User, SlidersHorizontal, Trash2, RotateCcw, Plus, Sunrise, MapPin, Search, Loader2, X, Home } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,11 +41,12 @@ type Props = {
   onOpenChange: (v: boolean) => void;
 };
 
-type SectionKey = "habits" | "modules" | "account" | "preferences";
+type SectionKey = "habits" | "modules" | "home" | "account" | "preferences";
 
 const SECTIONS: { key: SectionKey; label: string; jp: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "habits", label: "Alışkanlık", jp: "習慣", icon: Sprout },
   { key: "modules", label: "Modüller", jp: "区分", icon: LayoutGrid },
+  { key: "home", label: "Ana Sayfa", jp: "家", icon: Home },
   { key: "account", label: "Hesap", jp: "個人", icon: User },
   { key: "preferences", label: "Tercihler", jp: "設定", icon: SlidersHorizontal },
 ];
@@ -119,30 +120,51 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
   }, [user?.email, user?.user_metadata?.full_name]);
 
   const focusOptions = userSettings.home_focus_options?.length ? userSettings.home_focus_options : DEFAULT_HOME_FOCUS_OPTIONS;
+  const homeTaskProjectIds = useMemo(() => userSettings.home_task_project_ids ?? [], [userSettings.home_task_project_ids]);
+  const homeTaskProjectSet = useMemo(() => new Set(homeTaskProjectIds), [homeTaskProjectIds]);
+  const visibleHomeTaskProjectIds = useMemo(
+    () => workspaceProjects.map((project) => project.id).filter((id) => homeTaskProjectSet.has(id)),
+    [homeTaskProjectSet, workspaceProjects]
+  );
+  const homeTaskFilterIsAll = visibleHomeTaskProjectIds.length === 0;
+
+  const persistFocusOptions = async (next: DailyFocusOption[]) => {
+    const { error } = await updateUserSettings({ home_focus_options: next.length ? next : DEFAULT_HOME_FOCUS_OPTIONS });
+    if (error) toast.error("Günün Odağı güncellenemedi.");
+  };
 
   const updateFocusOption = (index: number, patch: Partial<DailyFocusOption>) => {
     const next = focusOptions.map((option, i) => i === index ? { ...option, ...patch } : option);
-    updateUserSettings({ home_focus_options: next });
+    void persistFocusOptions(next);
   };
 
   const addFocusOption = () => {
-    updateUserSettings({
-      home_focus_options: [
-        ...focusOptions,
-        { id: crypto.randomUUID(), label: "Yeni Odak", color: "stone" },
-      ],
-    });
+    void persistFocusOptions([
+      ...focusOptions,
+      { id: crypto.randomUUID(), label: "Yeni Odak", color: "stone" },
+    ]);
   };
 
   const removeFocusOption = (index: number) => {
-    const option = focusOptions[index];
-    if (option?.allowsCustomText) return;
+    if (focusOptions.length <= 1) return;
     const next = focusOptions.filter((_, i) => i !== index);
-    updateUserSettings({ home_focus_options: next.length ? next : DEFAULT_HOME_FOCUS_OPTIONS });
+    void persistFocusOptions(next);
   };
 
   const resetFocusOptions = () => {
-    updateUserSettings({ home_focus_options: DEFAULT_HOME_FOCUS_OPTIONS });
+    void persistFocusOptions(DEFAULT_HOME_FOCUS_OPTIONS);
+  };
+
+  const updateHomeTaskProjects = async (projectIds: string[] | null) => {
+    const { error } = await updateUserSettings({ home_task_project_ids: projectIds && projectIds.length > 0 ? projectIds : null });
+    if (error) toast.error("Ana sayfa görev kaynakları güncellenemedi.");
+  };
+
+  const toggleHomeTaskProject = (projectId: string, checked: boolean) => {
+    const next = checked
+      ? Array.from(new Set([...visibleHomeTaskProjectIds, projectId]))
+      : visibleHomeTaskProjectIds.filter((id) => id !== projectId);
+    void updateHomeTaskProjects(next);
   };
 
   const requestNotif = async () => {
@@ -210,13 +232,18 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
     }
   };
 
+  const handleSaveSettings = () => {
+    toast.success("Kaydedildi");
+    onOpenChange(false);
+  };
+
   const enabledCount = ALL_TIME_OF_DAY_KEYS.length - todDisabled.length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "p-0 gap-0 overflow-hidden",
+          "p-0 gap-0 overflow-hidden flex flex-col",
           // Mobile: nearly full-screen sheet. Desktop: centered modal.
           "w-screen h-[100dvh] max-w-none rounded-none border-0",
           "sm:w-[90vw] sm:h-auto sm:max-w-3xl sm:rounded-lg sm:border sm:max-h-[85vh]"
@@ -226,7 +253,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
           <DialogTitle className="text-base font-light tracking-wide">設定 — Ayarlar</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col sm:flex-row flex-1 min-h-0 sm:max-h-[calc(85vh-3.5rem)]">
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0 sm:max-h-[calc(85vh-6.75rem)]">
           {/* Sidebar / top tabs */}
           <nav
             className={cn(
@@ -570,6 +597,143 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
               </div>
             )}
 
+            {section === "home" && (
+              <div className="space-y-5">
+                <SectionTitle>家 — Ana Sayfa</SectionTitle>
+
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-light">Günün Odağı</div>
+                      <div className="text-[10px] text-muted-foreground tracking-wide">
+                        Ana Sayfa odak seçiminde görünen seçenekler
+                      </div>
+                    </div>
+                    <button
+                      onClick={resetFocusOptions}
+                      className="flex items-center gap-1 text-[10px] tracking-wide text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Sıfırla
+                    </button>
+                  </div>
+                  <div className="space-y-2 pt-1">
+                    {focusOptions.map((option, index) => (
+                      <div key={option.id} className="flex flex-col sm:flex-row gap-2 rounded-md border border-border/60 bg-card/30 p-2">
+                        <Input
+                          value={option.label}
+                          onChange={(e) => updateFocusOption(index, { label: e.target.value })}
+                          className="h-8 text-xs bg-transparent flex-1"
+                        />
+                        <Select
+                          value={option.color || "stone"}
+                          onValueChange={(color) => updateFocusOption(index, { color })}
+                        >
+                          <SelectTrigger className="h-8 text-xs sm:w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-72">
+                            {CATEGORY_COLORS.map((color) => (
+                              <SelectItem key={color.key} value={color.key}>
+                                <span className="inline-flex items-center gap-2">
+                                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
+                                  {color.label}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <button
+                          onClick={() => removeFocusOption(index)}
+                          disabled={focusOptions.length <= 1}
+                          title="Seçeneği kaldır"
+                          className="inline-flex h-8 items-center justify-center rounded-sm px-2 text-muted-foreground hover:text-destructive hover:bg-accent/40 transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    onClick={addFocusOption}
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Odak ekle
+                  </button>
+                </div>
+
+                <div className="border-t border-border/60" />
+
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-sm font-light">Ana sayfada gösterilecek projeler</div>
+                      <div className="text-[10px] text-muted-foreground tracking-wide">
+                        Seçim boşsa Görevler / Yapılıyor alanı tüm projelerden görev gösterir.
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void updateHomeTaskProjects(null)}
+                        className="h-7 px-2 text-[10px]"
+                      >
+                        Tüm projeler
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void updateHomeTaskProjects(workspaceProjects.map((project) => project.id))}
+                        disabled={workspaceProjects.length === 0}
+                        className="h-7 px-2 text-[10px]"
+                      >
+                        Tümünü seç
+                      </Button>
+                    </div>
+                  </div>
+
+                  <label className="flex items-start gap-2 rounded-md border border-border/60 bg-card/30 px-3 py-2">
+                    <Checkbox
+                      checked={homeTaskFilterIsAll}
+                      onCheckedChange={() => void updateHomeTaskProjects(null)}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-xs tracking-wide">Tüm projeler</span>
+                      <span className="block text-[10px] text-muted-foreground tracking-wide">
+                        Varsayılan davranış: proje filtresi uygulanmaz.
+                      </span>
+                    </span>
+                  </label>
+
+                  <div className="max-h-64 overflow-y-auto rounded-md border border-border/40 bg-card/20">
+                    {workspaceProjects.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-[10px] text-muted-foreground tracking-wide">
+                        Gösterilecek proje yok.
+                      </div>
+                    ) : (
+                      workspaceProjects.map((project) => (
+                        <label
+                          key={project.id}
+                          className="flex items-center gap-2 px-3 py-2 text-xs tracking-wide transition-colors hover:bg-accent/40"
+                        >
+                          <Checkbox
+                            checked={!homeTaskFilterIsAll && homeTaskProjectSet.has(project.id)}
+                            onCheckedChange={(checked) => toggleHomeTaskProject(project.id, checked === true)}
+                            className="shrink-0"
+                          />
+                          <span className="shrink-0">{project.emoji}</span>
+                          <span className="min-w-0 truncate">{project.name}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {section === "account" && (
               <div className="space-y-5">
                 <SectionTitle>個人 — Hesap</SectionTitle>
@@ -733,72 +897,6 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                   </Select>
                 </div>
 
-                <div className="border-t border-border/60" />
-
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-light">Günün Odağı</div>
-                      <div className="text-[10px] text-muted-foreground tracking-wide">
-                        Ana Sayfa odak seçiminde görünen seçenekler
-                      </div>
-                    </div>
-                    <button
-                      onClick={resetFocusOptions}
-                      className="flex items-center gap-1 text-[10px] tracking-wide text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      Sıfırla
-                    </button>
-                  </div>
-                  <div className="space-y-2 pt-1">
-                    {focusOptions.map((option, index) => (
-                      <div key={option.id} className="flex flex-col sm:flex-row gap-2 rounded-md border border-border/60 bg-card/30 p-2">
-                        <Input
-                          value={option.label}
-                          onChange={(e) => updateFocusOption(index, { label: e.target.value })}
-                          className="h-8 text-xs bg-transparent flex-1"
-                        />
-                        <Select
-                          value={option.color || "stone"}
-                          onValueChange={(color) => updateFocusOption(index, { color })}
-                        >
-                          <SelectTrigger className="h-8 text-xs sm:w-40">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-72">
-                            {CATEGORY_COLORS.map((color) => (
-                              <SelectItem key={color.key} value={color.key}>
-                                <span className="inline-flex items-center gap-2">
-                                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
-                                  {color.label}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <button
-                          onClick={() => removeFocusOption(index)}
-                          disabled={option.allowsCustomText || focusOptions.length <= 1}
-                          title={option.allowsCustomText ? "Diğer seçeneği korunur" : "Seçeneği kaldır"}
-                          className="inline-flex h-8 items-center justify-center rounded-sm px-2 text-muted-foreground hover:text-destructive hover:bg-accent/40 transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={addFocusOption}
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Odak ekle
-                  </button>
-                </div>
-
-                <div className="border-t border-border/60" />
-
                 <div className="space-y-2">
                   <div className="text-sm font-light">Varsayılan çalışma alanı</div>
                   <div className="text-[10px] text-muted-foreground tracking-wide">
@@ -848,6 +946,12 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="shrink-0 border-t border-border/60 px-4 sm:px-5 py-3 bg-background/95 flex justify-end">
+          <Button size="sm" onClick={handleSaveSettings} className="min-w-24">
+            Kaydet
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
