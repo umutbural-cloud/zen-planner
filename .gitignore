@@ -29,3 +29,4 @@ dist-ssr
 keikaku-export-*.json
 .vercel
 supabase/.temp/
+supabase/.branches/
