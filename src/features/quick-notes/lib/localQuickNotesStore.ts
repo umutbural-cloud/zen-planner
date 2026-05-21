@@ -4,6 +4,7 @@ import type { QuickNoteNotebook } from "../types";
 const STORAGE_KEY = "zen-planner:quick-note-notebooks:v1";
 export const QUICK_NOTES_CHANGED_EVENT = "zen-planner:quick-notes-local-changed";
 export const QUICK_NOTEBOOK_ICON = "sticky-note";
+export const QUICK_NOTES_ROOT_ID = "quick-notes-root";
 
 type StoredNotebook = {
   id: string;
@@ -174,4 +175,3 @@ export const reorderQuickNotes = (notebookId: string, orderedIds: string[]) => {
     )),
   });
 };
-

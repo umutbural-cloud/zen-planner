@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNotebooks } from "@/features/knowledge/hooks/useNotebooks";
 import type { NotebookNote, QuickNoteColor } from "@/features/knowledge/types";
 import {
   createQuickNotebook,
@@ -8,6 +7,7 @@ import {
   deleteQuickNote,
   getQuickNotebook,
   getQuickNotebooks,
+  QUICK_NOTES_ROOT_ID,
   QUICK_NOTES_CHANGED_EVENT,
   renameQuickNotebook,
   reorderQuickNotes,
@@ -20,19 +20,19 @@ const getContainerNotebookId = (notebookId: string | null) => {
 };
 
 export const useQuickNoteNotebooks = (notebookId: string | null) => {
-  const { notebooks: knowledgeNotebooks } = useNotebooks();
   const [version, setVersion] = useState(0);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
+  const isRootCollection = notebookId === QUICK_NOTES_ROOT_ID;
   const containerNotebookId = useMemo(() => {
     void version;
+    if (isRootCollection) return null;
     return getContainerNotebookId(notebookId);
-  }, [notebookId, version]);
-  const rootFallbackId = knowledgeNotebooks.find((notebook) => !notebook.deleted_at)?.id ?? null;
-  const parentId = containerNotebookId ?? rootFallbackId;
+  }, [isRootCollection, notebookId, version]);
+  const parentId = isRootCollection ? null : containerNotebookId;
   const notebooks = useMemo(() => {
     void version;
-    return getQuickNotebooks(parentId);
-  }, [parentId, version]);
+    return isRootCollection ? getQuickNotebooks() : getQuickNotebooks(parentId);
+  }, [isRootCollection, parentId, version]);
 
   useEffect(() => {
     const refresh = () => setVersion((value) => value + 1);
@@ -45,7 +45,7 @@ export const useQuickNoteNotebooks = (notebookId: string | null) => {
   }, []);
 
   useEffect(() => {
-    if (!parentId || notebooks.length > 0) return;
+    if (notebooks.length > 0) return;
     const created = createQuickNotebook(parentId);
     setSelectedNotebookId(created.id);
   }, [notebooks.length, parentId]);
@@ -66,19 +66,20 @@ export const useQuickNoteNotebooks = (notebookId: string | null) => {
   const activeNotebookId = selectedNotebookId || notebooks[0]?.id || null;
   const activeNotebook = notebooks.find((notebook) => notebook.id === activeNotebookId) || null;
   const notes = useMemo(
-    () =>
-      (activeNotebook?.notes || [])
+    () => {
+      const source = isRootCollection ? notebooks.flatMap((notebook) => notebook.notes) : (activeNotebook?.notes || []);
+      return source
         .filter((note) => !note.deleted_at)
         .sort((a, b) => {
           if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
           if (a.position !== b.position) return a.position - b.position;
           return a.created_at.localeCompare(b.created_at);
-        }),
-    [activeNotebook]
+        });
+    },
+    [activeNotebook, isRootCollection, notebooks]
   );
 
   const createNotebook = useCallback(async () => {
-    if (!parentId) return null;
     const created = createQuickNotebook(parentId);
     setSelectedNotebookId(created.id);
     return created;
@@ -122,6 +123,7 @@ export const useQuickNoteNotebooks = (notebookId: string | null) => {
 
   return {
     notebooks,
+    isRootCollection,
     activeNotebook,
     activeNotebookId,
     notes,

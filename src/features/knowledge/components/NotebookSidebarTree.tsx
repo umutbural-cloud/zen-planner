@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, FileText, Plus, StickyNote, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, FileText, Plus, StickyNote, Trash2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -9,13 +9,7 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui
 import { useKnowledgeNotes } from "../hooks/useNotebookNotes";
 import { useNotebooks } from "../hooks/useNotebooks";
 import type { NotebookNote, NoteType } from "../types";
-import {
-  createQuickNotebook,
-  deleteQuickNotebook,
-  getQuickNotebooks,
-  QUICK_NOTEBOOK_ICON,
-  QUICK_NOTES_CHANGED_EVENT,
-} from "@/features/quick-notes/lib/localQuickNotesStore";
+import { QUICK_NOTEBOOK_ICON, QUICK_NOTES_ROOT_ID } from "@/features/quick-notes/lib/localQuickNotesStore";
 
 type Props = {
   selectedNotebookId: string | null;
@@ -25,6 +19,8 @@ type Props = {
 };
 
 const EMPTY_RICH_DOC = { type: "doc", content: [{ type: "paragraph" }] };
+const ROOT_ITEM_PADDING_LEFT = 8;
+const CHILD_ITEM_INDENT = 16;
 
 const noteLabel = (note: NotebookNote) => {
   return note.title?.trim() || "Başlıksız doküman";
@@ -46,21 +42,9 @@ const NotebookSidebarTree = ({
   const [createOpen, setCreateOpen] = useState(false);
   const [creatingType, setCreatingType] = useState<NoteType | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [quickVersion, setQuickVersion] = useState(0);
-  const [collapsedQuickGroups, setCollapsedQuickGroups] = useState<Record<string, boolean>>({});
   const rootNotebooks = notebooks.filter((notebook) => notebook.icon !== QUICK_NOTEBOOK_ICON);
   const visibleNotes = notes.filter((note) => note.type === "rich");
   const loading = notebooksLoading || notesLoading;
-
-  useEffect(() => {
-    const refresh = () => setQuickVersion((value) => value + 1);
-    window.addEventListener(QUICK_NOTES_CHANGED_EVENT, refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      window.removeEventListener(QUICK_NOTES_CHANGED_EVENT, refresh);
-      window.removeEventListener("storage", refresh);
-    };
-  }, []);
 
   const childrenOf = (notebookId: string, parentId: string | null) =>
     visibleNotes
@@ -74,28 +58,24 @@ const NotebookSidebarTree = ({
   const ensureKnowledgeNotebook = async () => {
     const existingNotebook = notebooks.find((notebook) => !notebook.deleted_at && notebook.icon !== QUICK_NOTEBOOK_ICON);
     if (existingNotebook) return existingNotebook.id;
-    if (selectedNotebookId) return selectedNotebookId;
 
-    const createdNotebook = await createNotebook("Defterim");
+    const createdNotebook = await createNotebook("Metin Belgeleri");
     if (!createdNotebook) return null;
-
-    onSelectNotebook(createdNotebook.id);
     return createdNotebook.id;
   };
 
   const handleCreate = async (type: NoteType, notebookId?: string, parentNote?: NotebookNote) => {
     setCreatingType(type);
-    const targetNotebookId = notebookId || parentNote?.notebook_id || (await ensureKnowledgeNotebook());
-    if (!targetNotebookId) {
+    if (type === "quick") {
+      onSelectNotebook(QUICK_NOTES_ROOT_ID);
+      onSelectKnowledgeNote(null);
+      setCreateOpen(false);
       setCreatingType(null);
       return;
     }
 
-    if (type === "quick") {
-      const quickNotebook = createQuickNotebook(targetNotebookId);
-      onSelectNotebook(quickNotebook.id);
-      onSelectKnowledgeNote(null);
-      setCreateOpen(false);
+    const targetNotebookId = notebookId || parentNote?.notebook_id || (await ensureKnowledgeNotebook());
+    if (!targetNotebookId) {
       setCreatingType(null);
       return;
     }
@@ -133,7 +113,7 @@ const NotebookSidebarTree = ({
           <SidebarMenuButton
             onClick={() => onSelectKnowledgeNote(note.id)}
             className={`group/note text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
-            style={{ paddingLeft: `${24 + depth * 16}px` }}
+            style={{ paddingLeft: `${ROOT_ITEM_PADDING_LEFT + depth * CHILD_ITEM_INDENT}px` }}
           >
             <button
               onClick={(event) => {
@@ -185,121 +165,27 @@ const NotebookSidebarTree = ({
         </SidebarMenuItem>
       )}
 
-      {!loading && rootNotebooks.map((notebook) => {
-        const active = selectedNotebookId === notebook.id && !selectedKnowledgeNoteId;
-        void quickVersion;
-        const quickChildren = getQuickNotebooks(notebook.id);
-        const quickGroupCollapsed = collapsedQuickGroups[notebook.id] ?? false;
-        const rootNotes = childrenOf(notebook.id, null);
+      {!loading && (
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => {
+              onSelectNotebook(QUICK_NOTES_ROOT_ID);
+              onSelectKnowledgeNote(null);
+            }}
+            className={`text-xs font-light ${
+              selectedNotebookId === QUICK_NOTES_ROOT_ID && !selectedKnowledgeNoteId
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground"
+            }`}
+          >
+            <span className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-80" />
+            <span className="truncate flex-1">Anlık Notlar</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      )}
 
-        return (
-          <div key={notebook.id}>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => onSelectNotebook(notebook.id)}
-                className={`group/notebook text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
-              >
-                <BookOpen className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                <span className="truncate flex-1">{notebook.name}</span>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleCreate("quick", notebook.id);
-                  }}
-                  className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/notebook:opacity-100 focus:opacity-100 transition-opacity"
-                  title="Anlık not ekle"
-                >
-                  <StickyNote className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleCreate("rich", notebook.id);
-                  }}
-                  className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/notebook:opacity-100 focus:opacity-100 transition-opacity"
-                  title="Zengin doküman ekle"
-                >
-                  <FileText className="h-3 w-3" />
-                </button>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
-            {quickChildren.length === 1 && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => onSelectNotebook(quickChildren[0].id)}
-                  className={`group/quick text-xs font-light ${
-                    selectedNotebookId === quickChildren[0].id && !selectedKnowledgeNoteId
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground"
-                  }`}
-                  style={{ paddingLeft: "24px" }}
-                >
-                  <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-75" />
-                  <span className="truncate flex-1">Anlık Notlar</span>
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteQuickNotebook(quickChildren[0].id);
-                      if (selectedNotebookId === quickChildren[0].id) onSelectNotebook(notebook.id);
-                    }}
-                    className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/quick:opacity-100 focus:opacity-100"
-                    title="Defteri sil"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
-
-            {quickChildren.length > 1 && (
-              <>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => setCollapsedQuickGroups((prev) => ({ ...prev, [notebook.id]: !quickGroupCollapsed }))}
-                    className="text-xs font-light text-muted-foreground"
-                    style={{ paddingLeft: "24px" }}
-                  >
-                    <ChevronRight className={`h-3 w-3 shrink-0 transition-transform ${quickGroupCollapsed ? "" : "rotate-90"}`} />
-                    <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-75" />
-                    <span className="truncate flex-1">Anlık Notlar</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                {!quickGroupCollapsed && quickChildren.map((quickNotebook) => {
-                  const childActive = selectedNotebookId === quickNotebook.id && !selectedKnowledgeNoteId;
-
-                  return (
-                    <SidebarMenuItem key={quickNotebook.id}>
-                      <SidebarMenuButton
-                        onClick={() => onSelectNotebook(quickNotebook.id)}
-                        className={`group/quick text-xs font-light ${childActive ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
-                        style={{ paddingLeft: "44px" }}
-                      >
-                        <StickyNote className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                        <span className="truncate flex-1">{quickNotebook.title}</span>
-                        <button
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            deleteQuickNotebook(quickNotebook.id);
-                            if (selectedNotebookId === quickNotebook.id) onSelectNotebook(notebook.id);
-                          }}
-                          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/quick:opacity-100 focus:opacity-100"
-                          title="Defteri sil"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </>
-            )}
-
-            {rootNotes.map((note) => renderNote(note, 0))}
-          </div>
-        );
-      })}
+      {!loading && rootNotebooks.flatMap((notebook) => childrenOf(notebook.id, null)).map((note) => renderNote(note, 0))}
 
       {!loading && visibleNotes.length === 0 && rootNotebooks.length === 0 && (
         <SidebarMenuItem>

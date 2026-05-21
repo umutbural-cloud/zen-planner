@@ -69,6 +69,7 @@ const NoteGrid = ({
 const QuickNotesPanel = ({ notebookId }: { notebookId: string | null }) => {
   const {
     notebooks,
+    isRootCollection,
     activeNotebookId,
     notes,
     loading,
@@ -100,14 +101,23 @@ const QuickNotesPanel = ({ notebookId }: { notebookId: string | null }) => {
   return (
     <section className="mx-auto w-full max-w-6xl px-1 py-1 sm:px-4">
       <div className="space-y-4">
-        <QuickNotebookTabs
-          notebooks={notebooks}
-          activeNotebookId={activeNotebookId}
-          onSelect={selectNotebook}
-          onCreate={() => { void createNotebook(); }}
-          onRename={(id, title) => { void renameNotebook(id, title); }}
-          onDelete={(id) => { void deleteNotebook(id); }}
-        />
+        {isRootCollection ? (
+          <div className="space-y-1">
+            <h2 className="text-xl font-light tracking-wide">Anlık Notlar</h2>
+            <p className="text-xs text-muted-foreground">
+              Tüm anlık not kartları bu panoda birlikte görünür.
+            </p>
+          </div>
+        ) : (
+          <QuickNotebookTabs
+            notebooks={notebooks}
+            activeNotebookId={activeNotebookId}
+            onSelect={selectNotebook}
+            onCreate={() => { void createNotebook(); }}
+            onRename={(id, title) => { void renameNotebook(id, title); }}
+            onDelete={(id) => { void deleteNotebook(id); }}
+          />
+        )}
 
         {notes.length === 0 ? (
           <div className="flex min-h-[46vh] items-center justify-center">
