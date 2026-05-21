@@ -10,6 +10,8 @@ import { PageStateProvider } from "@/hooks/usePageState";
 import { PrayerTimesSync } from "@/components/PrayerTimesSync";
 import { UiScaleSync } from "@/components/UiScaleSync";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AccountGateScreen } from "@/components/account-gate/AccountGateScreen";
+import { useAccountGate } from "@/hooks/useAccountGate";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -20,7 +22,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, status, gate, error, refreshGate, signOut } = useAccountGate();
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -28,7 +30,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  return user ? <>{children}</> : <Navigate to="/auth" replace />;
+  if (!user || status === "signed_out") return <Navigate to="/auth" replace />;
+  if (status === "allowed") return <>{children}</>;
+  return (
+    <AccountGateScreen
+      status={status}
+      gate={gate}
+      error={error}
+      onRetry={refreshGate}
+      onSignOut={signOut}
+    />
+  );
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
