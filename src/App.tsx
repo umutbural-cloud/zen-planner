@@ -17,6 +17,7 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Pomodoro from "./pages/Pomodoro";
 import WorkHistory from "./pages/WorkHistory";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
                 <Route path="/pomodoro" element={<ProtectedRoute><Pomodoro /></ProtectedRoute>} />
                 <Route path="/work-history" element={<ProtectedRoute><WorkHistory /></ProtectedRoute>} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </PageStateProvider>
