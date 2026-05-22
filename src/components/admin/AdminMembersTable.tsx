@@ -18,6 +18,7 @@ type AdminMembersState = ReturnType<typeof useAdminMembers>;
 
 type AdminMembersTableProps = {
   members: AdminMembersState;
+  onSelectMember: (userId: string) => void;
 };
 
 const filterValue = (value: string | null) => value ?? "all";
@@ -49,7 +50,7 @@ const statusBadge = (value: string | null) => {
   );
 };
 
-export const AdminMembersTable = ({ members }: AdminMembersTableProps) => {
+export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTableProps) => {
   const canGoPrevious = members.offset > 0;
   const canGoNext = members.offset + members.limit < members.totalCount;
   const rangeStart = members.totalCount === 0 ? 0 : members.offset + 1;
@@ -152,11 +153,12 @@ export const AdminMembersTable = ({ members }: AdminMembersTableProps) => {
                 <TableHead>Kullanabilir</TableHead>
                 <TableHead>Dışa aktarabilir</TableHead>
                 <TableHead>Engel nedeni</TableHead>
+                <TableHead className="text-right">Detay</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {members.items.map((member) => (
-                <MemberRow key={member.user_id} member={member} />
+                <MemberRow key={member.user_id} member={member} onSelectMember={onSelectMember} />
               ))}
             </TableBody>
           </Table>
@@ -180,7 +182,7 @@ export const AdminMembersTable = ({ members }: AdminMembersTableProps) => {
   );
 };
 
-const MemberRow = ({ member }: { member: AdminMember }) => (
+const MemberRow = ({ member, onSelectMember }: { member: AdminMember; onSelectMember: (userId: string) => void }) => (
   <TableRow>
     <TableCell className="font-medium">{member.email ?? "-"}</TableCell>
     <TableCell>{member.full_name ?? "-"}</TableCell>
@@ -192,5 +194,10 @@ const MemberRow = ({ member }: { member: AdminMember }) => (
     <TableCell>{booleanLabel(member.can_use_app)}</TableCell>
     <TableCell>{booleanLabel(member.can_export)}</TableCell>
     <TableCell>{statusLabel(member.block_reason)}</TableCell>
+    <TableCell className="text-right">
+      <Button type="button" variant="outline" size="sm" onClick={() => onSelectMember(member.user_id)}>
+        Detay
+      </Button>
+    </TableCell>
   </TableRow>
 );

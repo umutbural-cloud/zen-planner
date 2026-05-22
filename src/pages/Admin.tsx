@@ -1,15 +1,25 @@
 import { Navigate, useNavigate } from "react-router-dom";
+import { useCallback, useState } from "react";
 import { AlertTriangle, ClipboardList, Settings, ShieldCheck } from "lucide-react";
+import { AdminMemberDetailPanel } from "@/components/admin/AdminMemberDetailPanel";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminGate } from "@/hooks/useAdminGate";
+import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 
 const Admin = () => {
   const navigate = useNavigate();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { status, error, refreshAdminContext } = useAdminGate();
   const adminMembers = useAdminMembers(status === "admin");
+  const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
+
+  const closeMemberDetail = useCallback(() => {
+    setSelectedUserId(null);
+    memberDetail.clear();
+  }, [memberDetail]);
 
   if (status === "loading") {
     return (
@@ -72,7 +82,10 @@ const Admin = () => {
         </header>
 
         <section className="space-y-4">
-          <AdminMembersTable members={adminMembers} />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <AdminMembersTable members={adminMembers} onSelectMember={setSelectedUserId} />
+            <AdminMemberDetailPanel detail={memberDetail} onClose={closeMemberDetail} />
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <AdminPlaceholderCard title="Audit Log" icon={ClipboardList} />
