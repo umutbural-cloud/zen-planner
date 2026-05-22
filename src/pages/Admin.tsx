@@ -1,12 +1,15 @@
 import { Navigate, useNavigate } from "react-router-dom";
-import { AlertTriangle, ClipboardList, Settings, ShieldCheck, Users } from "lucide-react";
+import { AlertTriangle, ClipboardList, Settings, ShieldCheck } from "lucide-react";
+import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminGate } from "@/hooks/useAdminGate";
+import { useAdminMembers } from "@/hooks/useAdminMembers";
 
 const Admin = () => {
   const navigate = useNavigate();
   const { status, error, refreshAdminContext } = useAdminGate();
+  const adminMembers = useAdminMembers(status === "admin");
 
   if (status === "loading") {
     return (
@@ -68,10 +71,13 @@ const Admin = () => {
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <AdminPlaceholderCard title="Üyeler" icon={Users} />
-          <AdminPlaceholderCard title="Audit Log" icon={ClipboardList} />
-          <AdminPlaceholderCard title="Ayarlar" icon={Settings} />
+        <section className="space-y-4">
+          <AdminMembersTable members={adminMembers} />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <AdminPlaceholderCard title="Audit Log" icon={ClipboardList} />
+            <AdminPlaceholderCard title="Ayarlar" icon={Settings} />
+          </div>
         </section>
       </main>
     </div>
