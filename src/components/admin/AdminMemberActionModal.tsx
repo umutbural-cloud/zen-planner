@@ -25,9 +25,12 @@ type AdminMemberActionModalProps = {
   member: AdminMemberDetail | null;
   open: boolean;
   targetMembership: AdminMembershipTarget | null;
-  reasonCode: AdminMembershipReasonCode;
+  reasonCode: AdminMembershipReasonCode | null;
   onReasonCodeChange: (reasonCode: AdminMembershipReasonCode) => void;
   onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  loading: boolean;
+  errorMessage: string | null;
 };
 
 const reasonCodeOptions: { value: AdminMembershipReasonCode; label: string }[] = [
@@ -45,16 +48,31 @@ export const AdminMemberActionModal = ({
   reasonCode,
   onReasonCodeChange,
   onOpenChange,
+  onConfirm,
+  loading,
+  errorMessage,
 }: AdminMemberActionModalProps) => {
   const currentMembership = member?.membership ?? null;
   const isDowngrade = currentMembership === "plus" && targetMembership === "beginner";
+  const hasReasonCode = reasonCode !== null;
+  const canConfirm =
+    member !== null &&
+    targetMembership !== null &&
+    hasReasonCode &&
+    currentMembership !== targetMembership &&
+    !loading;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (loading && !nextOpen) return;
+    onOpenChange(nextOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="rounded-none sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base font-medium tracking-wide">Üyelik değişikliği onayı</DialogTitle>
-          <DialogDescription>Bu hazırlık ekranı henüz işlem çalıştırmaz.</DialogDescription>
+          <DialogDescription>Bu işlem audit log'a yazılır.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -75,9 +93,13 @@ export const AdminMemberActionModal = ({
 
           <div className="space-y-2">
             <label className="text-xs uppercase tracking-wide text-muted-foreground">Reason code</label>
-            <Select value={reasonCode} onValueChange={(value) => onReasonCodeChange(value as AdminMembershipReasonCode)}>
-              <SelectTrigger className="rounded-none">
-                <SelectValue placeholder="Reason code seç" />
+            <Select
+              value={reasonCode ?? undefined}
+              onValueChange={(value) => onReasonCodeChange(value as AdminMembershipReasonCode)}
+              disabled={loading}
+            >
+              <SelectTrigger className="rounded-none" disabled={loading}>
+                <SelectValue placeholder="İşlem nedeni seçin" />
               </SelectTrigger>
               <SelectContent>
                 {reasonCodeOptions.map((option) => (
@@ -95,16 +117,20 @@ export const AdminMemberActionModal = ({
             <AlertDescription>Bu işlem audit log'a yazılır.</AlertDescription>
           </Alert>
 
-          <p className="text-xs leading-5 text-muted-foreground">
-            RPC entegrasyonu V1-B6b-2 aşamasında eklenecek.
-          </p>
+          {errorMessage && (
+            <Alert variant="destructive" className="rounded-none">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>İşlem tamamlanamadı</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             İptal
           </Button>
-          <Button type="button" disabled variant={isDowngrade ? "destructive" : "default"}>
+          <Button type="button" disabled={!canConfirm} onClick={onConfirm} variant={isDowngrade ? "destructive" : "default"}>
             Onayla
           </Button>
         </DialogFooter>

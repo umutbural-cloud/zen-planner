@@ -1,6 +1,7 @@
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCallback, useState } from "react";
 import { AlertTriangle, ClipboardList, Settings, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import {
   AdminMemberActionModal,
   type AdminMembershipReasonCode,
@@ -14,6 +15,7 @@ import { useAdminGate } from "@/hooks/useAdminGate";
 import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
+import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -22,29 +24,53 @@ const Admin = () => {
     member: AdminMemberDetail;
     targetMembership: AdminMembershipTarget;
   } | null>(null);
-  const [membershipReasonCode, setMembershipReasonCode] = useState<AdminMembershipReasonCode>("admin_correction");
+  const [membershipReasonCode, setMembershipReasonCode] = useState<AdminMembershipReasonCode | null>(null);
   const { status, error, refreshAdminContext } = useAdminGate();
   const adminMembers = useAdminMembers(status === "admin");
   const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
+  const memberActions = useAdminMemberActions();
 
   const closeMemberDetail = useCallback(() => {
     setSelectedUserId(null);
     setMembershipAction(null);
-    setMembershipReasonCode("admin_correction");
+    setMembershipReasonCode(null);
     memberDetail.clear();
   }, [memberDetail]);
 
   const prepareMembershipChange = useCallback((member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => {
+    memberActions.clearOutcome();
     setMembershipAction({ member, targetMembership });
-    setMembershipReasonCode(targetMembership === "plus" ? "plan_upgrade" : "plan_downgrade");
-  }, []);
+    setMembershipReasonCode(null);
+  }, [memberActions]);
 
   const closeMembershipAction = useCallback((open: boolean) => {
     if (open) return;
 
+    memberActions.clearOutcome();
     setMembershipAction(null);
-    setMembershipReasonCode("admin_correction");
-  }, []);
+    setMembershipReasonCode(null);
+  }, [memberActions]);
+
+  const handleMembershipConfirm = useCallback(async () => {
+    if (!membershipAction || !membershipReasonCode) return;
+
+    const changed = await memberActions.changeMembership(
+      membershipAction.member.user_id,
+      membershipAction.targetMembership,
+      membershipReasonCode,
+    );
+
+    if (!changed) {
+      return;
+    }
+
+    adminMembers.refresh();
+    memberDetail.refresh();
+    toast.success("Üyelik güncellendi.");
+    memberActions.clearOutcome();
+    setMembershipAction(null);
+    setMembershipReasonCode(null);
+  }, [adminMembers, memberActions, memberDetail, membershipAction, membershipReasonCode]);
 
   if (status === "loading") {
     return (
@@ -123,6 +149,9 @@ const Admin = () => {
             reasonCode={membershipReasonCode}
             onReasonCodeChange={setMembershipReasonCode}
             onOpenChange={closeMembershipAction}
+            onConfirm={handleMembershipConfirm}
+            loading={memberActions.loading}
+            errorMessage={memberActions.errorMessage}
           />
 
           <div className="grid gap-4 md:grid-cols-2">
