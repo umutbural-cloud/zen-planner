@@ -3,12 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminMemberDetail, useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
+import type { AdminMembershipTarget } from "./AdminMemberActionModal";
 
 type AdminMemberDetailState = ReturnType<typeof useAdminMemberDetail>;
 
 type AdminMemberDetailPanelProps = {
   detail: AdminMemberDetailState;
   onClose: () => void;
+  onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
 };
 
 const formatDate = (value: string | null) => {
@@ -35,7 +37,7 @@ const statusBadge = (value: string | null) => {
   );
 };
 
-export const AdminMemberDetailPanel = ({ detail, onClose }: AdminMemberDetailPanelProps) => {
+export const AdminMemberDetailPanel = ({ detail, onClose, onPrepareMembershipChange }: AdminMemberDetailPanelProps) => {
   return (
     <Card className="rounded-none border-border/70 shadow-none">
       <CardHeader className="flex flex-row items-start justify-between gap-4 p-5">
@@ -69,9 +71,54 @@ export const AdminMemberDetailPanel = ({ detail, onClose }: AdminMemberDetailPan
           </div>
         )}
 
-        {!detail.loading && !detail.error && detail.member && <DetailFields member={detail.member} />}
+        {!detail.loading && !detail.error && detail.member && (
+          <>
+            <DetailFields member={detail.member} />
+            <MembershipActions member={detail.member} onPrepareMembershipChange={onPrepareMembershipChange} />
+          </>
+        )}
       </CardContent>
     </Card>
+  );
+};
+
+const MembershipActions = ({
+  member,
+  onPrepareMembershipChange,
+}: {
+  member: AdminMemberDetail;
+  onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
+}) => {
+  const currentMembership = member.membership;
+
+  if (currentMembership !== "beginner" && currentMembership !== "plus") {
+    return (
+      <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+        Bu üyenin planı için üyelik değişikliği hazırlanamaz.
+      </div>
+    );
+  }
+
+  const targetMembership: AdminMembershipTarget = currentMembership === "beginner" ? "plus" : "beginner";
+  const buttonLabel = currentMembership === "beginner" ? "Plus'a geçir" : "Beginner'a düşür";
+  const buttonVariant = currentMembership === "plus" ? "destructive" : "outline";
+
+  return (
+    <div className="border border-border/70 p-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium text-foreground">Üyelik işlemi</h3>
+        <p className="text-xs leading-5 text-muted-foreground">Bu aşamada yalnızca onay ekranı hazırlanır.</p>
+      </div>
+      <Button
+        type="button"
+        variant={buttonVariant}
+        size="sm"
+        className="mt-4"
+        onClick={() => onPrepareMembershipChange(member, targetMembership)}
+      >
+        {buttonLabel}
+      </Button>
+    </div>
   );
 };
 

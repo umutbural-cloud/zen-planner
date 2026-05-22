@@ -1,25 +1,50 @@
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCallback, useState } from "react";
 import { AlertTriangle, ClipboardList, Settings, ShieldCheck } from "lucide-react";
+import {
+  AdminMemberActionModal,
+  type AdminMembershipReasonCode,
+  type AdminMembershipTarget,
+} from "@/components/admin/AdminMemberActionModal";
 import { AdminMemberDetailPanel } from "@/components/admin/AdminMemberDetailPanel";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminGate } from "@/hooks/useAdminGate";
+import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 
 const Admin = () => {
   const navigate = useNavigate();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [membershipAction, setMembershipAction] = useState<{
+    member: AdminMemberDetail;
+    targetMembership: AdminMembershipTarget;
+  } | null>(null);
+  const [membershipReasonCode, setMembershipReasonCode] = useState<AdminMembershipReasonCode>("admin_correction");
   const { status, error, refreshAdminContext } = useAdminGate();
   const adminMembers = useAdminMembers(status === "admin");
   const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
 
   const closeMemberDetail = useCallback(() => {
     setSelectedUserId(null);
+    setMembershipAction(null);
+    setMembershipReasonCode("admin_correction");
     memberDetail.clear();
   }, [memberDetail]);
+
+  const prepareMembershipChange = useCallback((member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => {
+    setMembershipAction({ member, targetMembership });
+    setMembershipReasonCode(targetMembership === "plus" ? "plan_upgrade" : "plan_downgrade");
+  }, []);
+
+  const closeMembershipAction = useCallback((open: boolean) => {
+    if (open) return;
+
+    setMembershipAction(null);
+    setMembershipReasonCode("admin_correction");
+  }, []);
 
   if (status === "loading") {
     return (
@@ -84,8 +109,21 @@ const Admin = () => {
         <section className="space-y-4">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <AdminMembersTable members={adminMembers} onSelectMember={setSelectedUserId} />
-            <AdminMemberDetailPanel detail={memberDetail} onClose={closeMemberDetail} />
+            <AdminMemberDetailPanel
+              detail={memberDetail}
+              onClose={closeMemberDetail}
+              onPrepareMembershipChange={prepareMembershipChange}
+            />
           </div>
+
+          <AdminMemberActionModal
+            member={status === "admin" ? membershipAction?.member ?? null : null}
+            open={status === "admin" && membershipAction !== null}
+            targetMembership={membershipAction?.targetMembership ?? null}
+            reasonCode={membershipReasonCode}
+            onReasonCodeChange={setMembershipReasonCode}
+            onOpenChange={closeMembershipAction}
+          />
 
           <div className="grid gap-4 md:grid-cols-2">
             <AdminPlaceholderCard title="Audit Log" icon={ClipboardList} />
