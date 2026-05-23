@@ -107,6 +107,8 @@ const AccountStatusActions = ({
 }) => {
   const currentStatus = member.account_status;
   const isSelfTarget = currentAdminUserId !== null && member.user_id === currentAdminUserId;
+  const isManageabilityUnknown =
+    member.admin_manageable !== true && member.admin_management_block_reason === null;
 
   if (isSelfTarget) {
     return (
@@ -114,6 +116,25 @@ const AccountStatusActions = ({
         Kendi admin hesabınız için hesap durumu işlemi yapılamaz.
       </div>
     );
+  }
+
+  if (isManageabilityUnknown) {
+    return (
+      <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+        Bu hesap için yönetilebilirlik doğrulanamadı.
+      </div>
+    );
+  }
+
+  if (!member.admin_manageable) {
+    const message =
+      member.admin_management_block_reason === "self_account"
+        ? "Kendi admin hesabınız için hesap durumu işlemi yapılamaz."
+        : member.admin_management_block_reason === "admin_account"
+          ? "Admin hesapları bu akıştan yönetilemez."
+          : "Bu hesap için hesap durumu işlemi hazırlanamaz.";
+
+    return <div className="border border-border/70 p-4 text-sm text-muted-foreground">{message}</div>;
   }
 
   if (currentStatus === "security_blocked") {
