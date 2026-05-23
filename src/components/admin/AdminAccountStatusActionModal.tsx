@@ -28,6 +28,9 @@ type AdminAccountStatusActionModalProps = {
   reasonCode: AdminAccountStatusReasonCode | null;
   onReasonCodeChange: (reasonCode: AdminAccountStatusReasonCode) => void;
   onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  loading: boolean;
+  errorMessage: string | null;
 };
 
 const suspendReasonCodeOptions: { value: AdminAccountStatusReasonCode; label: string }[] = [
@@ -48,6 +51,22 @@ const getReasonCodeOptions = (targetStatus: AdminAccountStatusTarget | null) => 
   return [];
 };
 
+export const isValidAccountStatusReason = (
+  currentStatus: string | null,
+  targetStatus: AdminAccountStatusTarget | null,
+  reasonCode: AdminAccountStatusReasonCode | null,
+) => {
+  if (currentStatus === "active" && targetStatus === "suspended") {
+    return suspendReasonCodeOptions.some((option) => option.value === reasonCode);
+  }
+
+  if (currentStatus === "suspended" && targetStatus === "active") {
+    return reactivateReasonCodeOptions.some((option) => option.value === reasonCode);
+  }
+
+  return false;
+};
+
 export const AdminAccountStatusActionModal = ({
   member,
   open,
@@ -55,12 +74,28 @@ export const AdminAccountStatusActionModal = ({
   reasonCode,
   onReasonCodeChange,
   onOpenChange,
+  onConfirm,
+  loading,
+  errorMessage,
 }: AdminAccountStatusActionModalProps) => {
   const currentStatus = member?.account_status ?? null;
   const reasonCodeOptions = getReasonCodeOptions(targetStatus);
+  const canConfirm =
+    member !== null &&
+    member.admin_manageable === true &&
+    currentStatus !== targetStatus &&
+    (currentStatus === "active" || currentStatus === "suspended") &&
+    (targetStatus === "active" || targetStatus === "suspended") &&
+    isValidAccountStatusReason(currentStatus, targetStatus, reasonCode) &&
+    !loading;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (loading && !nextOpen) return;
+    onOpenChange(nextOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="rounded-none sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base font-medium tracking-wide">Hesap durumu değişikliği</DialogTitle>
@@ -80,8 +115,9 @@ export const AdminAccountStatusActionModal = ({
             <Select
               value={reasonCode ?? undefined}
               onValueChange={(value) => onReasonCodeChange(value as AdminAccountStatusReasonCode)}
+              disabled={loading}
             >
-              <SelectTrigger className="rounded-none">
+              <SelectTrigger className="rounded-none" disabled={loading}>
                 <SelectValue placeholder="İşlem nedeni seçin" />
               </SelectTrigger>
               <SelectContent>
@@ -100,19 +136,22 @@ export const AdminAccountStatusActionModal = ({
             <AlertDescription>Bu işlem audit log'a yazılır.</AlertDescription>
           </Alert>
 
-          <Alert className="rounded-none">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>V1-B6c-1 UI shell</AlertTitle>
-            <AlertDescription>RPC entegrasyonu V1-B6c-2 aşamasında eklenecek.</AlertDescription>
-          </Alert>
+          {errorMessage && (
+            <Alert variant="destructive" className="rounded-none">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>İşlem tamamlanamadı</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
+
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             İptal
           </Button>
-          <Button type="button" disabled>
-            Onayla
+          <Button type="button" disabled={!canConfirm} onClick={onConfirm} variant={targetStatus === "suspended" ? "destructive" : "default"}>
+            {loading ? "İşleniyor..." : "Onayla"}
           </Button>
         </DialogFooter>
       </DialogContent>

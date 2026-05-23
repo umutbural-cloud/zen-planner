@@ -16,6 +16,7 @@ import { AdminMemberDetailPanel } from "@/components/admin/AdminMemberDetailPane
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAdminAccountStatusActions } from "@/hooks/useAdminAccountStatusActions";
 import { useAdminGate } from "@/hooks/useAdminGate";
 import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
@@ -39,6 +40,7 @@ const Admin = () => {
   const adminMembers = useAdminMembers(status === "admin");
   const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
+  const accountStatusActions = useAdminAccountStatusActions();
 
   const closeMemberDetail = useCallback(() => {
     setSelectedUserId(null);
@@ -50,16 +52,27 @@ const Admin = () => {
   }, [memberDetail]);
 
   const prepareAccountStatusChange = useCallback((member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => {
+    if (
+      !member.admin_manageable ||
+      member.user_id === adminContext?.user_id ||
+      (member.account_status !== "active" && member.account_status !== "suspended") ||
+      (targetStatus !== "active" && targetStatus !== "suspended")
+    ) {
+      return;
+    }
+
+    accountStatusActions.reset();
     setAccountStatusAction({ member, targetStatus });
     setAccountStatusReasonCode(null);
-  }, []);
+  }, [accountStatusActions, adminContext?.user_id]);
 
   const closeAccountStatusAction = useCallback((open: boolean) => {
     if (open) return;
 
+    accountStatusActions.reset();
     setAccountStatusAction(null);
     setAccountStatusReasonCode(null);
-  }, []);
+  }, [accountStatusActions]);
 
   const prepareMembershipChange = useCallback((member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => {
     memberActions.clearOutcome();
@@ -95,6 +108,48 @@ const Admin = () => {
     setMembershipAction(null);
     setMembershipReasonCode(null);
   }, [adminMembers, memberActions, memberDetail, membershipAction, membershipReasonCode]);
+
+  const handleAccountStatusConfirm = useCallback(async () => {
+    if (!accountStatusAction || !accountStatusReasonCode) return;
+
+    const { member, targetStatus } = accountStatusAction;
+    const currentStatus = member.account_status;
+    const isValidReason =
+      (currentStatus === "active" &&
+        targetStatus === "suspended" &&
+        ["policy_violation", "payment_issue", "user_request", "admin_correction"].includes(accountStatusReasonCode)) ||
+      (currentStatus === "suspended" &&
+        targetStatus === "active" &&
+        ["reactivation_approved", "admin_correction"].includes(accountStatusReasonCode));
+
+    if (
+      !member.admin_manageable ||
+      member.user_id === adminContext?.user_id ||
+      (currentStatus !== "active" && currentStatus !== "suspended") ||
+      (targetStatus !== "active" && targetStatus !== "suspended") ||
+      currentStatus === targetStatus ||
+      !isValidReason
+    ) {
+      return;
+    }
+
+    const changed = await accountStatusActions.changeAccountStatus({
+      targetUserId: member.user_id,
+      newStatus: targetStatus,
+      reasonCode: accountStatusReasonCode,
+    });
+
+    if (!changed) {
+      return;
+    }
+
+    adminMembers.refresh();
+    memberDetail.refresh();
+    toast.success(targetStatus === "suspended" ? "Hesap askıya alındı." : "Hesap yeniden aktif edildi.");
+    accountStatusActions.reset();
+    setAccountStatusAction(null);
+    setAccountStatusReasonCode(null);
+  }, [accountStatusAction, accountStatusActions, accountStatusReasonCode, adminContext?.user_id, adminMembers, memberDetail]);
 
   if (status === "loading") {
     return (
@@ -175,6 +230,9 @@ const Admin = () => {
             reasonCode={accountStatusReasonCode}
             onReasonCodeChange={setAccountStatusReasonCode}
             onOpenChange={closeAccountStatusAction}
+            onConfirm={handleAccountStatusConfirm}
+            loading={accountStatusActions.loading}
+            errorMessage={accountStatusActions.errorMessage}
           />
 
           <AdminMemberActionModal
