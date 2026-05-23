@@ -3,13 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminMemberDetail, useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
+import type { AdminAccountStatusTarget } from "./AdminAccountStatusActionModal";
 import type { AdminMembershipTarget } from "./AdminMemberActionModal";
 
 type AdminMemberDetailState = ReturnType<typeof useAdminMemberDetail>;
 
 type AdminMemberDetailPanelProps = {
   detail: AdminMemberDetailState;
+  currentAdminUserId: string | null;
   onClose: () => void;
+  onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
   onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
 };
 
@@ -37,7 +40,13 @@ const statusBadge = (value: string | null) => {
   );
 };
 
-export const AdminMemberDetailPanel = ({ detail, onClose, onPrepareMembershipChange }: AdminMemberDetailPanelProps) => {
+export const AdminMemberDetailPanel = ({
+  detail,
+  currentAdminUserId,
+  onClose,
+  onPrepareAccountStatusChange,
+  onPrepareMembershipChange,
+}: AdminMemberDetailPanelProps) => {
   return (
     <Card className="rounded-none border-border/70 shadow-none">
       <CardHeader className="flex flex-row items-start justify-between gap-4 p-5">
@@ -74,11 +83,85 @@ export const AdminMemberDetailPanel = ({ detail, onClose, onPrepareMembershipCha
         {!detail.loading && !detail.error && detail.member && (
           <>
             <DetailFields member={detail.member} />
+            <AccountStatusActions
+              member={detail.member}
+              currentAdminUserId={currentAdminUserId}
+              onPrepareAccountStatusChange={onPrepareAccountStatusChange}
+            />
             <MembershipActions member={detail.member} onPrepareMembershipChange={onPrepareMembershipChange} />
           </>
         )}
       </CardContent>
     </Card>
+  );
+};
+
+const AccountStatusActions = ({
+  member,
+  currentAdminUserId,
+  onPrepareAccountStatusChange,
+}: {
+  member: AdminMemberDetail;
+  currentAdminUserId: string | null;
+  onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
+}) => {
+  const currentStatus = member.account_status;
+  const isSelfTarget = currentAdminUserId !== null && member.user_id === currentAdminUserId;
+
+  if (isSelfTarget) {
+    return (
+      <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+        Kendi admin hesabınız için hesap durumu işlemi yapılamaz.
+      </div>
+    );
+  }
+
+  if (currentStatus === "security_blocked") {
+    return (
+      <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+        Security blocked durumu V1-B6c-3 aşamasında ayrı ele alınacak.
+      </div>
+    );
+  }
+
+  if (currentStatus === "deleted" || currentStatus === "anonymized") {
+    return (
+      <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+        Bu hesap durumu V1 kapsamı dışında.
+      </div>
+    );
+  }
+
+  if (currentStatus !== "active" && currentStatus !== "suspended") {
+    return (
+      <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+        Bu hesap durumu için hesap durumu değişikliği hazırlanamaz.
+      </div>
+    );
+  }
+
+  const targetStatus: AdminAccountStatusTarget = currentStatus === "active" ? "suspended" : "active";
+  const buttonLabel = currentStatus === "active" ? "Hesabı askıya al" : "Hesabı yeniden aktif et";
+  const buttonVariant = currentStatus === "active" ? "destructive" : "outline";
+
+  return (
+    <div className="border border-border/70 p-4">
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium text-foreground">Hesap durumu işlemi</h3>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Bu aşamada yalnızca hesap durumu onay ekranı hazırlanır.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant={buttonVariant}
+        size="sm"
+        className="mt-4"
+        onClick={() => onPrepareAccountStatusChange(member, targetStatus)}
+      >
+        {buttonLabel}
+      </Button>
+    </div>
   );
 };
 

@@ -3,6 +3,11 @@ import { useCallback, useState } from "react";
 import { AlertTriangle, ClipboardList, Settings, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
+  AdminAccountStatusActionModal,
+  type AdminAccountStatusReasonCode,
+  type AdminAccountStatusTarget,
+} from "@/components/admin/AdminAccountStatusActionModal";
+import {
   AdminMemberActionModal,
   type AdminMembershipReasonCode,
   type AdminMembershipTarget,
@@ -25,7 +30,12 @@ const Admin = () => {
     targetMembership: AdminMembershipTarget;
   } | null>(null);
   const [membershipReasonCode, setMembershipReasonCode] = useState<AdminMembershipReasonCode | null>(null);
-  const { status, error, refreshAdminContext } = useAdminGate();
+  const [accountStatusAction, setAccountStatusAction] = useState<{
+    member: AdminMemberDetail;
+    targetStatus: AdminAccountStatusTarget;
+  } | null>(null);
+  const [accountStatusReasonCode, setAccountStatusReasonCode] = useState<AdminAccountStatusReasonCode | null>(null);
+  const { status, adminContext, error, refreshAdminContext } = useAdminGate();
   const adminMembers = useAdminMembers(status === "admin");
   const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
@@ -34,8 +44,22 @@ const Admin = () => {
     setSelectedUserId(null);
     setMembershipAction(null);
     setMembershipReasonCode(null);
+    setAccountStatusAction(null);
+    setAccountStatusReasonCode(null);
     memberDetail.clear();
   }, [memberDetail]);
+
+  const prepareAccountStatusChange = useCallback((member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => {
+    setAccountStatusAction({ member, targetStatus });
+    setAccountStatusReasonCode(null);
+  }, []);
+
+  const closeAccountStatusAction = useCallback((open: boolean) => {
+    if (open) return;
+
+    setAccountStatusAction(null);
+    setAccountStatusReasonCode(null);
+  }, []);
 
   const prepareMembershipChange = useCallback((member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => {
     memberActions.clearOutcome();
@@ -137,10 +161,21 @@ const Admin = () => {
             <AdminMembersTable members={adminMembers} onSelectMember={setSelectedUserId} />
             <AdminMemberDetailPanel
               detail={memberDetail}
+              currentAdminUserId={adminContext?.user_id ?? null}
               onClose={closeMemberDetail}
+              onPrepareAccountStatusChange={prepareAccountStatusChange}
               onPrepareMembershipChange={prepareMembershipChange}
             />
           </div>
+
+          <AdminAccountStatusActionModal
+            member={status === "admin" ? accountStatusAction?.member ?? null : null}
+            open={status === "admin" && accountStatusAction !== null}
+            targetStatus={accountStatusAction?.targetStatus ?? null}
+            reasonCode={accountStatusReasonCode}
+            onReasonCodeChange={setAccountStatusReasonCode}
+            onOpenChange={closeAccountStatusAction}
+          />
 
           <AdminMemberActionModal
             member={status === "admin" ? membershipAction?.member ?? null : null}
