@@ -1,12 +1,13 @@
 import { Navigate, useNavigate } from "react-router-dom";
-import { useCallback, useState } from "react";
-import { AlertTriangle, ClipboardList, Settings, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Settings, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   AdminAccountStatusActionModal,
   type AdminAccountStatusReasonCode,
   type AdminAccountStatusTarget,
 } from "@/components/admin/AdminAccountStatusActionModal";
+import { AdminAuditLogPanel } from "@/components/admin/AdminAuditLogPanel";
 import {
   AdminMemberActionModal,
   type AdminMembershipReasonCode,
@@ -16,6 +17,7 @@ import { AdminMemberDetailPanel } from "@/components/admin/AdminMemberDetailPane
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdminAccountStatusActions } from "@/hooks/useAdminAccountStatusActions";
 import { useAdminGate } from "@/hooks/useAdminGate";
 import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
@@ -23,8 +25,11 @@ import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
 
+type AdminTab = "members" | "audit";
+
 const Admin = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<AdminTab>("members");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [membershipAction, setMembershipAction] = useState<{
     member: AdminMemberDetail;
@@ -41,6 +46,13 @@ const Admin = () => {
   const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
+  const isSuperManager = adminContext?.is_super_manager === true;
+
+  useEffect(() => {
+    if (!isSuperManager && activeTab === "audit") {
+      setActiveTab("members");
+    }
+  }, [activeTab, isSuperManager]);
 
   const closeMemberDetail = useCallback(() => {
     setSelectedUserId(null);
@@ -212,16 +224,46 @@ const Admin = () => {
         </header>
 
         <section className="space-y-4">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <AdminMembersTable members={adminMembers} onSelectMember={setSelectedUserId} />
-            <AdminMemberDetailPanel
-              detail={memberDetail}
-              currentAdminUserId={adminContext?.user_id ?? null}
-              onClose={closeMemberDetail}
-              onPrepareAccountStatusChange={prepareAccountStatusChange}
-              onPrepareMembershipChange={prepareMembershipChange}
-            />
-          </div>
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => {
+              if (value === "audit" && !isSuperManager) {
+                return;
+              }
+
+              setActiveTab(value === "audit" ? "audit" : "members");
+            }}
+          >
+            <TabsList className="h-auto w-full justify-start rounded-none border border-border/70 bg-muted/30 p-1">
+              <TabsTrigger value="members" className="rounded-none">
+                Üyeler
+              </TabsTrigger>
+              {isSuperManager && (
+                <TabsTrigger value="audit" className="rounded-none">
+                  Audit Log
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            <TabsContent value="members" className="mt-4">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <AdminMembersTable members={adminMembers} onSelectMember={setSelectedUserId} />
+                <AdminMemberDetailPanel
+                  detail={memberDetail}
+                  currentAdminUserId={adminContext?.user_id ?? null}
+                  onClose={closeMemberDetail}
+                  onPrepareAccountStatusChange={prepareAccountStatusChange}
+                  onPrepareMembershipChange={prepareMembershipChange}
+                />
+              </div>
+            </TabsContent>
+
+            {isSuperManager && (
+              <TabsContent value="audit" className="mt-4">
+                <AdminAuditLogPanel isSuperManager={isSuperManager} />
+              </TabsContent>
+            )}
+          </Tabs>
 
           <AdminAccountStatusActionModal
             member={status === "admin" ? accountStatusAction?.member ?? null : null}
@@ -248,7 +290,6 @@ const Admin = () => {
           />
 
           <div className="grid gap-4 md:grid-cols-2">
-            <AdminPlaceholderCard title="Audit Log" icon={ClipboardList} />
             <AdminPlaceholderCard title="Ayarlar" icon={Settings} />
           </div>
         </section>
