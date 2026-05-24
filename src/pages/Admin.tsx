@@ -258,9 +258,9 @@ const Admin = () => {
               </div>
             </TabsContent>
 
-            {isSuperManager && (
+            {activeTab === "audit" && isSuperManager && (
               <TabsContent value="audit" className="mt-4">
-                <AdminAuditLogPanel isSuperManager={isSuperManager} />
+                <AdminAuditLogPanel enabled={activeTab === "audit" && isSuperManager} isSuperManager={isSuperManager} />
               </TabsContent>
             )}
           </Tabs>
