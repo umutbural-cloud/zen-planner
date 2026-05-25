@@ -8,6 +8,7 @@ import {
   type AdminAccountStatusTarget,
 } from "@/components/admin/AdminAccountStatusActionModal";
 import { AdminAuditLogPanel } from "@/components/admin/AdminAuditLogPanel";
+import { AdminFeatureAccessMatrixPanel } from "@/components/admin/AdminFeatureAccessMatrixPanel";
 import {
   AdminMemberActionModal,
   type AdminMembershipReasonCode,
@@ -25,7 +26,7 @@ import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
 
-type AdminTab = "members" | "audit";
+type AdminTab = "members" | "audit" | "feature-access";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -50,6 +51,9 @@ const Admin = () => {
 
   useEffect(() => {
     if (!isSuperManager && activeTab === "audit") {
+      setActiveTab("members");
+    }
+    if (!isSuperManager && activeTab === "feature-access") {
       setActiveTab("members");
     }
   }, [activeTab, isSuperManager]);
@@ -239,9 +243,14 @@ const Admin = () => {
                 Üyeler
               </TabsTrigger>
               {isSuperManager && (
-                <TabsTrigger value="audit" className="rounded-none">
-                  Audit Log
-                </TabsTrigger>
+                <>
+                  <TabsTrigger value="audit" className="rounded-none">
+                    Audit Log
+                  </TabsTrigger>
+                  <TabsTrigger value="feature-access" className="rounded-none">
+                    Erişim Matrisi
+                  </TabsTrigger>
+                </>
               )}
             </TabsList>
 
@@ -261,6 +270,12 @@ const Admin = () => {
             {activeTab === "audit" && isSuperManager && (
               <TabsContent value="audit" className="mt-4">
                 <AdminAuditLogPanel enabled={activeTab === "audit" && isSuperManager} isSuperManager={isSuperManager} />
+              </TabsContent>
+            )}
+
+            {activeTab === "feature-access" && isSuperManager && (
+              <TabsContent value="feature-access" className="mt-4">
+                <AdminFeatureAccessMatrixPanel isSuperManager={isSuperManager} />
               </TabsContent>
             )}
           </Tabs>
