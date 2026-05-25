@@ -264,6 +264,17 @@
 .ProseMirror strong { font-weight: 600; color: hsl(var(--foreground)); }
 .ProseMirror em { font-style: italic; }
 .ProseMirror s { text-decoration: line-through; color: hsl(var(--muted-foreground)); }
+.ProseMirror a {
+  color: hsl(var(--primary));
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+  text-decoration-thickness: 1px;
+}
+.ProseMirror a:hover {
+  color: hsl(var(--foreground));
+  text-decoration-thickness: 2px;
+}
 
 .quick-note-editor.ProseMirror {
   font-family: 'Noto Sans JP', sans-serif;

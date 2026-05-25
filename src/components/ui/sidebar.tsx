@@ -19,6 +19,22 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+const isTypingOrEditorTarget = (event: KeyboardEvent) => {
+  const target = event.target;
+  const path = typeof event.composedPath === "function" ? event.composedPath() : [];
+
+  const matchesEditableNode = (node: EventTarget | null | undefined) => {
+    if (!(node instanceof Element)) return false;
+    return (
+      node.matches("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror") ||
+      node.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror") !== null
+    );
+  };
+
+  if (matchesEditableNode(target as EventTarget | null)) return true;
+  return path.some(matchesEditableNode);
+};
+
 type SidebarContext = {
   state: "expanded" | "collapsed";
   open: boolean;
@@ -78,11 +94,7 @@ const SidebarProvider = React.forwardRef<
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target instanceof Element ? event.target : null;
-      const isEditingTarget =
-        target?.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror") !== null;
-
-      if (event.defaultPrevented || isEditingTarget) return;
+      if (event.defaultPrevented || isTypingOrEditorTarget(event)) return;
 
       if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
