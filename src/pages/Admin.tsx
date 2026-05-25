@@ -231,11 +231,16 @@ const Admin = () => {
           <Tabs
             value={activeTab}
             onValueChange={(value) => {
-              if (value === "audit" && !isSuperManager) {
+              if ((value === "audit" || value === "feature-access") && !isSuperManager) {
                 return;
               }
 
-              setActiveTab(value === "audit" ? "audit" : "members");
+              if (value === "audit" || value === "feature-access") {
+                setActiveTab(value);
+                return;
+              }
+
+              setActiveTab("members");
             }}
           >
             <TabsList className="h-auto w-full justify-start rounded-none border border-border/70 bg-muted/30 p-1">
