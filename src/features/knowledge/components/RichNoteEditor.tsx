@@ -1,16 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Placeholder from "@tiptap/extension-placeholder";
-import Link from "@tiptap/extension-link";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { common, createLowlight } from "lowlight";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
-import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
-import ToggleBlock from "@/components/editor/extensions/ToggleBlock";
+import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
-
-const lowlight = createLowlight(common);
 
 type Props = {
   value: JSONContent | null | undefined;
@@ -24,24 +16,10 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
   const debounceRef = useRef<number | null>(null);
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        codeBlock: false,
-        dropcursor: false,
-        gapcursor: false,
-      }),
-      CodeBlockLowlight.configure({ lowlight }),
-      ToggleBlock,
-      FontSize,
-      LineHeight,
-      Placeholder.configure({ placeholder: placeholder || "Yazmaya başla, ya da bir blok ekle..." }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        validate: (href) => normalizeSafeLinkUrl(href) !== null,
-      }),
-    ],
+    extensions: createRichEditorExtensions({
+      placeholder: placeholder || "Yazmaya başla, ya da bir blok ekle...",
+      linkClassName: "",
+    }),
     content: value && Object.keys(value || {}).length ? value : { type: "doc", content: [{ type: "paragraph" }] },
     editorProps: {
       attributes: {
