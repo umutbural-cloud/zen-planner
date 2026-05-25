@@ -3,6 +3,7 @@ import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
+import { BubbleTextMenu } from "@/components/editor/BubbleTextMenu";
 
 type Props = {
   value: JSONContent | null | undefined;
@@ -92,6 +93,8 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
       }}>
         <EditorContent editor={editor} />
       </div>
+
+      {editor ? <BubbleTextMenu editor={editor} onSetLink={insertLink} /> : null}
     </div>
   );
 };
