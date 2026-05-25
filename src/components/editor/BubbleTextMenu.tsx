@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/react";
-import BubbleMenu from "@tiptap/extension-bubble-menu";
+import { BubbleMenu } from "@tiptap/react/menus";
 import { Bold, Code2, Italic, Link as LinkIcon, Strikethrough, Unlink } from "lucide-react";
 
 type BubbleTextMenuProps = {
@@ -23,7 +23,10 @@ const BubbleButton = ({
   <button
     type="button"
     disabled={disabled}
-    onMouseDown={(event) => event.preventDefault()}
+    onMouseDown={(event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    }}
     onClick={onClick}
     title={title}
     className={`rounded-sm p-1.5 transition-colors ${
@@ -45,12 +48,9 @@ export const BubbleTextMenu = ({ editor, onSetLink }: BubbleTextMenuProps) => {
     <BubbleMenu
       editor={editor}
       shouldShow={({ editor: bubbleEditor }) => bubbleEditor.isEditable && !bubbleEditor.state.selection.empty}
-      tippyOptions={{
+      options={{
         placement: "top",
-        duration: 120,
-        offset: [0, 10],
-        animation: false,
-        zIndex: 30,
+        offset: 10,
       }}
       className="rounded-md border border-border/70 bg-background/95 px-1.5 py-1 shadow-lg backdrop-blur-sm"
     >
@@ -90,7 +90,10 @@ export const BubbleTextMenu = ({ editor, onSetLink }: BubbleTextMenuProps) => {
         <div className="mx-0.5 h-4 w-px bg-border/60" />
         <BubbleButton
           active={editor.isActive("link")}
-          onClick={onSetLink}
+          onClick={() => {
+            editor.chain().focus().run();
+            onSetLink();
+          }}
           title="Bağlantı ekle/düzenle"
         >
           <LinkIcon className="h-3.5 w-3.5" />

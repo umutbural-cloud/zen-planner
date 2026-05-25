@@ -59,6 +59,7 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
   if (!editor) return null;
 
   const insertLink = () => {
+    const { from, to } = editor.state.selection;
     const url = window.prompt("URL");
     if (!url) return;
     const safeUrl = normalizeSafeLinkUrl(url);
@@ -66,7 +67,7 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
       console.warn("Invalid or unsafe link URL rejected.");
       return;
     }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: safeUrl }).run();
+    editor.chain().focus().setTextSelection({ from, to }).extendMarkRange("link").setLink({ href: safeUrl }).run();
   };
 
   return (
