@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdminAccountStatusActions } from "@/hooks/useAdminAccountStatusActions";
 import { useAdminGate } from "@/hooks/useAdminGate";
+import { useAdminFeatureAccessMatrix } from "@/hooks/useAdminFeatureAccessMatrix";
 import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
@@ -48,6 +49,7 @@ const Admin = () => {
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
   const isSuperManager = adminContext?.is_super_manager === true;
+  const featureAccessMatrix = useAdminFeatureAccessMatrix(activeTab === "feature-access" && isSuperManager);
 
   useEffect(() => {
     if (!isSuperManager && activeTab === "audit") {
@@ -280,7 +282,12 @@ const Admin = () => {
 
             {activeTab === "feature-access" && isSuperManager && (
               <TabsContent value="feature-access" className="mt-4">
-                <AdminFeatureAccessMatrixPanel isSuperManager={isSuperManager} />
+                <AdminFeatureAccessMatrixPanel
+                  items={featureAccessMatrix.items}
+                  isLoading={featureAccessMatrix.isLoading}
+                  error={featureAccessMatrix.error}
+                  onRetry={featureAccessMatrix.refetch}
+                />
               </TabsContent>
             )}
           </Tabs>
