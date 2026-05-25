@@ -1,47 +1,16 @@
-import { type ChangeEvent, useEffect, useRef } from "react";
-import { useEditor, EditorContent, NodeViewContent, NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tiptap/react";
-import { Node, mergeAttributes, type JSONContent } from "@tiptap/core";
+import { useEffect, useRef } from "react";
+import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
-import { ChevronRight } from "lucide-react";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
+import ToggleBlock from "@/components/editor/extensions/ToggleBlock";
+import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
 
 const lowlight = createLowlight(common);
-const SAFE_LINK_PROTOCOLS = new Set(["http:", "https:", "mailto:"]);
-const UNSAFE_LINK_PROTOCOLS = new Set(["javascript:", "data:", "vbscript:", "file:", "blob:"]);
-
-const hasControlCharacter = (value: string) => {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    if (code <= 31 || code === 127) return true;
-  }
-  return false;
-};
-
-const normalizeSafeLinkUrl = (rawUrl: string) => {
-  const trimmed = rawUrl.trim();
-  if (!trimmed || hasControlCharacter(trimmed)) return null;
-
-  try {
-    const parsed = new URL(trimmed);
-    if (UNSAFE_LINK_PROTOCOLS.has(parsed.protocol) || !SAFE_LINK_PROTOCOLS.has(parsed.protocol)) return null;
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-};
-
-declare module "@tiptap/core" {
-  interface Commands<ReturnType> {
-    toggleBlock: {
-      insertToggleBlock: () => ReturnType;
-    };
-  }
-}
 
 type Props = {
   value: JSONContent | null | undefined;
@@ -50,93 +19,6 @@ type Props = {
   titleValue: string;
   onTitleChange: (v: string) => void;
 };
-
-const ToggleBlockView = ({ node, updateAttributes }: NodeViewProps) => {
-  const open = (node.attrs.open as boolean | undefined) ?? true;
-  const title = (node.attrs.title as string | undefined) || "";
-
-  const handleToggle = () => {
-    updateAttributes({ open: !open });
-  };
-
-  const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    updateAttributes({ title: event.target.value });
-  };
-
-  return (
-    <NodeViewWrapper className="notion-toggle" data-open={open ? "true" : "false"}>
-      <div className="notion-toggle-header" contentEditable={false}>
-        <button type="button" className="notion-toggle-button" onClick={handleToggle} title={open ? "Kapat" : "Aç"}>
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-        <input
-          value={title}
-          onChange={handleTitleChange}
-          placeholder="Toggle"
-          className="notion-toggle-title"
-        />
-      </div>
-      <NodeViewContent className="notion-toggle-content" />
-    </NodeViewWrapper>
-  );
-};
-
-const ToggleBlock = Node.create({
-  name: "toggleBlock",
-  group: "block",
-  content: "block*",
-  defining: true,
-  isolating: true,
-
-  addAttributes() {
-    return {
-      title: {
-        default: "",
-        parseHTML: (element) => element.getAttribute("data-title") || "",
-        renderHTML: (attributes) => ({ "data-title": attributes.title }),
-      },
-      open: {
-        default: true,
-        parseHTML: (element) => element.getAttribute("data-open") !== "false",
-        renderHTML: (attributes) => ({ "data-open": attributes.open ? "true" : "false" }),
-      },
-    };
-  },
-
-  parseHTML() {
-    return [{ tag: 'div[data-type="toggle-block"]' }];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      "div",
-      mergeAttributes(HTMLAttributes, { "data-type": "toggle-block" }),
-      ["div", { "data-toggle-fallback-title": "" }, HTMLAttributes["data-title"] || ""],
-      ["div", { "data-toggle-content": "" }, 0],
-    ];
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(ToggleBlockView);
-  },
-
-  addCommands() {
-    return {
-      insertToggleBlock:
-        () =>
-        ({ commands }) =>
-          commands.insertContent({
-            type: this.name,
-            attrs: { title: "", open: true },
-            content: [
-              {
-                type: "paragraph",
-              },
-            ],
-          }),
-    };
-  },
-});
 
 const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChange }: Props) => {
   const debounceRef = useRef<number | null>(null);
