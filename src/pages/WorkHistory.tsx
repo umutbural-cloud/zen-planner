@@ -74,6 +74,7 @@ const weekOfMonth = (d: Date) => {
 };
 
 const todayKey = () => format(startOfDay(new Date()), "yyyy-MM-dd");
+const dateKey = (d: Date) => format(startOfDay(d), "yyyy-MM-dd");
 
 const WorkHistory = () => {
   const navigate = useNavigate();
@@ -96,7 +97,9 @@ const WorkHistory = () => {
   // ----- Stats category inclusion (persisted) -----
   // null = include all (default). Otherwise an explicit Set of included keys.
   const storageKey = user ? `keikaku:work-stats:included-cats:${user.id}` : null;
+  const offDaysStorageKey = user ? `keikaku:work-stats:off-days:${user.id}` : null;
   const [includedCats, setIncludedCats] = useState<Set<string> | null>(null);
+  const [offDays, setOffDays] = useState<Set<string>>(new Set());
   const [statsSettingsOpen, setStatsSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -112,12 +115,40 @@ const WorkHistory = () => {
     } catch { /* ignore */ }
   }, [storageKey]);
 
+  useEffect(() => {
+    if (!offDaysStorageKey) return;
+    try {
+      const raw = localStorage.getItem(offDaysStorageKey);
+      if (!raw) {
+        setOffDays(new Set());
+        return;
+      }
+      const arr = JSON.parse(raw) as string[];
+      if (Array.isArray(arr)) {
+        setOffDays(new Set(arr.filter((value): value is string => typeof value === "string" && value.length > 0)));
+      } else {
+        setOffDays(new Set());
+      }
+    } catch {
+      setOffDays(new Set());
+    }
+  }, [offDaysStorageKey]);
+
   const persistIncluded = (next: Set<string> | null) => {
     setIncludedCats(next);
     if (!storageKey) return;
     try {
       if (next === null) localStorage.removeItem(storageKey);
       else localStorage.setItem(storageKey, JSON.stringify(Array.from(next)));
+    } catch { /* ignore */ }
+  };
+
+  const persistOffDays = (next: Set<string>) => {
+    setOffDays(next);
+    if (!offDaysStorageKey) return;
+    try {
+      if (next.size === 0) localStorage.removeItem(offDaysStorageKey);
+      else localStorage.setItem(offDaysStorageKey, JSON.stringify(Array.from(next).sort()));
     } catch { /* ignore */ }
   };
 
@@ -147,6 +178,20 @@ const WorkHistory = () => {
     () => sessions.filter((s) => isCatIncluded(s.category_id)),
     [sessions, isCatIncluded],
   );
+
+  const offDaysSelected = useMemo(
+    () => Array.from(offDays).sort().map((value) => new Date(`${value}T00:00:00`)),
+    [offDays],
+  );
+
+  const sessionCountByDay = useMemo(() => {
+    const map = new Map<string, number>();
+    sessions.forEach((s) => {
+      const k = dateKey(parseISO(s.started_at));
+      map.set(k, (map.get(k) || 0) + 1);
+    });
+    return map;
+  }, [sessions]);
 
   const toggleRecentCat = (key: string) => {
     setRecentCatFilter((prev) => {
@@ -178,7 +223,7 @@ const WorkHistory = () => {
   // -------- Stats --------
   const stats = useMemo(() => {
     if (filteredStatsSessions.length === 0) {
-      return { last7: 0, last30: 0, avgDaily: 0, hasData: false };
+      return { last7: 0, last30: 0, avgDaily: 0, hasData: false, excludedOffDays: 0 };
     }
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
@@ -193,9 +238,16 @@ const WorkHistory = () => {
       if (t >= cutoff30) last30 += s.duration_seconds;
       if (t < firstTs) firstTs = t;
     });
-    const days = Math.max(1, differenceInCalendarDays(new Date(), new Date(firstTs)) + 1);
-    return { last7, last30, avgDaily: Math.round(total / days), hasData: true };
-  }, [filteredStatsSessions]);
+    const firstDay = startOfDay(new Date(firstTs));
+    const today = startOfDay(new Date());
+    const daySpan = Math.max(1, differenceInCalendarDays(today, firstDay) + 1);
+    let excludedOffDays = 0;
+    offDays.forEach((key) => {
+      if (key >= dateKey(firstDay) && key <= dateKey(today)) excludedOffDays += 1;
+    });
+    const days = Math.max(1, daySpan - excludedOffDays);
+    return { last7, last30, avgDaily: Math.round(total / days), hasData: true, excludedOffDays };
+  }, [filteredStatsSessions, offDays]);
 
   // -------- Category breakdowns --------
   // Build a quick day index of seconds per category
@@ -245,10 +297,10 @@ const WorkHistory = () => {
   // -------- Daily chart series (last 30 days) --------
   const chartData = useMemo(() => {
     const today = startOfDay(new Date());
-    const out: { date: string; label: string; minutes: number; sec: number }[] = [];
+    const out: { date: string; label: string; minutes: number; sec: number; isOffDay: boolean }[] = [];
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-      const k = format(d, "yyyy-MM-dd");
+      const k = dateKey(d);
       const inner = sessionsByDayCat.get(k);
       let sec = 0;
       inner?.forEach((v) => { sec += v; });
@@ -257,10 +309,22 @@ const WorkHistory = () => {
         label: format(d, "d MMM", { locale: tr }),
         minutes: Math.round(sec / 60),
         sec,
+        isOffDay: offDays.has(k),
       });
     }
     return out;
-  }, [sessionsByDayCat]);
+  }, [sessionsByDayCat, offDays]);
+
+  const updateOffDaysFromDates = (dates: Date[] | undefined) => {
+    const next = new Set((dates || []).filter(Boolean).map((d) => dateKey(d)));
+    persistOffDays(next);
+  };
+
+  const removeOffDay = (key: string) => {
+    const next = new Set(offDays);
+    next.delete(key);
+    persistOffDays(next);
+  };
 
   // -------- Group: month -> week -> day --------
   const grouped = useMemo(() => {
@@ -495,6 +559,69 @@ const WorkHistory = () => {
                           Tümünü kaldır
                         </button>
                       </div>
+                      <div className="px-3 py-2.5 border-t border-border/60">
+                        <div className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
+                          Off günler
+                        </div>
+                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-light leading-snug">
+                          Off günler günlük ortalama hesabında çalışma beklenen gün olarak sayılmaz.
+                        </div>
+                      </div>
+                      <div className="px-3 py-2">
+                        <Calendar
+                          mode="multiple"
+                          selected={offDaysSelected}
+                          onSelect={updateOffDaysFromDates}
+                          disabled={(d) => d > new Date()}
+                        />
+                      </div>
+                      <div className="border-t border-border/60 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
+                            Seçili günler
+                          </span>
+                          {offDays.size > 0 ? (
+                            <button
+                              onClick={() => persistOffDays(new Set())}
+                              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Temizle
+                            </button>
+                          ) : null}
+                        </div>
+                        {offDays.size === 0 ? (
+                          <div className="text-[11px] text-muted-foreground/50 italic py-1">
+                            Henüz off gün seçilmedi.
+                          </div>
+                        ) : (
+                          <div className="max-h-32 overflow-auto space-y-1">
+                            {Array.from(offDays).sort((a, b) => b.localeCompare(a)).map((key) => {
+                              const sessionCount = sessionCountByDay.get(key) || 0;
+                              return (
+                                <div key={key} className="flex items-center justify-between gap-2 text-[11px]">
+                                  <div className="min-w-0">
+                                    <div className="font-light">
+                                      {format(new Date(`${key}T00:00:00`), "d MMMM yyyy, EEEE", { locale: tr })}
+                                    </div>
+                                    {sessionCount > 0 ? (
+                                      <div className="text-[10px] text-muted-foreground/60">
+                                        {sessionCount} çalışma kaydı var; kayıtlar korunur.
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <button
+                                    onClick={() => removeOffDay(key)}
+                                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                    title="Off günü kaldır"
+                                  >
+                                    Kaldır
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -502,7 +629,11 @@ const WorkHistory = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <StatCard label="Son 7 gün" value={formatDur(stats.last7)} />
                   <StatCard label="Son 30 gün" value={formatDur(stats.last30)} />
-                  <StatCard label="Günlük ortalama" value={formatDur(stats.avgDaily)} />
+                  <StatCard
+                    label="Günlük ortalama"
+                    value={formatDur(stats.avgDaily)}
+                    hint={stats.excludedOffDays > 0 ? `${stats.excludedOffDays} off gün hariç` : undefined}
+                  />
                 </div>
 
                 {/* Category breakdown */}
@@ -613,6 +744,11 @@ const WorkHistory = () => {
                             formatDurShort(payload.payload?.sec ?? 0),
                             "Çalışma",
                           ]}
+                          labelFormatter={(_label: string, payload) => {
+                            const point = payload?.[0]?.payload as { label?: string; isOffDay?: boolean } | undefined;
+                            if (!point?.label) return "";
+                            return point.isOffDay ? `${point.label} · Off gün` : point.label;
+                          }}
                         />
                         <Line
                           type="monotone"
@@ -838,10 +974,11 @@ const WorkHistory = () => {
   );
 };
 
-const StatCard = ({ label, value }: { label: string; value: string }) => (
+const StatCard = ({ label, value, hint }: { label: string; value: string; hint?: string }) => (
   <div className="border border-border/60 rounded-sm p-3">
     <div className="text-[11px] uppercase tracking-widest text-muted-foreground/70 mb-1">{label}</div>
     <div className="text-lg font-light tracking-wide tabular-nums">{value}</div>
+    {hint ? <div className="text-[10px] text-muted-foreground/60 mt-1">{hint}</div> : null}
   </div>
 );
 
