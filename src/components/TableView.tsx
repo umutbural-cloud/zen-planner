@@ -269,21 +269,25 @@ const TableView = ({ projectId }: { projectId: string }) => {
 
   if (loading) {
     return (
-      <DelayedLoading loading delay={300} fallback={<div className="space-y-4 max-w-3xl mx-auto w-full">
-        <div className="space-y-2">
-          <LoadingBlock lines={2} className="max-w-[18rem]" />
-        </div>
-        <div className="flex gap-2">
-          <LoadingBlock lines={1} className="flex-1" />
-          <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
-          <div className="h-9 w-9 rounded-md bg-muted animate-pulse" />
-        </div>
-        <div className="border border-border/60 rounded-sm overflow-hidden">
-          <div className="space-y-2 p-3">
-            <LoadingBlock lines={4} />
+      <DelayedLoading
+        loading
+        delay={300}
+        fallback={(
+          <div className="space-y-2.5 max-w-3xl mx-auto w-full">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+              <span>Yükleniyor</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <LoadingBlock lines={1} className="flex-1 max-w-[16rem]" />
+              <div className="h-8 w-8 rounded-md bg-muted/70 animate-pulse" />
+            </div>
+            <div className="rounded-sm border border-border/50 bg-card/20 px-2.5 py-2">
+              <LoadingBlock lines={1} className="max-w-[12rem]" />
+            </div>
           </div>
-        </div>
-      </div>} />
+        )}
+      />
     );
   }
 

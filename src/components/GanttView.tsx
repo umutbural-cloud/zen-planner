@@ -142,19 +142,21 @@ const GanttView = ({ projectId }: { projectId: string }) => {
         loading
         delay={300}
         fallback={(
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <LoadingBlock lines={2} className="max-w-[14rem]" />
-              <div className="flex items-center gap-2">
-                <div className="h-7 w-14 rounded-md bg-muted animate-pulse" />
-                <div className="h-7 w-7 rounded-md bg-muted animate-pulse" />
-                <div className="h-7 w-7 rounded-md bg-muted animate-pulse" />
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+              <span>Yükleniyor</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <LoadingBlock lines={1} className="max-w-[11rem] flex-1" />
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="h-7 w-12 rounded-md bg-muted/70 animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted/70 animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted/70 animate-pulse" />
               </div>
             </div>
-            <div className="border border-border/60 rounded-sm overflow-hidden">
-              <div className="space-y-2 p-3">
-                <LoadingBlock lines={5} />
-              </div>
+            <div className="rounded-sm border border-border/50 bg-card/20 px-2.5 py-2">
+              <LoadingBlock lines={2} />
             </div>
           </div>
         )}

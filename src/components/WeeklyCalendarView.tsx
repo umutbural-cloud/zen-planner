@@ -384,23 +384,25 @@ const WeeklyCalendarView = ({ projectId }: { projectId: string }) => {
         loading
         delay={300}
         fallback={(
-          <div className="space-y-4">
-            <div className="flex justify-between items-center flex-wrap gap-2">
-              <LoadingBlock lines={2} className="max-w-[15rem]" />
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+              <span>Yükleniyor</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <LoadingBlock lines={1} className="max-w-[12rem] flex-1" />
               <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex border border-border/60 rounded-sm overflow-hidden">
-                  <div className="h-7 w-12 bg-muted animate-pulse" />
-                  <div className="h-7 w-12 bg-muted animate-pulse" />
-                  <div className="h-7 w-12 bg-muted animate-pulse" />
+                <div className="flex border border-border/50 rounded-sm overflow-hidden">
+                  <div className="h-7 w-10 bg-muted/70 animate-pulse" />
+                  <div className="h-7 w-10 bg-muted/70 animate-pulse" />
+                  <div className="h-7 w-10 bg-muted/70 animate-pulse" />
                 </div>
-                <div className="h-7 w-7 rounded-md bg-muted animate-pulse" />
-                <div className="h-7 w-7 rounded-md bg-muted animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted/70 animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted/70 animate-pulse" />
               </div>
             </div>
-            <div className="border border-border/60 rounded-sm overflow-hidden">
-              <div className="space-y-2 p-3">
-                <LoadingBlock lines={6} />
-              </div>
+            <div className="rounded-sm border border-border/50 bg-card/20 px-2.5 py-2">
+              <LoadingBlock lines={3} />
             </div>
           </div>
         )}
