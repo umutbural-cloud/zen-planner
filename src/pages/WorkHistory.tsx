@@ -75,6 +75,7 @@ const weekOfMonth = (d: Date) => {
 
 const todayKey = () => format(startOfDay(new Date()), "yyyy-MM-dd");
 const dateKey = (d: Date) => format(startOfDay(d), "yyyy-MM-dd");
+const OFF_DAYS_WEEK_STARTS_ON = 0;
 
 const WorkHistory = () => {
   const navigate = useNavigate();
@@ -183,6 +184,28 @@ const WorkHistory = () => {
     () => Array.from(offDays).sort().map((value) => new Date(`${value}T00:00:00`)),
     [offDays],
   );
+
+  const offDaySegments = useMemo(() => {
+    const single: Date[] = [];
+    const start: Date[] = [];
+    const middle: Date[] = [];
+    const end: Date[] = [];
+
+    offDaysSelected.forEach((day) => {
+      const dayColumn = (day.getDay() - OFF_DAYS_WEEK_STARTS_ON + 7) % 7;
+      const prevKey = dateKey(new Date(day.getTime() - 24 * 60 * 60 * 1000));
+      const nextKey = dateKey(new Date(day.getTime() + 24 * 60 * 60 * 1000));
+      const hasPrev = dayColumn > 0 && offDays.has(prevKey);
+      const hasNext = dayColumn < 6 && offDays.has(nextKey);
+
+      if (hasPrev && hasNext) middle.push(day);
+      else if (hasPrev) end.push(day);
+      else if (hasNext) start.push(day);
+      else single.push(day);
+    });
+
+    return { single, start, middle, end };
+  }, [offDays, offDaysSelected]);
 
   const sessionCountByDay = useMemo(() => {
     const map = new Map<string, number>();
@@ -570,9 +593,27 @@ const WorkHistory = () => {
                       <div className="px-3 py-2">
                         <Calendar
                           mode="multiple"
+                          weekStartsOn={OFF_DAYS_WEEK_STARTS_ON}
                           selected={offDaysSelected}
                           onSelect={updateOffDaysFromDates}
                           disabled={(d) => d > new Date()}
+                          classNames={{
+                            cell: "h-9 w-9 p-0 text-center text-sm relative [&:has([aria-selected])]:bg-primary/15 focus-within:relative focus-within:z-20",
+                            day: "h-9 w-9 p-0 font-normal rounded-none aria-selected:opacity-100",
+                            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-none",
+                          }}
+                          modifiers={{
+                            offSingle: offDaySegments.single,
+                            offStart: offDaySegments.start,
+                            offMiddle: offDaySegments.middle,
+                            offEnd: offDaySegments.end,
+                          }}
+                          modifiersClassNames={{
+                            offSingle: "rounded-md",
+                            offStart: "rounded-l-md rounded-r-none",
+                            offMiddle: "rounded-none",
+                            offEnd: "rounded-r-md rounded-l-none",
+                          }}
                         />
                       </div>
                       <div className="border-t border-border/60 px-3 py-2">
