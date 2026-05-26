@@ -45,12 +45,20 @@ const deriveStatus = (userId: string | undefined, gate: AccountGatePayload | nul
   return "error";
 };
 
+type CachedGateState = {
+  gate: AccountGatePayload | null;
+  status: Exclude<AccountGateStatus, "loading">;
+};
+
+const gateCache = new Map<string, CachedGateState>();
+
 export const useAccountGate = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, initialAuthResolved, loading: authLoading, signOut } = useAuth();
   const [gate, setGate] = useState<AccountGatePayload | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const mountedRef = useRef(false);
+  const activeUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -61,57 +69,71 @@ export const useAccountGate = () => {
   }, []);
 
   const refreshGate = useCallback(async () => {
-    if (!user) {
+    const currentUserId = user?.id ?? null;
+    if (!currentUserId) {
+      activeUserIdRef.current = null;
       setGate(null);
       setError(null);
       setLoading(false);
+      gateCache.clear();
       return null;
     }
 
+    activeUserIdRef.current = currentUserId;
     setLoading(true);
     setError(null);
 
     const { data, error: rpcError } = await (supabase as SupabaseRpcClient).rpc("get_current_account_gate");
 
     if (!mountedRef.current) return null;
+    if (activeUserIdRef.current !== currentUserId) return null;
 
     if (rpcError) {
       setGate(null);
       setError(rpcError);
+      gateCache.set(currentUserId, { gate: null, status: "error" });
       setLoading(false);
       return null;
     }
 
     setGate(data);
+    gateCache.set(currentUserId, { gate: data, status: deriveStatus(currentUserId, data) });
     setLoading(false);
     return data;
   }, [user]);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !initialAuthResolved) return;
 
     let cancelled = false;
 
     const loadGate = async () => {
-      if (!user) {
+      const currentUserId = user?.id ?? null;
+      if (!currentUserId) {
+        activeUserIdRef.current = null;
         setGate(null);
         setError(null);
         setLoading(false);
+        gateCache.clear();
         return;
       }
 
+      activeUserIdRef.current = currentUserId;
       setLoading(true);
       setError(null);
 
       const { data, error: rpcError } = await (supabase as SupabaseRpcClient).rpc("get_current_account_gate");
 
       if (cancelled) return;
+      if (activeUserIdRef.current !== currentUserId) return;
 
       if (rpcError) {
         setGate(null);
         setError(rpcError);
+        gateCache.set(currentUserId, { gate: null, status: "error" });
       } else {
         setGate(data);
+        gateCache.set(currentUserId, { gate: data, status: deriveStatus(currentUserId, data) });
       }
 
       setLoading(false);
@@ -122,9 +144,31 @@ export const useAccountGate = () => {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user]);
+  }, [authLoading, initialAuthResolved, user]);
 
-  const status: AccountGateStatus = authLoading || loading ? "loading" : deriveStatus(user?.id, gate);
+  const currentUserId = user?.id ?? null;
+  const cachedStatus = currentUserId ? gateCache.get(currentUserId)?.status : null;
+  const status: AccountGateStatus = authLoading || !initialAuthResolved || loading
+    ? "loading"
+    : cachedStatus ?? deriveStatus(currentUserId, gate);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      activeUserIdRef.current = null;
+      gateCache.clear();
+      setGate(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    if (activeUserIdRef.current && activeUserIdRef.current !== currentUserId) {
+      gateCache.clear();
+      setGate(null);
+      setError(null);
+      setLoading(true);
+    }
+  }, [currentUserId]);
 
   return {
     user,

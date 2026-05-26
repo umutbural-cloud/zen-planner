@@ -23,8 +23,9 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, status, gate, error, refreshGate, signOut } = useAccountGate();
-  if (loading) {
+  const { user, initialAuthResolved } = useAuth();
+  const { status, gate, error, refreshGate, signOut } = useAccountGate();
+  if (!initialAuthResolved || status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
@@ -45,8 +46,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  if (loading) {
+  const { user, initialAuthResolved } = useAuth();
+  if (!initialAuthResolved) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
