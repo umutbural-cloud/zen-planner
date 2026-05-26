@@ -25,6 +25,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
+import { DelayedLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 
 const COLUMNS: { key: TaskStatus; label: string; jpLabel: string }[] = [
   { key: "todo", label: "Yapılacak", jpLabel: "未" },
@@ -294,7 +295,33 @@ const KanbanView = ({ projectId }: { projectId: string }) => {
     }
   };
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) {
+    return (
+      <DelayedLoading
+        loading
+        delay={300}
+        fallback={(
+          <div className="space-y-4">
+            <LoadingBlock lines={2} className="max-w-[16rem]" />
+            <div className="flex flex-col sm:flex-row gap-4 sm:overflow-x-auto pb-4">
+              <div className="flex-1 min-w-[240px] rounded-sm border border-border/60 p-3 space-y-3">
+                <LoadingBlock lines={2} className="max-w-[10rem]" />
+                <LoadingBlock lines={4} />
+              </div>
+              <div className="flex-1 min-w-[240px] rounded-sm border border-border/60 p-3 space-y-3">
+                <LoadingBlock lines={2} className="max-w-[10rem]" />
+                <LoadingBlock lines={3} />
+              </div>
+              <div className="flex-1 min-w-[240px] rounded-sm border border-border/60 p-3 space-y-3">
+                <LoadingBlock lines={2} className="max-w-[10rem]" />
+                <LoadingBlock lines={3} />
+              </div>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

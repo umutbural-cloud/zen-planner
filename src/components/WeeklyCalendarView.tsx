@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import TaskEditDialog from "./TaskEditDialog";
+import { DelayedLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const SLOT_HEIGHT = 44; // px per hour slot
@@ -377,7 +378,35 @@ const WeeklyCalendarView = ({ projectId }: { projectId: string }) => {
   const weekDays = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
   const timeGridTemplate = { gridTemplateColumns: `52px repeat(${days.length}, minmax(0, 1fr))` };
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) {
+    return (
+      <DelayedLoading
+        loading
+        delay={300}
+        fallback={(
+          <div className="space-y-4">
+            <div className="flex justify-between items-center flex-wrap gap-2">
+              <LoadingBlock lines={2} className="max-w-[15rem]" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex border border-border/60 rounded-sm overflow-hidden">
+                  <div className="h-7 w-12 bg-muted animate-pulse" />
+                  <div className="h-7 w-12 bg-muted animate-pulse" />
+                  <div className="h-7 w-12 bg-muted animate-pulse" />
+                </div>
+                <div className="h-7 w-7 rounded-md bg-muted animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted animate-pulse" />
+              </div>
+            </div>
+            <div className="border border-border/60 rounded-sm overflow-hidden">
+              <div className="space-y-2 p-3">
+                <LoadingBlock lines={6} />
+              </div>
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
