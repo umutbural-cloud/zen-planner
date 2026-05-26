@@ -27,6 +27,7 @@ import { usePageState } from "@/hooks/usePageState";
 import { useProjects } from "@/hooks/useProjects";
 import AppSidebar from "@/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { DelayedInlineLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 import type { ViewKey } from "@/hooks/useProjectViews";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { colorClasses, type TaskColor } from "@/lib/taskColors";
@@ -92,6 +93,7 @@ const WorkHistory = () => {
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [catDayKey, setCatDayKey] = useState<string>(todayKey());
   const [recentCatFilter, setRecentCatFilter] = useState<Set<string>>(new Set());
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
   const NONE_CAT_KEY = "__none__";
 
@@ -230,17 +232,28 @@ const WorkHistory = () => {
   }, [recentCatFilter]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setSessionsLoading(false);
+      return;
+    }
+    setSessionsLoading(true);
     (async () => {
-      const { data } = await supabase
-        .from("pomodoro_sessions")
-        .select("id, started_at, duration_seconds, kind, note, category_id")
-        .eq("user_id", user.id)
-        .eq("kind", "work")
-        .order("started_at", { ascending: false })
-        .limit(5000);
-      setSessions(((data || []) as PomodoroSessionRow[]) as Session[]);
+      try {
+        const { data } = await supabase
+          .from("pomodoro_sessions")
+          .select("id, started_at, duration_seconds, kind, note, category_id")
+          .eq("user_id", user.id)
+          .eq("kind", "work")
+          .order("started_at", { ascending: false })
+          .limit(5000);
+        setSessions(((data || []) as PomodoroSessionRow[]) as Session[]);
+      } finally {
+        setSessionsLoading(false);
+      }
     })();
+    return () => {
+      setSessionsLoading(false);
+    };
   }, [user]);
 
   // -------- Stats --------
@@ -517,9 +530,32 @@ const WorkHistory = () => {
 
           <main className="flex-1 overflow-auto">
             <div className="max-w-3xl mx-auto p-6 sm:p-8 space-y-10">
+              <DelayedInlineLoading loading={sessionsLoading} className="px-1" />
 
               {/* ============ STATS ============ */}
               <section>
+                {sessionsLoading ? (
+                  <div className="space-y-3 rounded-sm border border-border/50 bg-card/20 p-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <LoadingBlock lines={1} className="max-w-[11rem] flex-1" />
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-20 rounded-md bg-muted/70 animate-pulse" />
+                        <div className="h-8 w-8 rounded-md bg-muted/70 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+                        <LoadingBlock lines={2} />
+                      </div>
+                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+                        <LoadingBlock lines={2} />
+                      </div>
+                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+                        <LoadingBlock lines={2} />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between mb-3 px-1">
                   <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70">
                     İstatistikler
