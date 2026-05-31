@@ -41,24 +41,118 @@ const DEFAULTS: UserSettings = {
 
 const CACHE_KEY = "keikaku.userSettings.v1";
 const EVENT = "keikaku:userSettings";
+const SELECT_COLUMNS = "auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,home_focus_options,home_task_project_ids";
+const CACHE_FRESH_MS = 60_000;
 
-const readCache = (): UserSettings => {
+type StoredUserSettings = UserSettings & { __user_id?: string; __fetched_at?: number };
+type UserSettingsRow = Pick<
+  Database["public"]["Tables"]["user_settings"]["Row"],
+  | "auto_prayer_times"
+  | "location_permission"
+  | "country"
+  | "city"
+  | "latitude"
+  | "longitude"
+  | "calculation_method"
+  | "module_labels"
+  | "startup_page"
+  | "default_pomodoro_project_id"
+  | "home_focus_options"
+  | "home_task_project_ids"
+>;
+
+const memoryCache = new Map<string, UserSettings>();
+const fetchedAtByUser = new Map<string, number>();
+const inFlightFetches = new Map<string, Promise<UserSettings | null>>();
+
+const normalizeSettingsRow = (data: UserSettingsRow): UserSettings => ({
+  auto_prayer_times: data.auto_prayer_times,
+  location_permission: data.location_permission,
+  country: data.country,
+  city: data.city,
+  latitude: data.latitude,
+  longitude: data.longitude,
+  calculation_method: data.calculation_method,
+  module_labels: isStringRecord(data.module_labels) ? data.module_labels : {},
+  startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
+  default_pomodoro_project_id: data.default_pomodoro_project_id,
+  home_focus_options: normalizeFocusOptions(data.home_focus_options),
+  home_task_project_ids: normalizeProjectIds(data.home_task_project_ids),
+});
+
+const readStoredCache = (): StoredUserSettings | null => {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return DEFAULTS;
+    if (!raw) return null;
     return { ...DEFAULTS, ...JSON.parse(raw) };
   } catch {
-    return DEFAULTS;
+    return null;
   }
 };
 
-const writeCache = (s: UserSettings) => {
+const readCache = (userId?: string | null): UserSettings => {
+  if (!userId) return DEFAULTS;
+  const cached = memoryCache.get(userId);
+  if (cached) return cached;
+  const stored = readStoredCache();
+  if (stored?.__user_id !== userId) return DEFAULTS;
+  const { __user_id: _storedUserId, __fetched_at: storedFetchedAt, ...settings } = stored;
+  const next = { ...DEFAULTS, ...settings };
+  memoryCache.set(userId, next);
+  if (typeof storedFetchedAt === "number") fetchedAtByUser.set(userId, storedFetchedAt);
+  return next;
+};
+
+const hasCache = (userId: string) => {
+  if (memoryCache.has(userId)) return true;
+  return readStoredCache()?.__user_id === userId;
+};
+
+const isCacheFresh = (userId: string) => {
+  const fetchedAt = fetchedAtByUser.get(userId) ?? readStoredCache()?.__fetched_at;
+  return typeof fetchedAt === "number" && Date.now() - fetchedAt < CACHE_FRESH_MS;
+};
+
+const writeCache = (userId: string, s: UserSettings) => {
+  memoryCache.set(userId, s);
+  const fetchedAt = Date.now();
+  fetchedAtByUser.set(userId, fetchedAt);
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(s));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...s, __user_id: userId, __fetched_at: fetchedAt }));
   } catch {
     // localStorage can be unavailable in private browsing or restricted embeds.
   }
   window.dispatchEvent(new Event(EVENT));
+};
+
+const fetchSettings = (userId: string) => {
+  if (hasCache(userId) && isCacheFresh(userId)) {
+    return Promise.resolve(readCache(userId));
+  }
+
+  const existing = inFlightFetches.get(userId);
+  if (existing) return existing;
+
+  const promise = supabase
+    .from("user_settings")
+    .select(SELECT_COLUMNS)
+    .eq("user_id", userId)
+    .maybeSingle()
+    .then(({ data }) => {
+      if (!data) {
+        writeCache(userId, readCache(userId));
+        return null;
+      }
+      const next = normalizeSettingsRow(data);
+      writeCache(userId, next);
+      return next;
+    })
+    .finally(() => {
+      inFlightFetches.delete(userId);
+    });
+
+  inFlightFetches.set(userId, promise);
+  return promise;
 };
 
 const isStartupPageSetting = (value: unknown): value is StartupPageSetting => {
@@ -111,64 +205,57 @@ const normalizeProjectIds = (value: unknown): string[] | null => {
 
 export const useUserSettings = () => {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<UserSettings>(readCache);
-  const [loading, setLoading] = useState(true);
+  const userId = user?.id ?? null;
+  const [settings, setSettings] = useState<UserSettings>(() => readCache(userId));
+  const [loading, setLoading] = useState(() => (userId ? !hasCache(userId) : false));
 
   useEffect(() => {
-    const onChange = () => setSettings(readCache());
+    const onChange = () => setSettings(readCache(userId));
     window.addEventListener(EVENT, onChange);
     return () => window.removeEventListener(EVENT, onChange);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("user_settings")
-        .select("auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,home_focus_options,home_task_project_ids")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      if (data) {
-        const next: UserSettings = {
-          auto_prayer_times: data.auto_prayer_times,
-          location_permission: data.location_permission,
-          country: data.country,
-          city: data.city,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          calculation_method: data.calculation_method,
-          module_labels: isStringRecord(data.module_labels) ? data.module_labels : {},
-          startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
-          default_pomodoro_project_id: data.default_pomodoro_project_id,
-          home_focus_options: normalizeFocusOptions(data.home_focus_options),
-          home_task_project_ids: normalizeProjectIds(data.home_task_project_ids),
-        };
-        setSettings(next);
-        writeCache(next);
-      }
+    if (!userId) {
+      setSettings(DEFAULTS);
       setLoading(false);
-    })();
+      return;
+    }
+
+    let cancelled = false;
+
+    const cached = readCache(userId);
+    const cachedAvailable = hasCache(userId);
+    setSettings(cached);
+    setLoading(!cachedAvailable);
+
+    void fetchSettings(userId).then((next) => {
+      if (cancelled) return;
+      if (next) setSettings(next);
+      setLoading(false);
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
+    });
+
     return () => { cancelled = true; };
-  }, [user]);
+  }, [userId]);
 
   const update = useCallback(async (patch: Partial<UserSettings>) => {
-    const previous = readCache();
+    const previous = readCache(userId);
     const next = { ...previous, ...patch };
     setSettings(next);
-    writeCache(next);
-    if (!user) return { error: null };
-    const payload: Database["public"]["Tables"]["user_settings"]["Insert"] = { user_id: user.id, ...next };
+    if (!userId) return { error: null };
+    writeCache(userId, next);
+    const payload: Database["public"]["Tables"]["user_settings"]["Insert"] = { user_id: userId, ...next };
     const { error } = await supabase
       .from("user_settings")
       .upsert(payload, { onConflict: "user_id" });
     if (error) {
       setSettings(previous);
-      writeCache(previous);
+      writeCache(userId, previous);
     }
     return { error };
-  }, [user]);
+  }, [userId]);
 
   return { settings, update, loading };
 };
