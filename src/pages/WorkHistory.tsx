@@ -24,11 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePageState } from "@/hooks/usePageState";
-import { useProjects } from "@/hooks/useProjects";
-import AppSidebar from "@/components/AppSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { DelayedInlineLoading, LoadingBlock } from "@/components/ui/delayed-loading";
-import type { ViewKey } from "@/hooks/useProjectViews";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { colorClasses, type TaskColor } from "@/lib/taskColors";
 import { colorHex } from "@/hooks/useHabitCategories";
@@ -81,8 +78,7 @@ const OFF_DAYS_WEEK_STARTS_ON = 0;
 const WorkHistory = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, createProject, updateProject, deleteProject } = useProjects();
-  const { section, selectedProjectId, view, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
+  const { setSection, setJournalDate } = usePageState();
   const { categories } = usePomodoroCategories();
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -442,25 +438,6 @@ const WorkHistory = () => {
     return out;
   }, [sessions, recentWeeks, sessionMatchesFilter]);
 
-  // -------- Sidebar handlers --------
-  const handleSidebarSelect = (id: string, v?: ViewKey) => {
-    setSection("project");
-    setSelectedProjectId(id);
-    const project = projects.find((p) => p.id === id);
-    const pvs = (project?.enabled_views?.length ? project.enabled_views : ["table", "notes"]) as ViewKey[];
-    setView(v || pvs[0] || "table");
-    navigate("/");
-  };
-  const handleSidebarCreate = async (name: string, parentId?: string) => {
-    const p = await createProject(name, parentId);
-    if (p) {
-      setSelectedProjectId(p.id);
-      setSection("project");
-      setView("table");
-      navigate("/");
-    }
-  };
-
   // Helpers for category lookup
   const catName = (id: string | null) => id ? (categories.find((c) => c.id === id)?.name || "—") : "Kategorisiz";
   const catColor = (id: string | null): TaskColor => (categories.find((c) => c.id === id)?.color as TaskColor) || "gray";
@@ -490,29 +467,6 @@ const WorkHistory = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar
-          projects={projects}
-          selectedId={selectedProjectId}
-          selectedView={view}
-          section={section}
-          selectedNotebookId={selectedNotebookId}
-          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
-          onSelect={handleSidebarSelect}
-          onSelectHome={() => { setSection("home"); navigate("/"); }}
-          onCreate={handleSidebarCreate}
-          onDelete={(id) => deleteProject(id)}
-          onUpdateProject={updateProject}
-          onSelectBacklog={() => { setSection("backlog"); navigate("/"); }}
-          onSelectTrash={() => { setSection("trash"); navigate("/"); }}
-          onSelectJournal={() => { setSection("journal"); navigate("/"); }}
-          onSelectHabits={() => { setSection("habits"); navigate("/"); }}
-          onSelectRetreat={() => { setSection("retreat"); navigate("/"); }}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); navigate("/"); }}
-          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); navigate("/"); }}
-        />
-
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center border-b border-border/60 px-4 gap-3">
             <SidebarTrigger className="text-muted-foreground" />
@@ -1046,8 +1000,6 @@ const WorkHistory = () => {
             </div>
           </main>
         </div>
-      </div>
-    </SidebarProvider>
   );
 };
 

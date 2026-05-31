@@ -1,8 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid, type LucideIcon } from "lucide-react";
-import AppSidebar, { ProjectIconPicker } from "@/components/AppSidebar";
+import { ProjectIconPicker } from "@/components/AppSidebar";
 import NotesView from "@/components/NotesView";
 import TableView from "@/components/TableView";
 import GanttView from "@/components/GanttView";
@@ -16,7 +16,7 @@ import InzivaView from "@/components/InzivaView";
 import HomeView from "@/features/home/HomeView";
 import NotebookView from "@/features/knowledge/components/NotebookView";
 import { useKnowledgeNotes } from "@/features/knowledge/hooks/useNotebookNotes";
-import { useProjects } from "@/hooks/useProjects";
+import { useAppShellProjects } from "@/components/AppShell";
 import { ViewKey } from "@/hooks/useProjectViews";
 import { useUndo } from "@/hooks/useUndo";
 import { useTheme } from "@/hooks/useTheme";
@@ -37,7 +37,7 @@ const VIEWS: { id: ViewKey; label: string; jp: string; icon: LucideIcon }[] = [
 let startupApplied = false;
 
 const Index = () => {
-  const { projects, loading, createProject, updateProject, deleteProject } = useProjects();
+  const { projects, loading, updateProject } = useAppShellProjects();
   const { undo, redo, canUndo, canRedo } = useUndo();
   const { theme, toggle: toggleTheme } = useTheme();
   const { section, selectedProjectId, view, journalDate, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
@@ -111,36 +111,6 @@ const Index = () => {
     return () => window.removeEventListener("keydown", handler);
   }, [undo, redo]);
 
-  const handleCreate = async (name: string, parentId?: string) => {
-    const p = await createProject(name, parentId);
-    if (p) { setSelectedProjectId(p.id); setSection("project"); setView("table"); }
-  };
-
-  const handleSelect = (id: string, v?: ViewKey) => {
-    setSection("project");
-    setSelectedProjectId(id);
-    const project = projects.find((p) => p.id === id);
-    const pvs = (project?.enabled_views?.length ? project.enabled_views : ["table", "notes"]) as ViewKey[];
-    if (v) setView(v);
-    else setView(pvs[0] || "table");
-  };
-
-  const handleDelete = async (id: string) => {
-    await deleteProject(id);
-    if (selectedProjectId === id) {
-      const nextProject = projects.find((p) => p.id !== id && p.parent_id !== id);
-      if (nextProject) {
-        setSelectedProjectId(nextProject.id);
-        setSection("project");
-        const pvs = (nextProject.enabled_views?.length ? nextProject.enabled_views : ["table", "notes"]) as ViewKey[];
-        setView(pvs[0]);
-      } else {
-        setSelectedProjectId(null);
-        setSection("backlog");
-      }
-    }
-  };
-
   const addView = (v: ViewKey) => {
     if (!selectedProject) return;
     if (projectViews.includes(v)) return;
@@ -150,29 +120,6 @@ const Index = () => {
   const availableToAdd = VIEWS.filter((v) => !projectViews.includes(v.id));
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar
-          projects={projects}
-          selectedId={selectedProjectId}
-          selectedView={view}
-          section={section}
-          selectedNotebookId={selectedNotebookId}
-          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
-          onSelect={handleSelect}
-          onSelectHome={() => setSection("home")}
-          onCreate={handleCreate}
-          onDelete={handleDelete}
-          onUpdateProject={updateProject}
-          onSelectBacklog={() => setSection("backlog")}
-          onSelectTrash={() => setSection("trash")}
-          onSelectJournal={() => setSection("journal")}
-          onSelectHabits={() => setSection("habits")}
-          onSelectRetreat={() => setSection("retreat")}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); }}
-          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); }}
-        />
-
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center justify-between border-b border-border/60 px-4 gap-4">
             <div className="flex items-center gap-3 min-w-0">
@@ -368,8 +315,6 @@ const Index = () => {
             )}
           </main>
         </div>
-      </div>
-    </SidebarProvider>
   );
 };
 
