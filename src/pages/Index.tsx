@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid, type LucideIcon } from "lucide-react";
@@ -23,6 +23,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { usePageState } from "@/hooks/usePageState";
 import { useStartupPage } from "@/hooks/useStartupPage";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useAuth } from "@/hooks/useAuth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const VIEWS: { id: ViewKey; label: string; jp: string; icon: LucideIcon }[] = [
@@ -33,18 +34,17 @@ const VIEWS: { id: ViewKey; label: string; jp: string; icon: LucideIcon }[] = [
   { id: "calendar", label: "Takvim", jp: "暦", icon: Calendar },
 ];
 
-// Oturum başına bir kez açılış sayfası uygulansın (Index remount edildiğinde tekrarlanmasın)
-let startupApplied = false;
-
 const Index = () => {
   const { projects, loading, updateProject } = useAppShellProjects();
   const { undo, redo, canUndo, canRedo } = useUndo();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { user } = useAuth();
   const { section, selectedProjectId, view, journalDate, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { startup } = useStartupPage();
   const { loading: settingsLoading } = useUserSettings();
   const { notes: knowledgeNotes } = useKnowledgeNotes();
   const navigate = useNavigate();
+  const startupAppliedUserRef = useRef<string | null>(null);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
   const selectedKnowledgeNote = knowledgeNotes.find((note) => note.id === selectedKnowledgeNoteId) || null;
@@ -52,14 +52,15 @@ const Index = () => {
 
   // İlk yüklemede açılış sayfası tercihini uygula
   useEffect(() => {
-    if (loading || settingsLoading || startupApplied) return;
+    const userId = user?.id ?? null;
+    if (!userId || loading || settingsLoading || startupAppliedUserRef.current === userId) return;
     // Sadece hiçbir bölüm/proje seçilmemişken (taze açılış) uygula.
     // Aksi halde başka sayfadan ("/pomodoro" gibi) gelen kullanıcının seçimini ezeriz.
     if (section !== "project" || selectedProjectId !== null) {
-      startupApplied = true;
+      startupAppliedUserRef.current = userId;
       return;
     }
-    startupApplied = true;
+    startupAppliedUserRef.current = userId;
 
     if (startup.type === "module") {
       if (startup.value === "workHistory") { navigate("/work-history"); return; }
@@ -97,6 +98,7 @@ const Index = () => {
     setView,
     settingsLoading,
     startup,
+    user?.id,
   ]);
 
   // Keyboard shortcuts for undo/redo

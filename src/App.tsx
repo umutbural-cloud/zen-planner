@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,7 +12,8 @@ import { UiScaleSync } from "@/components/UiScaleSync";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AccountGateScreen } from "@/components/account-gate/AccountGateScreen";
 import { useAccountGate } from "@/hooks/useAccountGate";
-import { UserSettingsProvider } from "@/hooks/useUserSettings";
+import { UserSettingsProvider, useUserSettings } from "@/hooks/useUserSettings";
+import { usePageState } from "@/hooks/usePageState";
 import AppShell from "@/components/AppShell";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -68,7 +69,36 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  return user ? <Navigate to="/" replace /> : <>{children}</>;
+  return user ? <UserSettingsProvider><AuthStartupRedirect /></UserSettingsProvider> : <>{children}</>;
+};
+
+const AuthStartupRedirect = () => {
+  const { settings, loading } = useUserSettings();
+  const { setSection, setSelectedProjectId } = usePageState();
+  const startup = settings.startup_page;
+
+  useEffect(() => {
+    if (loading || startup.type !== "module") return;
+    if (startup.value === "backlog" || startup.value === "journal" || startup.value === "habits") {
+      setSelectedProjectId(null);
+      setSection(startup.value);
+    }
+  }, [loading, setSection, setSelectedProjectId, startup]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
+      </div>
+    );
+  }
+
+  if (startup.type === "module") {
+    if (startup.value === "pomodoro") return <Navigate to="/pomodoro" replace />;
+    if (startup.value === "workHistory") return <Navigate to="/work-history" replace />;
+  }
+
+  return <Navigate to="/" replace />;
 };
 
 const App = () => (
