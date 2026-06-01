@@ -10,7 +10,7 @@ import HabitDetailDialog from "./HabitDetailDialog";
 import { Circle, CheckCircle2, ChevronUp, ChevronDown } from "lucide-react";
 
 const HabitsToday = () => {
-  const { habits, completionsMap, today, toggleCompletion, updateHabit, deleteHabit } = useHabits();
+  const { habits, loading, completionsMap, today, toggleCompletion, updateHabit, deleteHabit } = useHabits();
   const { categories } = useHabitCategories();
   const [defaultFilter] = useHabitTodayDefault();
   const [filter, setFilter] = useState<TimeOfDay | "all">(defaultFilter === "all" ? "all" : currentTimeOfDay());
@@ -82,7 +82,22 @@ const HabitsToday = () => {
         ))}
       </div>
 
-      {visible.length === 0 ? (
+      {loading ? (
+        <div className="border border-border/60 rounded-sm overflow-hidden divide-y divide-border/40">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="flex items-center gap-3 px-3 py-2">
+              <div className="h-5 w-5 rounded-full bg-muted/70 animate-pulse shrink-0" />
+              <div className="h-4 w-4 rounded-sm bg-muted/70 animate-pulse shrink-0" />
+              <div className="h-4 flex-1 rounded-sm bg-muted/70 animate-pulse" />
+              <div className="hidden sm:flex items-center gap-1 shrink-0">
+                {last7.map((d) => (
+                  <div key={d.toISOString()} className="h-5 w-4 rounded-sm bg-muted/50 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
           <p className="mb-1">空 — Boş</p>
           <p className="text-xs">Bu dilim için planlı alışkanlık yok</p>

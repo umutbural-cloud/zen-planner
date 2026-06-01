@@ -17,7 +17,7 @@ const UNCATEGORIZED: HabitCategory = {
 };
 
 const HabitsStats = () => {
-  const { habits, completionsMap, today } = useHabits();
+  const { habits, loading, completionsMap, today } = useHabits();
   const { categories } = useHabitCategories();
   const [range, setRange] = useState<Range>("week");
 
@@ -75,6 +75,35 @@ const HabitsStats = () => {
 
     return { stats, totals, byCategory };
   }, [habits, completionsMap, today, range, categories]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-3 gap-2">
+          <SummarySkeleton />
+          <SummarySkeleton />
+          <SummarySkeleton />
+        </div>
+        <div className="h-7 w-40 rounded-sm bg-muted/60 animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-3 w-24 rounded-sm bg-muted/60 animate-pulse" />
+          <div className="border border-border/60 rounded-sm overflow-hidden divide-y divide-border/40">
+            {[0, 1, 2].map((item) => (
+              <div key={item} className="px-3 py-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 rounded-sm bg-muted/70 animate-pulse" />
+                  <div className="h-4 flex-1 rounded-sm bg-muted/70 animate-pulse" />
+                  <div className="h-4 w-10 rounded-sm bg-muted/70 animate-pulse" />
+                </div>
+                <div className="h-1.5 w-full bg-muted/60 rounded-sm animate-pulse" />
+                <div className="h-3 w-32 rounded-sm bg-muted/50 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -155,6 +184,14 @@ const SummaryCard = ({ label, value, sub }: { label: string; value: number; sub:
     <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">{label}</div>
     <div className="text-2xl font-light tracking-wide tabular-nums mt-1">{value}</div>
     <div className="text-[10px] text-muted-foreground tracking-wide">{sub}</div>
+  </div>
+);
+
+const SummarySkeleton = () => (
+  <div className="border border-border/60 rounded-sm px-3 py-3">
+    <div className="h-3 w-16 rounded-sm bg-muted/60 animate-pulse" />
+    <div className="h-8 w-10 rounded-sm bg-muted/70 animate-pulse mt-2" />
+    <div className="h-3 w-20 rounded-sm bg-muted/50 animate-pulse mt-2" />
   </div>
 );
 
