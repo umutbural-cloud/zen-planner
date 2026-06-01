@@ -58,6 +58,7 @@ type AccountGateContextValue = {
   loading: boolean;
   error: Error | null;
   refreshGate: () => Promise<AccountGatePayload | null>;
+  signOut: () => Promise<void>;
 };
 
 const AccountGateContext = createContext<AccountGateContextValue | null>(null);
@@ -67,7 +68,7 @@ type AccountGateProviderProps = {
 };
 
 export const AccountGateProvider = ({ children }: AccountGateProviderProps) => {
-  const { user, initialAuthResolved, loading: authLoading } = useAuth();
+  const { user, initialAuthResolved, loading: authLoading, signOut: authSignOut } = useAuth();
   const [gate, setGate] = useState<AccountGatePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -165,13 +166,24 @@ export const AccountGateProvider = ({ children }: AccountGateProviderProps) => {
     ? "loading"
     : cachedStatus ?? deriveStatus(currentUserId, gate);
 
+  const signOut = useCallback(async () => {
+    activeUserIdRef.current = null;
+    confirmedAllowedUserIdRef.current = null;
+    gateCache.clear();
+    setGate(null);
+    setError(null);
+    setLoading(false);
+    await authSignOut();
+  }, [authSignOut]);
+
   const value = useMemo<AccountGateContextValue>(() => ({
     gate,
     status,
     loading: status === "loading",
     error,
     refreshGate: loadGate,
-  }), [error, gate, loadGate, status]);
+    signOut,
+  }), [error, gate, loadGate, signOut, status]);
 
   return <AccountGateContext.Provider value={value}>{children}</AccountGateContext.Provider>;
 };
