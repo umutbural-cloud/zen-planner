@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Database } from "@/integrations/supabase/types";
@@ -203,11 +203,19 @@ const normalizeProjectIds = (value: unknown): string[] | null => {
   return ids.length > 0 ? Array.from(new Set(ids)) : null;
 };
 
-export const useUserSettings = () => {
-  const { user } = useAuth();
+type UserSettingsContextValue = {
+  settings: UserSettings;
+  update: (patch: Partial<UserSettings>) => Promise<{ error: Error | null }>;
+  loading: boolean;
+};
+
+const UserSettingsContext = createContext<UserSettingsContextValue | null>(null);
+
+export const UserSettingsProvider = ({ children }: { children: ReactNode }) => {
+  const { user, initialAuthResolved } = useAuth();
   const userId = user?.id ?? null;
   const [settings, setSettings] = useState<UserSettings>(() => readCache(userId));
-  const [loading, setLoading] = useState(() => (userId ? !hasCache(userId) : false));
+  const [loading, setLoading] = useState(() => (!initialAuthResolved || (userId ? !hasCache(userId) : false)));
 
   useEffect(() => {
     const onChange = () => setSettings(readCache(userId));
@@ -216,6 +224,11 @@ export const useUserSettings = () => {
   }, [userId]);
 
   useEffect(() => {
+    if (!initialAuthResolved) {
+      setLoading(true);
+      return;
+    }
+
     if (!userId) {
       setSettings(DEFAULTS);
       setLoading(false);
@@ -238,7 +251,7 @@ export const useUserSettings = () => {
     });
 
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [initialAuthResolved, userId]);
 
   const update = useCallback(async (patch: Partial<UserSettings>) => {
     const previous = readCache(userId);
@@ -257,5 +270,22 @@ export const useUserSettings = () => {
     return { error };
   }, [userId]);
 
-  return { settings, update, loading };
+  const value = useMemo<UserSettingsContextValue>(() => ({
+    settings,
+    update,
+    loading,
+  }), [loading, settings, update]);
+
+  return <UserSettingsContext.Provider value={value}>{children}</UserSettingsContext.Provider>;
+};
+
+export const useUserSettings = () => {
+  const context = useContext(UserSettingsContext);
+  if (context) return context;
+
+  return {
+    settings: DEFAULTS,
+    update: async () => ({ error: null }),
+    loading: false,
+  };
 };

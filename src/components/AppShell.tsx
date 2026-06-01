@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import AppSidebar from "@/components/AppSidebar";
+import { PrayerTimesSync } from "@/components/PrayerTimesSync";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { usePageState } from "@/hooks/usePageState";
 import { useProjects } from "@/hooks/useProjects";
@@ -66,6 +67,7 @@ const AppShell = () => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
+        <PrayerTimesSync />
         <AppSidebar
           projects={projects}
           selectedId={selectedProjectId}

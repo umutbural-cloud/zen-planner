@@ -8,11 +8,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { UndoProvider } from "@/hooks/useUndo";
 import { PomodoroProvider } from "@/hooks/usePomodoro";
 import { PageStateProvider } from "@/hooks/usePageState";
-import { PrayerTimesSync } from "@/components/PrayerTimesSync";
 import { UiScaleSync } from "@/components/UiScaleSync";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AccountGateScreen } from "@/components/account-gate/AccountGateScreen";
 import { useAccountGate } from "@/hooks/useAccountGate";
+import { UserSettingsProvider } from "@/hooks/useUserSettings";
 import AppShell from "@/components/AppShell";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -81,12 +81,11 @@ const App = () => (
           <UndoProvider>
             <PomodoroProvider>
               <PageStateProvider>
-              <PrayerTimesSync />
               <UiScaleSync />
               <Routes>
                 <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+                <Route element={<ProtectedRoute><UserSettingsProvider><AppShell /></UserSettingsProvider></ProtectedRoute>}>
                   <Route path="/" element={<Index />} />
                   <Route path="/pomodoro" element={<Pomodoro />} />
                   <Route path="/work-history" element={<WorkHistory />} />

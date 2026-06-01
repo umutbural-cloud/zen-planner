@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { format, subDays } from "date-fns";
@@ -46,10 +46,11 @@ const normalizeHabit = (row: HabitRow, completedToday = false): Habit => ({
 const todayStr = () => format(new Date(), "yyyy-MM-dd");
 
 export const useHabits = (projectId?: string | null) => {
-  const { user } = useAuth();
+  const { user, initialAuthResolved } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [today, setToday] = useState(todayStr());
+  const fetchSeqRef = useRef(0);
   // habit_id -> Set<yyyy-MM-dd>
   const [completionsMap, setCompletionsMap] = useState<Record<string, Set<string>>>({});
 
@@ -62,11 +63,20 @@ export const useHabits = (projectId?: string | null) => {
   }, [today]);
 
   const fetchHabits = useCallback(async () => {
-    if (!user) { setHabits([]); setLoading(false); return; }
+    if (!initialAuthResolved) {
+      setLoading(true);
+      return;
+    }
+    if (!user) { setHabits([]); setCompletionsMap({}); setLoading(false); return; }
+    const userId = user.id;
+    const requestId = ++fetchSeqRef.current;
+    const isCurrentRequest = () => fetchSeqRef.current === requestId;
+    setLoading(true);
     let q = supabase.from("habits").select("*").eq("user_id", user.id).is("deleted_at", null).order("position", { ascending: true });
     if (projectId) q = q.eq("project_id", projectId);
     const { data: rows } = await q;
-    if (!rows) { setHabits([]); setLoading(false); return; }
+    if (!isCurrentRequest()) return;
+    if (!rows) { setHabits([]); setCompletionsMap({}); setLoading(false); return; }
     const ids = rows.map((row) => row.id);
     const cmap: Record<string, Set<string>> = {};
     const todaySet = new Set<string>();
@@ -75,7 +85,7 @@ export const useHabits = (projectId?: string | null) => {
       const { data: comps } = await supabase
         .from("habit_completions")
         .select("habit_id, completion_date")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .in("habit_id", ids)
         .gte("completion_date", since);
       (comps || [] as HabitCompletionRow[]).forEach((c) => {
@@ -84,12 +94,18 @@ export const useHabits = (projectId?: string | null) => {
         if (c.completion_date === today) todaySet.add(c.habit_id);
       });
     }
+    if (!isCurrentRequest()) return;
     setCompletionsMap(cmap);
     setHabits(rows.map((row) => normalizeHabit(row, todaySet.has(row.id))));
     setLoading(false);
-  }, [user, projectId, today]);
+  }, [initialAuthResolved, user, projectId, today]);
 
-  useEffect(() => { fetchHabits(); }, [fetchHabits]);
+  useEffect(() => {
+    fetchHabits();
+    return () => {
+      fetchSeqRef.current += 1;
+    };
+  }, [fetchHabits]);
 
   const createHabit = async (input: HabitInput) => {
     if (!user || !input.title.trim()) return null;
