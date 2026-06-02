@@ -8,18 +8,15 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePomodoro, formatMMSS } from "@/hooks/usePomodoro";
 import { useTheme } from "@/hooks/useTheme";
-import { usePageState } from "@/hooks/usePageState";
-import { useProjects } from "@/hooks/useProjects";
+import { useAppShellProjects } from "@/components/AppShell";
 import { usePomodoroCategories, PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { TASK_COLORS, colorClasses, TaskColor } from "@/lib/taskColors";
 import { colorHex } from "@/hooks/useHabitCategories";
 import { CategoryColorPicker } from "@/components/CategoryColorPicker";
 import PomodoroTaskBoard from "@/components/PomodoroTaskBoard";
-import AppSidebar from "@/components/AppSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import type { ViewKey } from "@/hooks/useProjectViews";
 import { toast } from "sonner";
 
 type Session = {
@@ -38,8 +35,7 @@ type PomodoroSessionUpdate = Database["public"]["Tables"]["pomodoro_sessions"]["
 const Pomodoro = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, createProject, updateProject, deleteProject } = useProjects();
-  const { section, selectedProjectId, view, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
+  const { projects } = useAppShellProjects();
   const { theme, toggle: toggleTheme } = useTheme();
   const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak } = usePomodoro();
   const { categories, create: createCategory, update: updateCategory, remove: removeCategory } = usePomodoroCategories();
@@ -227,52 +223,8 @@ const Pomodoro = () => {
     toast.success("Çalışma eklendi.");
   };
 
-  // Sidebar handlers — clicking a project takes us to "/" with that selection
-  const handleSidebarSelect = (id: string, v?: ViewKey) => {
-    setSection("project");
-    setSelectedProjectId(id);
-    const project = projects.find((p) => p.id === id);
-    const pvs = (project?.enabled_views?.length ? project.enabled_views : ["table", "notes"]) as ViewKey[];
-    setView(v || pvs[0] || "table");
-    navigate("/");
-  };
-  const handleSidebarCreate = async (name: string, parentId?: string) => {
-    const p = await createProject(name, parentId);
-    if (p) {
-      setSelectedProjectId(p.id);
-      setSection("project");
-      setView("table");
-      navigate("/");
-    }
-  };
-  const handleSidebarDelete = async (id: string) => {
-    await deleteProject(id);
-  };
-
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar
-          projects={projects}
-          selectedId={selectedProjectId}
-          selectedView={view}
-          section={section}
-          selectedNotebookId={selectedNotebookId}
-          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
-          onSelect={handleSidebarSelect}
-          onSelectHome={() => { setSection("home"); navigate("/"); }}
-          onCreate={handleSidebarCreate}
-          onDelete={handleSidebarDelete}
-          onUpdateProject={updateProject}
-          onSelectBacklog={() => { setSection("backlog"); navigate("/"); }}
-          onSelectTrash={() => { setSection("trash"); navigate("/"); }}
-          onSelectJournal={() => { setSection("journal"); navigate("/"); }}
-          onSelectHabits={() => { setSection("habits"); navigate("/"); }}
-          onSelectRetreat={() => { setSection("retreat"); navigate("/"); }}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); navigate("/"); }}
-          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); navigate("/"); }}
-        />
-
+    <>
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center border-b border-border/60 px-4 gap-3">
             <SidebarTrigger className="text-muted-foreground" />
@@ -616,7 +568,6 @@ const Pomodoro = () => {
             </div>
           </main>
         </div>
-      </div>
 
       {/* Categories management dialog */}
       <Dialog open={showCategoriesDialog} onOpenChange={setShowCategoriesDialog}>
@@ -633,7 +584,7 @@ const Pomodoro = () => {
           />
         </DialogContent>
       </Dialog>
-    </SidebarProvider>
+    </>
   );
 };
 

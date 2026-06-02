@@ -15,6 +15,7 @@ import {
   parseISO,
 } from "date-fns";
 import { tr } from "date-fns/locale";
+import { DelayedLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 
 type DragState = {
   taskId: string;
@@ -135,7 +136,33 @@ const GanttView = ({ projectId }: { projectId: string }) => {
     };
   };
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) {
+    return (
+      <DelayedLoading
+        loading
+        delay={300}
+        fallback={(
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+              <span>Yükleniyor</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <LoadingBlock lines={1} className="max-w-[11rem] flex-1" />
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="h-7 w-12 rounded-md bg-muted/70 animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted/70 animate-pulse" />
+                <div className="h-7 w-7 rounded-md bg-muted/70 animate-pulse" />
+              </div>
+            </div>
+            <div className="rounded-sm border border-border/50 bg-card/20 px-2.5 py-2">
+              <LoadingBlock lines={2} />
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

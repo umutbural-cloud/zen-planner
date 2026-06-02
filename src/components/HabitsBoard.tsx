@@ -21,7 +21,7 @@ const FREQ_LABEL: Record<FrequencyType, string> = {
 };
 
 const HabitsBoard = () => {
-  const { habits, createHabit, updateHabit, deleteHabit, moveHabit } = useHabits();
+  const { habits, loading, createHabit, updateHabit, deleteHabit, moveHabit } = useHabits();
   const { options: todOptions } = useTimeOfDayRanges();
   const { categories, createCategory, updateCategory, deleteCategory } = useHabitCategories();
   const [newTitle, setNewTitle] = useState("");
@@ -55,7 +55,21 @@ const HabitsBoard = () => {
         </Button>
       </div>
 
-      {sorted.length === 0 ? (
+      {loading ? (
+        <div className="border border-border/60 rounded-sm overflow-hidden">
+          <div className="divide-y divide-border/40">
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className="flex items-center gap-3 px-3 py-3">
+                <div className="h-5 w-5 rounded-sm bg-muted/60 animate-pulse" />
+                <div className="h-5 w-5 rounded-sm bg-muted/70 animate-pulse" />
+                <div className="h-4 flex-1 rounded-sm bg-muted/70 animate-pulse" />
+                <div className="hidden sm:block h-4 w-24 rounded-sm bg-muted/60 animate-pulse" />
+                <div className="hidden md:block h-4 w-28 rounded-sm bg-muted/60 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : sorted.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
           <p className="mb-1">空 — Boş</p>
           <p className="text-xs">Henüz alışkanlık eklenmedi</p>

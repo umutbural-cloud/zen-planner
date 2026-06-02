@@ -11,6 +11,7 @@ import { colorHex } from "@/hooks/useHabitCategories";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import TaskEditDialog from "./TaskEditDialog";
+import { DelayedLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 import {
   DndContext,
   PointerSensor,
@@ -266,7 +267,29 @@ const TableView = ({ projectId }: { projectId: string }) => {
   const filterActive = statusFilter !== "all" || categoryFilter !== "all";
   const activeCategory = categories.find((c) => c.id === categoryFilter);
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) {
+    return (
+      <DelayedLoading
+        loading
+        delay={300}
+        fallback={(
+          <div className="space-y-2.5 max-w-3xl mx-auto w-full">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+              <span>Yükleniyor</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <LoadingBlock lines={1} className="flex-1 max-w-[16rem]" />
+              <div className="h-8 w-8 rounded-md bg-muted/70 animate-pulse" />
+            </div>
+            <div className="rounded-sm border border-border/50 bg-card/20 px-2.5 py-2">
+              <LoadingBlock lines={1} className="max-w-[12rem]" />
+            </div>
+          </div>
+        )}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto w-full">

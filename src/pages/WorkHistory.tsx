@@ -24,10 +24,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { usePageState } from "@/hooks/usePageState";
-import { useProjects } from "@/hooks/useProjects";
-import AppSidebar from "@/components/AppSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import type { ViewKey } from "@/hooks/useProjectViews";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { DelayedInlineLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { colorClasses, type TaskColor } from "@/lib/taskColors";
 import { colorHex } from "@/hooks/useHabitCategories";
@@ -80,8 +78,7 @@ const OFF_DAYS_WEEK_STARTS_ON = 0;
 const WorkHistory = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { projects, createProject, updateProject, deleteProject } = useProjects();
-  const { section, selectedProjectId, view, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
+  const { setSection, setJournalDate } = usePageState();
   const { categories } = usePomodoroCategories();
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -92,6 +89,7 @@ const WorkHistory = () => {
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [catDayKey, setCatDayKey] = useState<string>(todayKey());
   const [recentCatFilter, setRecentCatFilter] = useState<Set<string>>(new Set());
+  const [sessionsLoading, setSessionsLoading] = useState(true);
 
   const NONE_CAT_KEY = "__none__";
 
@@ -230,17 +228,28 @@ const WorkHistory = () => {
   }, [recentCatFilter]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setSessionsLoading(false);
+      return;
+    }
+    setSessionsLoading(true);
     (async () => {
-      const { data } = await supabase
-        .from("pomodoro_sessions")
-        .select("id, started_at, duration_seconds, kind, note, category_id")
-        .eq("user_id", user.id)
-        .eq("kind", "work")
-        .order("started_at", { ascending: false })
-        .limit(5000);
-      setSessions(((data || []) as PomodoroSessionRow[]) as Session[]);
+      try {
+        const { data } = await supabase
+          .from("pomodoro_sessions")
+          .select("id, started_at, duration_seconds, kind, note, category_id")
+          .eq("user_id", user.id)
+          .eq("kind", "work")
+          .order("started_at", { ascending: false })
+          .limit(5000);
+        setSessions(((data || []) as PomodoroSessionRow[]) as Session[]);
+      } finally {
+        setSessionsLoading(false);
+      }
     })();
+    return () => {
+      setSessionsLoading(false);
+    };
   }, [user]);
 
   // -------- Stats --------
@@ -429,25 +438,6 @@ const WorkHistory = () => {
     return out;
   }, [sessions, recentWeeks, sessionMatchesFilter]);
 
-  // -------- Sidebar handlers --------
-  const handleSidebarSelect = (id: string, v?: ViewKey) => {
-    setSection("project");
-    setSelectedProjectId(id);
-    const project = projects.find((p) => p.id === id);
-    const pvs = (project?.enabled_views?.length ? project.enabled_views : ["table", "notes"]) as ViewKey[];
-    setView(v || pvs[0] || "table");
-    navigate("/");
-  };
-  const handleSidebarCreate = async (name: string, parentId?: string) => {
-    const p = await createProject(name, parentId);
-    if (p) {
-      setSelectedProjectId(p.id);
-      setSection("project");
-      setView("table");
-      navigate("/");
-    }
-  };
-
   // Helpers for category lookup
   const catName = (id: string | null) => id ? (categories.find((c) => c.id === id)?.name || "—") : "Kategorisiz";
   const catColor = (id: string | null): TaskColor => (categories.find((c) => c.id === id)?.color as TaskColor) || "gray";
@@ -477,29 +467,6 @@ const WorkHistory = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar
-          projects={projects}
-          selectedId={selectedProjectId}
-          selectedView={view}
-          section={section}
-          selectedNotebookId={selectedNotebookId}
-          selectedKnowledgeNoteId={selectedKnowledgeNoteId}
-          onSelect={handleSidebarSelect}
-          onSelectHome={() => { setSection("home"); navigate("/"); }}
-          onCreate={handleSidebarCreate}
-          onDelete={(id) => deleteProject(id)}
-          onUpdateProject={updateProject}
-          onSelectBacklog={() => { setSection("backlog"); navigate("/"); }}
-          onSelectTrash={() => { setSection("trash"); navigate("/"); }}
-          onSelectJournal={() => { setSection("journal"); navigate("/"); }}
-          onSelectHabits={() => { setSection("habits"); navigate("/"); }}
-          onSelectRetreat={() => { setSection("retreat"); navigate("/"); }}
-          onSelectNotebook={(id) => { setSelectedNotebookId(id); setSelectedKnowledgeNoteId(null); setSection("notebook"); navigate("/"); }}
-          onSelectKnowledgeNote={(id) => { setSelectedKnowledgeNoteId(id); setSection("notebook"); navigate("/"); }}
-        />
-
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center border-b border-border/60 px-4 gap-3">
             <SidebarTrigger className="text-muted-foreground" />
@@ -517,9 +484,32 @@ const WorkHistory = () => {
 
           <main className="flex-1 overflow-auto">
             <div className="max-w-3xl mx-auto p-6 sm:p-8 space-y-10">
+              <DelayedInlineLoading loading={sessionsLoading} className="px-1" />
 
               {/* ============ STATS ============ */}
               <section>
+                {sessionsLoading ? (
+                  <div className="space-y-3 rounded-sm border border-border/50 bg-card/20 p-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <LoadingBlock lines={1} className="max-w-[11rem] flex-1" />
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-20 rounded-md bg-muted/70 animate-pulse" />
+                        <div className="h-8 w-8 rounded-md bg-muted/70 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+                        <LoadingBlock lines={2} />
+                      </div>
+                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+                        <LoadingBlock lines={2} />
+                      </div>
+                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+                        <LoadingBlock lines={2} />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-between mb-3 px-1">
                   <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70">
                     İstatistikler
@@ -1010,8 +1000,6 @@ const WorkHistory = () => {
             </div>
           </main>
         </div>
-      </div>
-    </SidebarProvider>
   );
 };
 
