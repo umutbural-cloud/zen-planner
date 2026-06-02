@@ -35,7 +35,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!initialAuthResolved || (status === "loading" && !hasVerifiedShell)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
+        <span className="text-muted-foreground text-sm tracking-widest">Yükleniyor...</span>
       </div>
     );
   }
@@ -65,7 +65,7 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   if (!initialAuthResolved) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
+        <span className="text-muted-foreground text-sm tracking-widest">Yükleniyor...</span>
       </div>
     );
   }
@@ -88,7 +88,7 @@ const AuthStartupRedirect = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
+        <span className="text-muted-foreground text-sm tracking-widest">Yükleniyor...</span>
       </div>
     );
   }
