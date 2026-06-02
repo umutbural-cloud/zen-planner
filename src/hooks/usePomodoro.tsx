@@ -355,14 +355,14 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const finalizeRow = useCallback(async (row: ActiveStateRow, options: { notifyUser: boolean }) => {
+  const finalizeRow = useCallback(async (row: ActiveStateRow, options: { notifyUser: boolean; endedAt?: Date }) => {
     if (!user || finishingRef.current) return;
     finishingRef.current = true;
     try {
       const nowMs = adjustedNow();
       const runElapsed = row.phase === "running" ? currentRunElapsed(row, nowMs) : 0;
       const elapsed = Math.min(Math.max(row.accumulated_elapsed_seconds + runElapsed, 0), row.duration_seconds);
-      const ended = new Date(row.phase === "running" && row.ends_at ? new Date(row.ends_at).getTime() : nowMs);
+      const ended = options.endedAt ?? new Date(row.phase === "running" && row.ends_at ? new Date(row.ends_at).getTime() : nowMs);
       const started = row.started_at
         ? new Date(row.started_at)
         : new Date(ended.getTime() - elapsed * 1000);
@@ -697,7 +697,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         active_session_token: activeSessionToken,
         updated_at: new Date().toISOString(),
       };
-      await finalizeRow(row, { notifyUser: false });
+      await finalizeRow(row, { notifyUser: false, endedAt: new Date(adjustedNow()) });
       clearTimer();
       clearFinishScheduler();
       completedSessionIdRef.current = activeSessionIdRef.current;
