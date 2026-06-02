@@ -90,6 +90,7 @@ const WorkHistory = () => {
   const [catDayKey, setCatDayKey] = useState<string>(todayKey());
   const [recentCatFilter, setRecentCatFilter] = useState<Set<string>>(new Set());
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  const isHistoryLoading = sessionsLoading;
 
   const NONE_CAT_KEY = "__none__";
 
@@ -484,319 +485,305 @@ const WorkHistory = () => {
 
           <main className="flex-1 overflow-auto">
             <div className="max-w-3xl mx-auto p-6 sm:p-8 space-y-10">
-              <DelayedInlineLoading loading={sessionsLoading} className="px-1" />
+              <DelayedInlineLoading loading={isHistoryLoading} className="px-1" label="Çalışma geçmişi yükleniyor..." />
 
               {/* ============ STATS ============ */}
               <section>
-                {sessionsLoading ? (
-                  <div className="space-y-3 rounded-sm border border-border/50 bg-card/20 p-3">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <LoadingBlock lines={1} className="max-w-[11rem] flex-1" />
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-20 rounded-md bg-muted/70 animate-pulse" />
-                        <div className="h-8 w-8 rounded-md bg-muted/70 animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
-                        <LoadingBlock lines={2} />
-                      </div>
-                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
-                        <LoadingBlock lines={2} />
-                      </div>
-                      <div className="rounded-sm border border-border/50 bg-background/40 p-3">
-                        <LoadingBlock lines={2} />
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70">
-                    İstatistikler
-                  </h2>
-                  <Popover open={statsSettingsOpen} onOpenChange={setStatsSettingsOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        className="p-1 -m-1 text-muted-foreground/70 hover:text-foreground transition-colors rounded-sm hover:bg-accent/40"
-                        title="İstatistik ayarları"
-                        aria-label="İstatistik ayarları"
-                      >
-                        <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-72 p-0">
-                      <div className="px-3 py-2.5 border-b border-border/60">
-                        <div className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
-                          Dahil edilen kategoriler
-                        </div>
-                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-light leading-snug">
-                          Yalnızca seçili kategoriler istatistik, grafik ve özetlere dahil edilir.
-                        </div>
-                      </div>
-                      <div className="max-h-72 overflow-auto py-1">
-                        {[
-                          ...categories.map((c) => ({ key: c.id, name: c.name, color: c.color })),
-                          { key: NONE_CAT_KEY, name: "Kategorisiz", color: "gray" },
-                        ].map((c) => {
-                          const checked = isCatIncluded(c.key === NONE_CAT_KEY ? null : c.key);
-                          return (
-                            <button
-                              key={c.key}
-                              onClick={() => toggleStatsCat(c.key)}
-                              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent/40 transition-colors text-left"
-                            >
-                              <span
-                                className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${
-                                  checked ? "bg-foreground border-foreground" : "border-border"
-                                }`}
-                              >
-                                {checked && <Check className="h-2.5 w-2.5 text-background" strokeWidth={3} />}
-                              </span>
-                              <span className="h-2 w-2 rounded-full shrink-0" style={{ background: colorHex(c.color) }} />
-                              <span className="font-light flex-1 truncate">{c.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-border/60">
-                        <button
-                          onClick={() => setAllStatsCats(true)}
-                          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-sm hover:bg-accent/40"
-                        >
-                          Tümünü seç
-                        </button>
-                        <button
-                          onClick={() => setAllStatsCats(false)}
-                          className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-sm hover:bg-accent/40"
-                        >
-                          Tümünü kaldır
-                        </button>
-                      </div>
-                      <div className="px-3 py-2.5 border-t border-border/60">
-                        <div className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
-                          Off günler
-                        </div>
-                        <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-light leading-snug">
-                          Off günler günlük ortalama hesabında çalışma beklenen gün olarak sayılmaz.
-                        </div>
-                      </div>
-                      <div className="px-3 py-2">
-                        <Calendar
-                          mode="multiple"
-                          weekStartsOn={OFF_DAYS_WEEK_STARTS_ON}
-                          selected={offDaysSelected}
-                          onSelect={updateOffDaysFromDates}
-                          disabled={(d) => d > new Date()}
-                          classNames={{
-                            cell: "h-9 w-9 p-0 text-center text-sm relative [&:has([aria-selected])]:bg-primary/15 focus-within:relative focus-within:z-20",
-                            day: "h-9 w-9 p-0 font-normal rounded-none aria-selected:opacity-100",
-                            day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-none",
-                          }}
-                          modifiers={{
-                            offSingle: offDaySegments.single,
-                            offStart: offDaySegments.start,
-                            offMiddle: offDaySegments.middle,
-                            offEnd: offDaySegments.end,
-                          }}
-                          modifiersClassNames={{
-                            offSingle: "rounded-md",
-                            offStart: "rounded-l-md rounded-r-none",
-                            offMiddle: "rounded-none",
-                            offEnd: "rounded-r-md rounded-l-none",
-                          }}
-                        />
-                      </div>
-                      <div className="border-t border-border/60 px-3 py-2">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
-                            Seçili günler
-                          </span>
-                          {offDays.size > 0 ? (
-                            <button
-                              onClick={() => persistOffDays(new Set())}
-                              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              Temizle
-                            </button>
-                          ) : null}
-                        </div>
-                        {offDays.size === 0 ? (
-                          <div className="text-[11px] text-muted-foreground/50 italic py-1">
-                            Henüz off gün seçilmedi.
+                {isHistoryLoading ? (
+                  <WorkHistoryOverviewLoading />
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-3 px-1">
+                      <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70">
+                        İstatistikler
+                      </h2>
+                      <Popover open={statsSettingsOpen} onOpenChange={setStatsSettingsOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            className="p-1 -m-1 text-muted-foreground/70 hover:text-foreground transition-colors rounded-sm hover:bg-accent/40"
+                            title="İstatistik ayarları"
+                            aria-label="İstatistik ayarları"
+                          >
+                            <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-72 p-0">
+                          <div className="px-3 py-2.5 border-b border-border/60">
+                            <div className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
+                              Dahil edilen kategoriler
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-light leading-snug">
+                              Yalnızca seçili kategoriler istatistik, grafik ve özetlere dahil edilir.
+                            </div>
                           </div>
-                        ) : (
-                          <div className="max-h-32 overflow-auto space-y-1">
-                            {Array.from(offDays).sort((a, b) => b.localeCompare(a)).map((key) => {
-                              const sessionCount = sessionCountByDay.get(key) || 0;
+                          <div className="max-h-72 overflow-auto py-1">
+                            {[
+                              ...categories.map((c) => ({ key: c.id, name: c.name, color: c.color })),
+                              { key: NONE_CAT_KEY, name: "Kategorisiz", color: "gray" },
+                            ].map((c) => {
+                              const checked = isCatIncluded(c.key === NONE_CAT_KEY ? null : c.key);
                               return (
-                                <div key={key} className="flex items-center justify-between gap-2 text-[11px]">
-                                  <div className="min-w-0">
-                                    <div className="font-light">
-                                      {format(new Date(`${key}T00:00:00`), "d MMMM yyyy, EEEE", { locale: tr })}
-                                    </div>
-                                    {sessionCount > 0 ? (
-                                      <div className="text-[10px] text-muted-foreground/60">
-                                        {sessionCount} çalışma kaydı var; kayıtlar korunur.
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                  <button
-                                    onClick={() => removeOffDay(key)}
-                                    className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-                                    title="Off günü kaldır"
+                                <button
+                                  key={c.key}
+                                  onClick={() => toggleStatsCat(c.key)}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-accent/40 transition-colors text-left"
+                                >
+                                  <span
+                                    className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-colors ${
+                                      checked ? "bg-foreground border-foreground" : "border-border"
+                                    }`}
                                   >
-                                    Kaldır
-                                  </button>
-                                </div>
+                                    {checked && <Check className="h-2.5 w-2.5 text-background" strokeWidth={3} />}
+                                  </span>
+                                  <span className="h-2 w-2 rounded-full shrink-0" style={{ background: colorHex(c.color) }} />
+                                  <span className="font-light flex-1 truncate">{c.name}</span>
+                                </button>
                               );
                             })}
                           </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <StatCard label="Son 7 gün" value={formatDur(stats.last7)} />
-                  <StatCard label="Son 30 gün" value={formatDur(stats.last30)} />
-                  <StatCard
-                    label="Günlük ortalama"
-                    value={formatDur(stats.avgDaily)}
-                    hint={stats.excludedOffDays > 0 ? `${stats.excludedOffDays} off gün hariç` : undefined}
-                  />
-                </div>
-
-                {/* Category breakdown */}
-                <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="border border-border/60 rounded-sm p-3">
-                    <div className="flex items-center justify-between mb-2 gap-2">
-                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">Günlük</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => {
-                            const d = new Date(`${catDayKey}T00:00:00`);
-                            d.setDate(d.getDate() - 1);
-                            setCatDayKey(format(d, "yyyy-MM-dd"));
-                          }}
-                          className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                          title="Önceki gün"
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                        </button>
-                        <Popover>
-                          <PopoverTrigger asChild>
+                          <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-border/60">
                             <button
-                              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors tabular-nums min-w-[64px] text-center px-1 py-0.5 rounded-sm hover:bg-accent/40"
-                              title="Tarih seç"
+                              onClick={() => setAllStatsCats(true)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-sm hover:bg-accent/40"
                             >
-                              {catDayKey === todayKey()
-                                ? "Bugün"
-                                : format(new Date(`${catDayKey}T00:00:00`), "d MMM", { locale: tr })}
+                              Tümünü seç
                             </button>
-                          </PopoverTrigger>
-                          <PopoverContent align="end" className="w-auto p-0">
+                            <button
+                              onClick={() => setAllStatsCats(false)}
+                              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-sm hover:bg-accent/40"
+                            >
+                              Tümünü kaldır
+                            </button>
+                          </div>
+                          <div className="px-3 py-2.5 border-t border-border/60">
+                            <div className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
+                              Off günler
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/60 mt-0.5 font-light leading-snug">
+                              Off günler günlük ortalama hesabında çalışma beklenen gün olarak sayılmaz.
+                            </div>
+                          </div>
+                          <div className="px-3 py-2">
                             <Calendar
-                              mode="single"
-                              selected={new Date(`${catDayKey}T00:00:00`)}
-                              onSelect={(d) => d && setCatDayKey(format(d, "yyyy-MM-dd"))}
+                              mode="multiple"
+                              weekStartsOn={OFF_DAYS_WEEK_STARTS_ON}
+                              selected={offDaysSelected}
+                              onSelect={updateOffDaysFromDates}
                               disabled={(d) => d > new Date()}
-                              initialFocus
+                              classNames={{
+                                cell: "h-9 w-9 p-0 text-center text-sm relative [&:has([aria-selected])]:bg-primary/15 focus-within:relative focus-within:z-20",
+                                day: "h-9 w-9 p-0 font-normal rounded-none aria-selected:opacity-100",
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-none",
+                              }}
+                              modifiers={{
+                                offSingle: offDaySegments.single,
+                                offStart: offDaySegments.start,
+                                offMiddle: offDaySegments.middle,
+                                offEnd: offDaySegments.end,
+                              }}
+                              modifiersClassNames={{
+                                offSingle: "rounded-md",
+                                offStart: "rounded-l-md rounded-r-none",
+                                offMiddle: "rounded-none",
+                                offEnd: "rounded-r-md rounded-l-none",
+                              }}
                             />
-                          </PopoverContent>
-                        </Popover>
-                        <button
-                          onClick={() => {
-                            if (catDayKey >= todayKey()) return;
-                            const d = new Date(`${catDayKey}T00:00:00`);
-                            d.setDate(d.getDate() + 1);
-                            setCatDayKey(format(d, "yyyy-MM-dd"));
-                          }}
-                          disabled={catDayKey >= todayKey()}
-                          className="p-0.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground"
-                          title="Sonraki gün"
-                        >
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
+                          </div>
+                          <div className="border-t border-border/60 px-3 py-2">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
+                                Seçili günler
+                              </span>
+                              {offDays.size > 0 ? (
+                                <button
+                                  onClick={() => persistOffDays(new Set())}
+                                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  Temizle
+                                </button>
+                              ) : null}
+                            </div>
+                            {offDays.size === 0 ? (
+                              <div className="text-[11px] text-muted-foreground/50 italic py-1">
+                                Henüz off gün seçilmedi.
+                              </div>
+                            ) : (
+                              <div className="max-h-32 overflow-auto space-y-1">
+                                {Array.from(offDays).sort((a, b) => b.localeCompare(a)).map((key) => {
+                                  const sessionCount = sessionCountByDay.get(key) || 0;
+                                  return (
+                                    <div key={key} className="flex items-center justify-between gap-2 text-[11px]">
+                                      <div className="min-w-0">
+                                        <div className="font-light">
+                                          {format(new Date(`${key}T00:00:00`), "d MMMM yyyy, EEEE", { locale: tr })}
+                                        </div>
+                                        {sessionCount > 0 ? (
+                                          <div className="text-[10px] text-muted-foreground/60">
+                                            {sessionCount} çalışma kaydı var; kayıtlar korunur.
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                      <button
+                                        onClick={() => removeOffDay(key)}
+                                        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                                        title="Off günü kaldır"
+                                      >
+                                        Kaldır
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <StatCard label="Son 7 gün" value={formatDur(stats.last7)} />
+                      <StatCard label="Son 30 gün" value={formatDur(stats.last30)} />
+                      <StatCard
+                        label="Günlük ortalama"
+                        value={formatDur(stats.avgDaily)}
+                        hint={stats.excludedOffDays > 0 ? `${stats.excludedOffDays} off gün hariç` : undefined}
+                      />
+                    </div>
+
+                    {/* Category breakdown */}
+                    <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="border border-border/60 rounded-sm p-3">
+                        <div className="flex items-center justify-between mb-2 gap-2">
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">Günlük</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                const d = new Date(`${catDayKey}T00:00:00`);
+                                d.setDate(d.getDate() - 1);
+                                setCatDayKey(format(d, "yyyy-MM-dd"));
+                              }}
+                              className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                              title="Önceki gün"
+                            >
+                              <ChevronLeft className="h-3.5 w-3.5" />
+                            </button>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors tabular-nums min-w-[64px] text-center px-1 py-0.5 rounded-sm hover:bg-accent/40"
+                                  title="Tarih seç"
+                                >
+                                  {catDayKey === todayKey()
+                                    ? "Bugün"
+                                    : format(new Date(`${catDayKey}T00:00:00`), "d MMM", { locale: tr })}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent align="end" className="w-auto p-0">
+                                <Calendar
+                                  mode="single"
+                                  selected={new Date(`${catDayKey}T00:00:00`)}
+                                  onSelect={(d) => d && setCatDayKey(format(d, "yyyy-MM-dd"))}
+                                  disabled={(d) => d > new Date()}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <button
+                              onClick={() => {
+                                if (catDayKey >= todayKey()) return;
+                                const d = new Date(`${catDayKey}T00:00:00`);
+                                d.setDate(d.getDate() + 1);
+                                setCatDayKey(format(d, "yyyy-MM-dd"));
+                              }}
+                              disabled={catDayKey >= todayKey()}
+                              className="p-0.5 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:hover:text-muted-foreground"
+                              title="Sonraki gün"
+                            >
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {renderCatList(catBreakdown.day)}
+                      </div>
+                      <div className="border border-border/60 rounded-sm p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">Haftalık</span>
+                          <span className="text-[10px] text-muted-foreground/50">son 7 gün</span>
+                        </div>
+                        {renderCatList(catBreakdown.week)}
+                      </div>
+                      <div className="border border-border/60 rounded-sm p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">Aylık</span>
+                          <span className="text-[10px] text-muted-foreground/50">son 30 gün</span>
+                        </div>
+                        {renderCatList(catBreakdown.month)}
                       </div>
                     </div>
-                    {renderCatList(catBreakdown.day)}
-                  </div>
-                  <div className="border border-border/60 rounded-sm p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">Haftalık</span>
-                      <span className="text-[10px] text-muted-foreground/50">son 7 gün</span>
-                    </div>
-                    {renderCatList(catBreakdown.week)}
-                  </div>
-                  <div className="border border-border/60 rounded-sm p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">Aylık</span>
-                      <span className="text-[10px] text-muted-foreground/50">son 30 gün</span>
-                    </div>
-                    {renderCatList(catBreakdown.month)}
-                  </div>
-                </div>
 
-                {/* Daily chart */}
-                <div className="mt-5 border border-border/60 rounded-sm p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
-                      Günlük çalışma süresi
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/50">son 30 gün · dakika</span>
-                  </div>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
-                        <XAxis
-                          dataKey="label"
-                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                          interval={4}
-                          tickLine={false}
-                          axisLine={{ stroke: "hsl(var(--border))" }}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                          tickLine={false}
-                          axisLine={{ stroke: "hsl(var(--border))" }}
-                          width={36}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            background: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            fontSize: 11,
-                            borderRadius: 2,
-                          }}
-                          labelStyle={{ color: "hsl(var(--foreground))" }}
-                          formatter={(_value: unknown, _name: unknown, payload: ChartTooltipPayload) => [
-                            formatDurShort(payload.payload?.sec ?? 0),
-                            "Çalışma",
-                          ]}
-                          labelFormatter={(_label: string, payload) => {
-                            const point = payload?.[0]?.payload as { label?: string; isOffDay?: boolean } | undefined;
-                            if (!point?.label) return "";
-                            return point.isOffDay ? `${point.label} · Off gün` : point.label;
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="minutes"
-                          stroke="hsl(var(--foreground))"
-                          strokeWidth={1.5}
-                          dot={{ r: 2, fill: "hsl(var(--foreground))" }}
-                          activeDot={{ r: 4 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                    {/* Daily chart */}
+                    <div className="mt-5 border border-border/60 rounded-sm p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground/70">
+                          Günlük çalışma süresi
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/50">son 30 gün · dakika</span>
+                      </div>
+                      <div className="h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="2 4" vertical={false} />
+                            <XAxis
+                              dataKey="label"
+                              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                              interval={4}
+                              tickLine={false}
+                              axisLine={{ stroke: "hsl(var(--border))" }}
+                            />
+                            <YAxis
+                              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                              tickLine={false}
+                              axisLine={{ stroke: "hsl(var(--border))" }}
+                              width={36}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                background: "hsl(var(--card))",
+                                border: "1px solid hsl(var(--border))",
+                                fontSize: 11,
+                                borderRadius: 2,
+                              }}
+                              labelStyle={{ color: "hsl(var(--foreground))" }}
+                              formatter={(_value: unknown, _name: unknown, payload: ChartTooltipPayload) => [
+                                formatDurShort(payload.payload?.sec ?? 0),
+                                "Çalışma",
+                              ]}
+                              labelFormatter={(_label: string, payload) => {
+                                const point = payload?.[0]?.payload as { label?: string; isOffDay?: boolean } | undefined;
+                                if (!point?.label) return "";
+                                return point.isOffDay ? `${point.label} · Off gün` : point.label;
+                              }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="minutes"
+                              stroke="hsl(var(--foreground))"
+                              strokeWidth={1.5}
+                              dot={{ r: 2, fill: "hsl(var(--foreground))" }}
+                              activeDot={{ r: 4 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </>
+                )}
               </section>
 
               {/* ============ MONTH/WEEK/DAY GROUPED ============ */}
-              {grouped.length === 0 ? (
+              {isHistoryLoading ? (
+                <GroupedHistoryLoading />
+              ) : grouped.length === 0 ? (
                 <div className="text-center text-xs text-muted-foreground py-16">Henüz çalışma kaydı yok</div>
               ) : (
                 <div className="space-y-2">
@@ -871,6 +858,9 @@ const WorkHistory = () => {
               )}
 
               {/* ============ RECENT DAYS ============ */}
+              {isHistoryLoading ? (
+                <RecentDaysLoading recentWeeks={recentWeeks} />
+              ) : (
               <div>
                 <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 px-1">
                   Son {recentWeeks} Hafta — Günlük
@@ -997,11 +987,91 @@ const WorkHistory = () => {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </main>
         </div>
   );
 };
+
+const WorkHistoryOverviewLoading = () => (
+  <div className="space-y-5">
+    <div className="space-y-3 rounded-sm border border-border/50 bg-card/20 p-3" aria-busy="true">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <LoadingBlock lines={1} className="max-w-[11rem] flex-1" />
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-20 rounded-md bg-muted/70 animate-pulse" />
+          <div className="h-8 w-8 rounded-md bg-muted/70 animate-pulse" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <LoadingCard lines={2} />
+        <LoadingCard lines={2} />
+        <LoadingCard lines={2} />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <LoadingCard lines={4} />
+      <LoadingCard lines={4} />
+      <LoadingCard lines={4} />
+    </div>
+
+    <div className="border border-border/60 rounded-sm p-3" aria-busy="true">
+      <div className="flex items-center justify-between mb-3">
+        <LoadingBlock lines={1} className="w-36" />
+        <div className="h-3 w-24 rounded-sm bg-muted/60 animate-pulse" />
+      </div>
+      <div className="h-48 rounded-sm bg-muted/40 animate-pulse" />
+    </div>
+  </div>
+);
+
+const GroupedHistoryLoading = () => (
+  <div className="space-y-2" aria-busy="true">
+    <LoadingBlock lines={1} className="w-20 px-1 mb-3" />
+    {Array.from({ length: 3 }).map((_, index) => (
+      <div key={index} className="border border-border/60 rounded-sm overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2.5 bg-card/40">
+          <LoadingBlock lines={1} className="w-36" />
+          <div className="h-3 w-16 rounded-sm bg-muted/60 animate-pulse" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const RecentDaysLoading = ({ recentWeeks }: { recentWeeks: number }) => (
+  <div aria-busy="true">
+    <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70 mb-3 px-1">
+      Son {recentWeeks} Hafta — Günlük
+    </h2>
+    <div className="flex flex-wrap items-center gap-1.5 mb-4 px-1">
+      <div className="h-6 w-16 rounded-sm bg-muted/50 animate-pulse" />
+      <div className="h-6 w-20 rounded-sm bg-muted/50 animate-pulse" />
+      <div className="h-6 w-24 rounded-sm bg-muted/50 animate-pulse" />
+    </div>
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="border border-border/60 rounded-sm overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 bg-card/40 border-b border-border/60">
+            <LoadingBlock lines={1} className="w-44" />
+            <div className="h-3 w-10 rounded-sm bg-muted/60 animate-pulse" />
+          </div>
+          <div className="px-3 py-3">
+            <LoadingBlock lines={2} />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const LoadingCard = ({ lines }: { lines: number }) => (
+  <div className="rounded-sm border border-border/50 bg-background/40 p-3">
+    <LoadingBlock lines={lines} />
+  </div>
+);
 
 const StatCard = ({ label, value, hint }: { label: string; value: string; hint?: string }) => (
   <div className="border border-border/60 rounded-sm p-3">
