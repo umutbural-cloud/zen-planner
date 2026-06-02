@@ -37,7 +37,7 @@ const Pomodoro = () => {
   const { user } = useAuth();
   const { projects } = useAppShellProjects();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak } = usePomodoro();
+  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak, isLoading } = usePomodoro();
   const { categories, create: createCategory, update: updateCategory, remove: removeCategory } = usePomodoroCategories();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingTime, setEditingTime] = useState(false);
@@ -276,7 +276,11 @@ const Pomodoro = () => {
                   {isBreak ? "Dinlenme" : "Çalışma"}
                 </div>
 
-                {editingTime && isIdle ? (
+                {isLoading ? (
+                  <div className="text-8xl font-extralight tracking-widest tabular-nums mb-8 text-muted-foreground/50 select-none">
+                    --:--
+                  </div>
+                ) : editingTime && isIdle ? (
                   <input
                     value={editVal}
                     onChange={(e) => setEditVal(e.target.value)}
@@ -310,7 +314,11 @@ const Pomodoro = () => {
                     isRunning ? "opacity-30 hover:opacity-100 scale-95" : "opacity-100 scale-100"
                   }`}
                 >
-                  {isRunning ? (
+                  {isLoading ? (
+                    <button disabled className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 text-sm text-muted-foreground/60 cursor-not-allowed">
+                      Yükleniyor...
+                    </button>
+                  ) : isRunning ? (
                     <>
                       <button onClick={pause} className="flex items-center gap-2 px-5 py-2 rounded-sm bg-accent hover:bg-accent/80 text-sm transition-colors">
                         <Pause className="h-4 w-4" /> Duraklat

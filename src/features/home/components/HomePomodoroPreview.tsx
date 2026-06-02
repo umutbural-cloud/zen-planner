@@ -17,11 +17,12 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
     resume,
     complete,
     skipBreak,
+    isLoading,
   } = usePomodoro();
 
-  const progress = durationSec > 0 ? Math.max(0, Math.min(1, (durationSec - remainingSec) / durationSec)) : 0;
-  const phaseLabel = kind === "break" ? "Mola" : "Çalışma";
-  const stateLabel = phase === "running" ? "aktif" : phase === "paused" ? "duraklatıldı" : "hazır";
+  const progress = !isLoading && durationSec > 0 ? Math.max(0, Math.min(1, (durationSec - remainingSec) / durationSec)) : 0;
+  const phaseLabel = isLoading ? "Yükleniyor" : kind === "break" ? "Mola" : "Çalışma";
+  const stateLabel = isLoading ? "yükleniyor" : phase === "running" ? "aktif" : phase === "paused" ? "duraklatıldı" : "hazır";
   const primaryAction = phase === "paused" ? { label: "Devam Et", onClick: resume, icon: Play } : { label: "Başlat", onClick: start, icon: Play };
   const secondaryAction = kind === "break"
     ? { label: "Atla", onClick: skipBreak, icon: SkipForward }
@@ -58,7 +59,7 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
               </defs>
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-base font-light tabular-nums tracking-wider">{formatMMSS(remainingSec)}</span>
+              <span className="text-base font-light tabular-nums tracking-wider">{isLoading ? "--:--" : formatMMSS(remainingSec)}</span>
               <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">{stateLabel}</span>
             </div>
           </div>
@@ -66,20 +67,24 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
           <div className="min-w-0 flex-1">
             <p className="text-sm tracking-wide text-foreground">{phaseLabel}</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {phase === "idle" ? `${phaseLabel} için hazır` : phase === "paused" ? `${phaseLabel} duraklatıldı` : `${phaseLabel} devam ediyor`}
+              {isLoading ? "Pomodoro durumu yükleniyor" : phase === "idle" ? `${phaseLabel} için hazır` : phase === "paused" ? `${phaseLabel} duraklatıldı` : `${phaseLabel} devam ediyor`}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              {showPrimary && (
+              {isLoading ? (
+                <button type="button" disabled className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground/60 cursor-not-allowed">
+                  Yükleniyor...
+                </button>
+              ) : showPrimary && (
                 <button type="button" onClick={primaryAction.onClick} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-foreground/90 hover:bg-accent/40 transition-colors">
                   <PrimaryIcon className="h-3 w-3" /> {primaryAction.label}
                 </button>
               )}
-              {showPause && (
+              {!isLoading && showPause && (
                 <button type="button" onClick={pause} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-foreground/90 hover:bg-accent/40 transition-colors">
                   <Pause className="h-3 w-3" /> Duraklat
                 </button>
               )}
-              {showSecondary && (
+              {!isLoading && showSecondary && (
                 <button type="button" onClick={secondaryAction.onClick} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors">
                   <SecondaryIcon className="h-3 w-3" /> {secondaryAction.label}
                 </button>

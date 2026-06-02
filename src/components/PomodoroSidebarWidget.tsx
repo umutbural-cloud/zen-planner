@@ -5,7 +5,7 @@ import { usePomodoro, formatMMSS } from "@/hooks/usePomodoro";
 
 const PomodoroSidebarWidget = () => {
   const navigate = useNavigate();
-  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak } = usePomodoro();
+  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak, isLoading } = usePomodoro();
 
   const isRunning = phase === "running";
   const isPaused = phase === "paused";
@@ -46,7 +46,11 @@ const PomodoroSidebarWidget = () => {
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            {editing && isIdle ? (
+            {isLoading ? (
+              <span className="text-xl font-extralight tabular-nums tracking-wider text-muted-foreground/50 select-none">
+                --:--
+              </span>
+            ) : editing && isIdle ? (
               <input
                 value={editVal}
                 onChange={(e) => setEditVal(e.target.value)}
@@ -73,7 +77,11 @@ const PomodoroSidebarWidget = () => {
             )}
 
             <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-              {isRunning ? (
+              {isLoading ? (
+                <button disabled title="Yükleniyor" className="px-1.5 py-1 rounded-sm text-[10px] text-muted-foreground/60 cursor-not-allowed">
+                  Yükleniyor
+                </button>
+              ) : isRunning ? (
                 <>
                   <button onClick={pause} title="Duraklat" className="p-1 rounded-sm hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
                     <Pause className="h-3.5 w-3.5" />
