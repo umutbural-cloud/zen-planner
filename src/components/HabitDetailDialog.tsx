@@ -56,7 +56,7 @@ const HabitDetailDialog = ({ open, habit, onClose, onSave, onDelete }: Props) =>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-light tracking-wide text-base">習慣 — Alışkanlık</DialogTitle>
+          <DialogTitle className="font-light tracking-wide text-base">Alışkanlık</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">

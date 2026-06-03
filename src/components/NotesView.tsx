@@ -163,7 +163,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
     }, 600);
   };
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">Yükleniyor...</div>;
   if (error) return <div className="text-center text-destructive text-sm py-12">{error}</div>;
 
   return (
@@ -177,7 +177,7 @@ const NotesView = ({ projectId }: { projectId: string }) => {
       <RichTextToolbar editor={editor} sticky />
       <EditorContent editor={editor} />
       <div className="text-[10px] text-muted-foreground mt-6 tracking-wide">
-        {saving ? "保存中..." : "保存済み"}
+        {saving ? "Kaydediliyor..." : "Kaydedildi"}
       </div>
     </div>
   );

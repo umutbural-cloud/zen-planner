@@ -44,11 +44,11 @@ type Props = {
 type SectionKey = "habits" | "modules" | "home" | "account" | "preferences";
 
 const SECTIONS: { key: SectionKey; label: string; jp: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "habits", label: "Alışkanlık", jp: "習慣", icon: Sprout },
-  { key: "modules", label: "Modüller", jp: "区分", icon: LayoutGrid },
-  { key: "home", label: "Ana Sayfa", jp: "家", icon: Home },
-  { key: "account", label: "Hesap", jp: "個人", icon: User },
-  { key: "preferences", label: "Tercihler", jp: "設定", icon: SlidersHorizontal },
+  { key: "habits", label: "Alışkanlık", jp: "Alışkanlık", icon: Sprout },
+  { key: "modules", label: "Modüller", jp: "Modüller", icon: LayoutGrid },
+  { key: "home", label: "Ana Sayfa", jp: "Ana Sayfa", icon: Home },
+  { key: "account", label: "Hesap", jp: "Hesap", icon: User },
+  { key: "preferences", label: "Tercihler", jp: "Tercihler", icon: SlidersHorizontal },
 ];
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (
@@ -250,7 +250,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
         )}
       >
         <DialogHeader className="px-4 sm:px-5 py-3 border-b border-border/60 shrink-0">
-          <DialogTitle className="text-base font-light tracking-wide">設定 — Ayarlar</DialogTitle>
+          <DialogTitle className="text-base font-light tracking-wide">Ayarlar</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col sm:flex-row flex-1 min-h-0 sm:max-h-[calc(85vh-6.75rem)]">
@@ -287,7 +287,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
           <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 min-h-0">
             {section === "habits" && (
               <div className="space-y-5">
-                <SectionTitle>習慣 — Alışkanlık</SectionTitle>
+                <SectionTitle>Alışkanlık</SectionTitle>
 
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="min-w-0">
@@ -555,7 +555,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
 
             {section === "modules" && (
               <div className="space-y-3">
-                <SectionTitle>区分 — Modüller</SectionTitle>
+                <SectionTitle>Modüller</SectionTitle>
                 <div className="text-[10px] text-muted-foreground tracking-wide">
                   Yan menüde hangi bölümler görünsün ve adları
                 </div>
@@ -599,7 +599,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
 
             {section === "home" && (
               <div className="space-y-5">
-                <SectionTitle>家 — Ana Sayfa</SectionTitle>
+                <SectionTitle>Ana Sayfa</SectionTitle>
 
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-3">
@@ -736,7 +736,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
 
             {section === "account" && (
               <div className="space-y-5">
-                <SectionTitle>個人 — Hesap</SectionTitle>
+                <SectionTitle>Hesap</SectionTitle>
                 <div className="space-y-2">
                   <div className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase">Ad Soyad</div>
                   <div className="flex flex-col sm:flex-row gap-2">
@@ -811,7 +811,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
 
             {section === "preferences" && (
               <div className="space-y-5">
-                <SectionTitle>設定 — Tercihler</SectionTitle>
+                <SectionTitle>Tercihler</SectionTitle>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-sm font-light">Karanlık tema</div>
@@ -835,9 +835,9 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                   </div>
                   <div className="grid grid-cols-3 gap-2 pt-1">
                     {([
-                      { v: "normal", label: "Normal", jp: "標準" },
-                      { v: "large", label: "Büyük", jp: "大" },
-                      { v: "xlarge", label: "Çok Büyük", jp: "特大" },
+                      { v: "normal", label: "Normal", jp: "Standart" },
+                      { v: "large", label: "Büyük", jp: "Büyük" },
+                      { v: "xlarge", label: "Çok Büyük", jp: "Çok büyük" },
                     ] as const).map((opt) => {
                       const active = uiScale === opt.v;
                       return (

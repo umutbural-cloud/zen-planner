@@ -59,7 +59,7 @@ const Auth = () => {
         });
         if (error) throw error;
         toast({
-          title: "確認メール送信済み",
+          title: "Onay e-postası gönderildi",
           description: "E-posta adresinize doğrulama bağlantısı gönderildi.",
         });
       } else if (mode === "forgot") {
@@ -68,7 +68,7 @@ const Auth = () => {
         });
         if (error) throw error;
         toast({
-          title: "メール送信済み",
+          title: "E-posta gönderildi",
           description: "Şifre sıfırlama bağlantısı e-postanıza gönderildi.",
         });
         setMode("login");
@@ -95,7 +95,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ backgroundColor: 'hsl(40, 23%, 97%)' }}>
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl tracking-widest text-foreground">計画</h1>
+          <h1 className="text-3xl tracking-widest text-foreground">Zen Planner</h1>
           <p className="text-sm text-muted-foreground tracking-wide">
             {mode === "login" && "Keikaku — Planlama"}
             {mode === "signup" && "Yeni Hesap"}
@@ -227,7 +227,7 @@ const Auth = () => {
         </div>
 
         <div className="text-center pt-8">
-          <span className="text-xs text-muted-foreground/50 tracking-widest">和紙</span>
+          <span className="text-xs text-muted-foreground/50 tracking-widest">Sade planlama</span>
         </div>
       </div>
     </div>

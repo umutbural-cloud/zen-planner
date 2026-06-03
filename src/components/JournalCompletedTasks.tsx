@@ -59,10 +59,10 @@ const JournalCompletedTasks = ({ date }: { date: string }) => {
       {open && (
         <div className="divide-y divide-border/40">
           {loading ? (
-            <div className="px-3 py-3 text-xs text-muted-foreground">読み込み中...</div>
+            <div className="px-3 py-3 text-xs text-muted-foreground">Yükleniyor...</div>
           ) : tasks.length === 0 ? (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">
-              <p>空 — Bu gün hiç görev tamamlanmadı</p>
+              <p>Bu gün hiç görev tamamlanmadı</p>
             </div>
           ) : (
             tasks.map((t) => (

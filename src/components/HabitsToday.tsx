@@ -99,7 +99,7 @@ const HabitsToday = () => {
         </div>
       ) : visible.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">Bu dilim için planlı alışkanlık yok</p>
         </div>
       ) : (

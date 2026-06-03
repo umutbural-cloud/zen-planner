@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Package, Trash, Settings, Repeat, Check, Clock, Wind, Home, type LucideIcon } from "lucide-react";
 import { useSidebarPreferences } from "@/hooks/useSidebarPreferences";
 import { useModuleLabels } from "@/hooks/useModuleLabels";
@@ -32,11 +32,11 @@ import NotebookSidebarTree from "@/features/knowledge/components/NotebookSidebar
 
 
 const VIEW_META: Record<ViewKey, { label: string; jp: string; icon: LucideIcon }> = {
-  notes: { label: "Notlar", jp: "ノート", icon: FileText },
-  table: { label: "Tablo", jp: "表", icon: TableIcon },
-  gantt: { label: "Gantt", jp: "ガント", icon: GanttChart },
-  kanban: { label: "Kanban", jp: "看板", icon: Kanban },
-  calendar: { label: "Takvim", jp: "暦", icon: Calendar },
+  notes: { label: "Notlar", jp: "Not", icon: FileText },
+  table: { label: "Tablo", jp: "Tablo", icon: TableIcon },
+  gantt: { label: "Gantt", jp: "Gantt", icon: GanttChart },
+  kanban: { label: "Kanban", jp: "Kanban", icon: Kanban },
+  calendar: { label: "Takvim", jp: "Takvim", icon: Calendar },
 };
 const ALL_VIEW_KEYS: ViewKey[] = ["notes", "table", "gantt", "kanban", "calendar"];
 
@@ -364,6 +364,7 @@ const ProjectItem = ({
 const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, selectedKnowledgeNoteId, onSelect, onSelectHome, onCreate, onDelete, onUpdateProject, onSelectBacklog, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook, onSelectKnowledgeNote }: Props) => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { prefs, setItem } = useSidebarPreferences();
   const { get: moduleLabel } = useModuleLabels();
   const [newName, setNewName] = useState("");
@@ -405,6 +406,8 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
   const projectKind = (p: Project) => (p as ProjectWithKind).kind || "project";
   const rootProjects = projects.filter((p) => !p.parent_id && projectKind(p) === "project");
   const getChildren = (parentId: string) => projects.filter((p) => p.parent_id === parentId);
+  const isHomeRoute = location.pathname === "/";
+  const isWorkHistoryActive = location.pathname === "/work-history";
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-border/60">
@@ -416,7 +419,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onSelectHome}
-                  className={`text-sm font-light ${section === "home" ? "bg-accent text-accent-foreground" : ""}`}
+                  className={`text-sm font-light ${isHomeRoute && section === "home" ? "bg-accent text-accent-foreground" : ""}`}
                 >
                   <Home className="h-3.5 w-3.5" />
                   <span className="tracking-wide">Ana Sayfa</span>
@@ -426,7 +429,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={onSelectBacklog}
-                    className={`text-sm font-light ${section === "backlog" ? "bg-accent text-accent-foreground" : ""}`}
+                    className={`text-sm font-light ${isHomeRoute && section === "backlog" ? "bg-accent text-accent-foreground" : ""}`}
                   >
                     <Package className="h-3.5 w-3.5" />
                     <span className="tracking-wide">{moduleLabel("backlog")}</span>
@@ -437,7 +440,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={onSelectJournal}
-                    className={`text-sm font-light ${section === "journal" ? "bg-accent text-accent-foreground" : ""}`}
+                    className={`text-sm font-light ${isHomeRoute && section === "journal" ? "bg-accent text-accent-foreground" : ""}`}
                   >
                     <FileText className="h-3.5 w-3.5" />
                     <span className="tracking-wide">{moduleLabel("journal")}</span>
@@ -448,7 +451,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={onSelectHabits}
-                    className={`text-sm font-light ${section === "habits" ? "bg-accent text-accent-foreground" : ""}`}
+                    className={`text-sm font-light ${isHomeRoute && section === "habits" ? "bg-accent text-accent-foreground" : ""}`}
                   >
                     <Repeat className="h-3.5 w-3.5" />
                     <span className="tracking-wide">{moduleLabel("habits")}</span>
@@ -459,7 +462,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => navigate("/work-history")}
-                    className="text-sm font-light"
+                    className={`text-sm font-light ${isWorkHistoryActive ? "bg-accent text-accent-foreground" : ""}`}
                   >
                     <Clock className="h-3.5 w-3.5" />
                     <span className="tracking-wide">{moduleLabel("workHistory")}</span>
@@ -470,7 +473,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={onSelectRetreat}
-                    className={`text-sm font-light ${section === "retreat" ? "bg-accent text-accent-foreground" : ""}`}
+                    className={`text-sm font-light ${isHomeRoute && section === "retreat" ? "bg-accent text-accent-foreground" : ""}`}
                   >
                     <Wind className="h-3.5 w-3.5" />
                     <span className="tracking-wide">{moduleLabel("retreat")}</span>
@@ -514,7 +517,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">
-            計画 Projeler
+            Projeler
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -525,7 +528,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                     children={getChildren(project.id)}
                     selectedId={selectedId}
                     selectedView={selectedView}
-                    section={section}
+                    section={isHomeRoute ? section : "home"}
                     onSelect={onSelect}
                     onDelete={onDelete}
                     onUpdateProject={onUpdateProject}
@@ -582,12 +585,12 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
         {/* Bilgi Merkezi */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">
-            知 Bilgi Merkezi
+            Bilgi Merkezi
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <NotebookSidebarTree
-              selectedNotebookId={section === "notebook" ? selectedNotebookId : null}
-              selectedKnowledgeNoteId={section === "notebook" ? selectedKnowledgeNoteId : null}
+              selectedNotebookId={isHomeRoute && section === "notebook" ? selectedNotebookId : null}
+              selectedKnowledgeNoteId={isHomeRoute && section === "notebook" ? selectedKnowledgeNoteId : null}
               onSelectNotebook={onSelectNotebook}
               onSelectKnowledgeNote={onSelectKnowledgeNote}
             />
@@ -602,7 +605,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onSelectTrash}
-                  className={`text-xs font-light ${section === "trash" ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+                  className={`text-xs font-light ${isHomeRoute && section === "trash" ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
                 >
                   <Trash className="h-3 w-3" />
                   <span className="tracking-wide">Çöp Kutusu</span>

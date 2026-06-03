@@ -74,7 +74,7 @@ const PomodoroTaskBoard = ({ projects }: Props) => {
               }`}
             >
               <TableIcon className="h-3 w-3" />
-              <span className="hidden sm:inline">表 Tablo</span>
+              <span className="hidden sm:inline">Tablo</span>
             </button>
             <button
               onClick={() => setAndPersist("kanban")}
@@ -84,7 +84,7 @@ const PomodoroTaskBoard = ({ projects }: Props) => {
               }`}
             >
               <KanbanSquare className="h-3 w-3" />
-              <span className="hidden sm:inline">看板 Kanban</span>
+              <span className="hidden sm:inline">Kanban</span>
             </button>
           </div>
         )}

@@ -14,9 +14,9 @@ const priorityMeta: Record<Priority, { label: string; color: string; rank: numbe
 };
 
 const urgencyMeta: Record<Urgency, { label: string; jp: string; rank: number }> = {
-  today: { label: "Bugün", jp: "今日", rank: 0 },
-  this_week: { label: "Bu hafta", jp: "今週", rank: 1 },
-  someday: { label: "Bir gün", jp: "いつか", rank: 2 },
+  today: { label: "Bugün", jp: "Bugün", rank: 0 },
+  this_week: { label: "Bu hafta", jp: "Hafta", rank: 1 },
+  someday: { label: "Bir gün", jp: "Bir gün", rank: 2 },
 };
 
 const MoveMenu = ({ projects, onMove }: { projects: Project[]; onMove: (pid: string) => void }) => (
@@ -267,7 +267,7 @@ const BacklogView = () => {
     });
   }
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">Yükleniyor...</div>;
 
   return (
     <div className="max-w-5xl mx-auto space-y-4">
@@ -294,7 +294,7 @@ const BacklogView = () => {
 
       {sorted.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">Heybede iş yok</p>
         </div>
       ) : (

@@ -22,7 +22,7 @@ export const CategoryColorPicker = ({ value, onChange, size = "md", align = "sta
         />
       </PopoverTrigger>
       <PopoverContent align={align} className="w-auto p-3">
-        <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-2">色 — Renk</div>
+        <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-2">Renk</div>
         <div className="grid grid-cols-5 gap-1.5">
           {CATEGORY_COLORS.map((col) => {
             const active = col.key === value;

@@ -71,7 +71,7 @@ const HabitsBoard = () => {
         </div>
       ) : sorted.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">Henüz alışkanlık eklenmedi</p>
         </div>
       ) : (
@@ -226,7 +226,7 @@ const HabitsBoard = () => {
       <Dialog open={manageOpen} onOpenChange={setManageOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-light tracking-wide text-base">カテゴリ — Kategoriler</DialogTitle>
+            <DialogTitle className="font-light tracking-wide text-base">Kategoriler</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             {categories.map((c) => (

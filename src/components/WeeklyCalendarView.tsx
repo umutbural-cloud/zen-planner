@@ -414,7 +414,7 @@ const WeeklyCalendarView = ({ projectId }: { projectId: string }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="text-lg tracking-wide">
-          {mode === "day" ? "日 — Gün" : mode === "week" ? "週 — Hafta" : "月 — Ay"}
+          {mode === "day" ? "Gün" : mode === "week" ? "Hafta" : "Ay"}
         </h2>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex border border-border/60 rounded-sm overflow-hidden">

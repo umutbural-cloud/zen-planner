@@ -139,7 +139,7 @@ const RichNotesPanel = ({ notebookId }: { notebookId: string }) => {
     }, 500);
   };
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">Yükleniyor...</div>;
 
   return (
     <div className="flex gap-0 -mx-3 sm:-mx-6 min-h-[70vh]">

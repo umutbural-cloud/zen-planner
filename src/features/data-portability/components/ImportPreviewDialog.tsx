@@ -30,7 +30,7 @@ export const ImportPreviewDialog = ({ pending, importing, progress, onCancel, on
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-light tracking-wide">
-            取込 — Veri yükleme önizlemesi
+            Veri yükleme önizlemesi
           </DialogTitle>
         </DialogHeader>
 

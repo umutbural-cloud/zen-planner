@@ -203,7 +203,7 @@ const InzivaView = () => {
       {/* Header with title + timer */}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-lg tracking-wide font-light">隠 — İnziva</h2>
+          <h2 className="text-lg tracking-wide font-light">İnziva</h2>
           <p className="text-[11px] text-muted-foreground/70 font-light leading-relaxed mt-1">
             Buraya yazdıklarınız hiçbir yere kaydedilmez. Yazmayı bıraktığınızda her şey sessizce kaybolur.
           </p>
@@ -281,7 +281,7 @@ const InzivaView = () => {
       </div>
 
       <div className="text-[10px] text-muted-foreground/50 font-light tracking-widest text-center pt-4">
-        無 — kayıt yok
+        Kayıt yok
       </div>
     </div>
   );

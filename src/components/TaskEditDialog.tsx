@@ -120,7 +120,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base font-light tracking-wide">編 — Görevi Düzenle</DialogTitle>
+          <DialogTitle className="text-base font-light tracking-wide">Görevi Düzenle</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">

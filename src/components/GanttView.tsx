@@ -167,7 +167,7 @@ const GanttView = ({ projectId }: { projectId: string }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg tracking-wide">ガント — Gantt</h2>
+        <h2 className="text-lg tracking-wide">Gantt</h2>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => setMode(mode === "week" ? "month" : "week")} className="text-xs">
             {mode === "week" ? "Aylık" : "Haftalık"}
@@ -186,7 +186,7 @@ const GanttView = ({ projectId }: { projectId: string }) => {
 
       {tasksWithDates.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">Tarih aralığı olan görev yok</p>
         </div>
       ) : (

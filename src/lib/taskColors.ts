@@ -1,11 +1,11 @@
 export type TaskColor = "gray" | "yellow" | "red" | "blue" | "green";
 
 export const TASK_COLORS: { value: TaskColor; label: string; jp: string }[] = [
-  { value: "gray", label: "Gri", jp: "灰" },
-  { value: "yellow", label: "Sarı", jp: "黄" },
-  { value: "red", label: "Kırmızı", jp: "赤" },
-  { value: "blue", label: "Mavi", jp: "青" },
-  { value: "green", label: "Yeşil", jp: "緑" },
+  { value: "gray", label: "Gri", jp: "Gri" },
+  { value: "yellow", label: "Sarı", jp: "Sarı" },
+  { value: "red", label: "Kırmızı", jp: "Kırmızı" },
+  { value: "blue", label: "Mavi", jp: "Mavi" },
+  { value: "green", label: "Yeşil", jp: "Yeşil" },
 ];
 
 // Soft, washi-friendly palette. Returns Tailwind classes.

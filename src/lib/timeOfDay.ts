@@ -10,11 +10,11 @@ export const ALL_TIME_OF_DAY_KEYS: TimeOfDayKey[] = ["morning", "noon", "ikindi"
 export const TIME_OF_DAY_KEYS = ALL_TIME_OF_DAY_KEYS;
 
 export const DEFAULT_TIME_OF_DAY_LABELS: Record<TimeOfDayKey, { label: string; jp: string }> = {
-  morning: { label: "Sabah", jp: "朝" },
-  noon: { label: "Öğle", jp: "昼" },
-  ikindi: { label: "İkindi", jp: "申" },
-  evening: { label: "Akşam", jp: "夕" },
-  night: { label: "Gece", jp: "夜" },
+  morning: { label: "Sabah", jp: "Sabah" },
+  noon: { label: "Öğle", jp: "Öğle" },
+  ikindi: { label: "İkindi", jp: "İkindi" },
+  evening: { label: "Akşam", jp: "Akşam" },
+  night: { label: "Gece", jp: "Gece" },
 };
 
 // Legacy export (static) — components needing live labels should use the hook.

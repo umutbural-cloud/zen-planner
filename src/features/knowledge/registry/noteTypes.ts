@@ -13,6 +13,6 @@ export type NoteTypeDef = {
 };
 
 export const NOTE_TYPES: NoteTypeDef[] = [
-  { key: "quick", label: "Anlık Notlar", jp: "付箋", icon: StickyNote, Panel: QuickNotesPanel },
-  { key: "rich",  label: "Zengin Doküman", jp: "文書", icon: FileText, Panel: RichNotesPanel },
+  { key: "quick", label: "Anlık Notlar", jp: "Anlık", icon: StickyNote, Panel: QuickNotesPanel },
+  { key: "rich",  label: "Zengin Doküman", jp: "Doküman", icon: FileText, Panel: RichNotesPanel },
 ];

@@ -6,9 +6,9 @@ import HabitsStats from "./HabitsStats";
 type Tab = "today" | "master" | "stats";
 
 const TABS: { key: Tab; jp: string; label: string }[] = [
-  { key: "today", jp: "今日", label: "Bugün" },
-  { key: "master", jp: "全て", label: "Master" },
-  { key: "stats", jp: "統計", label: "İstatistik" },
+  { key: "today", jp: "Bugün", label: "Bugün" },
+  { key: "master", jp: "Tümü", label: "Master" },
+  { key: "stats", jp: "İstatistik", label: "İstatistik" },
 ];
 
 const HabitsView = () => {
@@ -17,7 +17,7 @@ const HabitsView = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">習慣</div>
+        <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">Alışkanlıklar</div>
         <h1 className="text-2xl font-light tracking-wide">Alışkanlıklar</h1>
       </div>
 

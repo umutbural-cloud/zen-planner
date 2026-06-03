@@ -160,10 +160,10 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
           </div>
           <div className="divide-y divide-border/40">
             {loading ? (
-              <div className="px-3 py-3 text-xs text-muted-foreground">読み込み中...</div>
+              <div className="px-3 py-3 text-xs text-muted-foreground">Yükleniyor...</div>
             ) : visible.length === 0 ? (
               <div className="px-3 py-4 text-xs text-muted-foreground text-center">
-                <p>空 — Bu filtreyle çalışma kaydı yok</p>
+                <p>Bu filtreyle çalışma kaydı yok</p>
               </div>
             ) : (
               visible.map((s) => (

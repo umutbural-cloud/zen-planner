@@ -89,7 +89,7 @@ const QuickNotesPanel = ({ notebookId }: { notebookId: string | null }) => {
   if (loading) {
     return (
       <div className="flex min-h-[45vh] items-center justify-center text-xs text-muted-foreground">
-        読み込み中...
+        Yükleniyor...
       </div>
     );
   }
