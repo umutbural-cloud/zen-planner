@@ -577,7 +577,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     if (phase === "idle") return;
     const label = kind === "break" ? "Mola" : "Zen";
     const prefix = phase === "paused" ? "⏸ " : "";
-    document.title = `${prefix}${label} ${formatMMSS(remainingSec)} — Keikaku`;
+    document.title = `${prefix}${label} ${formatMMSS(remainingSec)} — Zen Planner`;
     return () => {
       document.title = original;
     };
