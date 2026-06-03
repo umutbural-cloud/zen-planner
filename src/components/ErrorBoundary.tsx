@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="max-w-sm w-full text-center space-y-5">
-          <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">エラー</div>
+          <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Hata</div>
           <h1 className="text-xl font-light tracking-wide">Bir şeyler ters gitti</h1>
           <p className="text-sm text-muted-foreground font-light leading-relaxed">
             Beklenmeyen bir durum oluştu. Tarayıcı çevirisi açıksa kapatmayı deneyin,

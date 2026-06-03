@@ -160,7 +160,7 @@ const NotebookSidebarTree = ({
       {loading && (
         <SidebarMenuItem>
           <div className="px-2 py-2 text-[11px] text-muted-foreground/60 font-light">
-            読み込み中...
+            Yükleniyor...
           </div>
         </SidebarMenuItem>
       )}

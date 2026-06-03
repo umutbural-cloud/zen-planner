@@ -30,7 +30,7 @@ const JournalHabits = ({ date }: { date: string }) => {
         <div className="divide-y divide-border/40">
           {completed.length === 0 ? (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">
-              <p>空 — Bu gün tamamlanan alışkanlık yok</p>
+              <p>Bu gün tamamlanan alışkanlık yok</p>
             </div>
           ) : (
             completed.map((h) => {

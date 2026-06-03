@@ -28,9 +28,9 @@ import { useDroppable } from "@dnd-kit/core";
 import { DelayedLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 
 const COLUMNS: { key: TaskStatus; label: string; jpLabel: string }[] = [
-  { key: "todo", label: "Yapılacak", jpLabel: "未" },
-  { key: "in_progress", label: "Devam Eden", jpLabel: "進" },
-  { key: "done", label: "Tamamlandı", jpLabel: "了" },
+  { key: "todo", label: "Yapılacak", jpLabel: "Plan" },
+  { key: "in_progress", label: "Devam Eden", jpLabel: "Aktif" },
+  { key: "done", label: "Tamamlandı", jpLabel: "Bitti" },
 ];
 
 const NEXT_STATUS: Record<TaskStatus, TaskStatus | null> = {
@@ -328,7 +328,7 @@ const KanbanView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg tracking-wide font-light">看板 — Kanban</h2>
+      <h2 className="text-lg tracking-wide font-light">Kanban</h2>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

@@ -44,7 +44,7 @@ const ResetPassword = () => {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      toast({ title: "完了", description: "Şifreniz güncellendi." });
+      toast({ title: "Tamamlandı", description: "Şifreniz güncellendi." });
       await supabase.auth.signOut();
       navigate("/auth", { replace: true });
     } catch (error: unknown) {
@@ -58,7 +58,7 @@ const ResetPassword = () => {
     <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ backgroundColor: 'hsl(40, 23%, 97%)' }}>
       <div className="w-full max-w-sm space-y-8">
         <div className="text-center space-y-2">
-          <h1 className="text-3xl tracking-widest text-foreground">計画</h1>
+          <h1 className="text-3xl tracking-widest text-foreground">Zen Planner</h1>
           <p className="text-sm text-muted-foreground tracking-wide">Yeni Şifre Belirle</p>
         </div>
 
@@ -105,7 +105,7 @@ const ResetPassword = () => {
         )}
 
         <div className="text-center pt-8">
-          <span className="text-xs text-muted-foreground/50 tracking-widest">和紙</span>
+          <span className="text-xs text-muted-foreground/50 tracking-widest">Sade planlama</span>
         </div>
       </div>
     </div>

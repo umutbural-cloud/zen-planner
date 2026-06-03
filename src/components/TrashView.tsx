@@ -16,7 +16,7 @@ const kindMeta: Record<TrashItem["kind"], { label: string; icon: LucideIcon }> =
 const TrashView = () => {
   const { items, loading, restore, purge, purgeAll } = useTrash();
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">Yükleniyor...</div>;
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -37,7 +37,7 @@ const TrashView = () => {
 
       {items.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">Çöp kutusu temiz</p>
         </div>
       ) : (

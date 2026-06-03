@@ -172,7 +172,7 @@ const Admin = () => {
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <span className="text-muted-foreground text-sm tracking-widest">読み込み中...</span>
+        <span className="text-muted-foreground text-sm tracking-widest">Yükleniyor...</span>
       </div>
     );
   }

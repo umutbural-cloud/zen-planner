@@ -293,7 +293,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto w-full">
-      <h2 className="text-lg tracking-wide font-light">表 — Tablo</h2>
+      <h2 className="text-lg tracking-wide font-light">Tablo</h2>
 
       <div className="flex gap-2">
         <Input
@@ -369,7 +369,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
 
       {visible.length === 0 && doneTasks.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">{filterActive ? "Filtreye uygun görev yok" : "Aktif görev yok"}</p>
         </div>
       ) : visible.length > 0 && (
@@ -412,7 +412,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
         return (
           <div className="border border-border/60 rounded-sm overflow-hidden">
             <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground bg-card/30">
-              <span className="tracking-wide">了 — Tamamlananlar</span>
+              <span className="tracking-wide">Tamamlananlar</span>
               <span className="text-muted-foreground/60">{doneTasks.length}</span>
             </div>
             <Table>
@@ -463,7 +463,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-card/40 transition-colors"
           >
             {showHidden ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-            <span className="tracking-wide">隠 — Gizlenenler</span>
+            <span className="tracking-wide">Gizlenenler</span>
             <span className="text-muted-foreground/60">{hiddenTasks.length}</span>
           </button>
           {showHidden && (

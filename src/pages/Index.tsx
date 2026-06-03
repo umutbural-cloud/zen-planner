@@ -27,11 +27,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const VIEWS: { id: ViewKey; label: string; jp: string; icon: LucideIcon }[] = [
-  { id: "notes", label: "Notlar", jp: "ノート", icon: FileText },
-  { id: "table", label: "Tablo", jp: "表", icon: TableIcon },
-  { id: "gantt", label: "Gantt", jp: "ガント", icon: GanttChart },
-  { id: "kanban", label: "Kanban", jp: "看板", icon: Kanban },
-  { id: "calendar", label: "Takvim", jp: "暦", icon: Calendar },
+  { id: "notes", label: "Notlar", jp: "Not", icon: FileText },
+  { id: "table", label: "Tablo", jp: "Tablo", icon: TableIcon },
+  { id: "gantt", label: "Gantt", jp: "Gantt", icon: GanttChart },
+  { id: "kanban", label: "Kanban", jp: "Kanban", icon: Kanban },
+  { id: "calendar", label: "Takvim", jp: "Takvim", icon: Calendar },
 ];
 
 const Index = () => {
@@ -297,7 +297,7 @@ const Index = () => {
               !selectedProject ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                   <div className="text-center space-y-2">
-                    <p className="text-2xl tracking-widest">計画</p>
+                    <p className="text-2xl tracking-widest">Plan</p>
                     <p className="text-xs">Bir proje seçin veya yeni bir proje oluşturun</p>
                   </div>
                 </div>

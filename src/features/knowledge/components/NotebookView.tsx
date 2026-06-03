@@ -109,7 +109,7 @@ const NotebookView = ({ noteId, selectedNotebookId, onClearSelection, onSelectNo
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-        <p className="text-xs">読み込み中...</p>
+        <p className="text-xs">Yükleniyor...</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ const NotebookView = ({ noteId, selectedNotebookId, onClearSelection, onSelectNo
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         <div className="text-center space-y-2">
-          <p className="text-2xl tracking-widest">知</p>
+          <p className="text-2xl tracking-widest">Bilgi</p>
           <p className="text-xs">Bilgi Merkezi'nden yeni bir kayıt ekleyin</p>
         </div>
       </div>
@@ -133,7 +133,7 @@ const NotebookView = ({ noteId, selectedNotebookId, onClearSelection, onSelectNo
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         <div className="text-center space-y-2">
-          <p className="text-2xl tracking-widest">空</p>
+          <p className="text-2xl tracking-widest">Boş</p>
           <p className="text-xs">Kayıt bulunamadı veya silinmiş</p>
         </div>
       </div>

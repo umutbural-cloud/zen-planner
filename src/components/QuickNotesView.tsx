@@ -123,12 +123,12 @@ const QuickNotesView = () => {
   const pinned = notes.filter((n) => n.pinned);
   const others = notes.filter((n) => !n.pinned);
 
-  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">読み込み中...</div>;
+  if (loading) return <div className="text-center text-muted-foreground text-sm py-12">Yükleniyor...</div>;
 
   return (
     <div className="max-w-5xl mx-auto w-full space-y-6">
       <div>
-        <h2 className="text-lg tracking-wide font-light">付箋 — Anlık Notlar</h2>
+        <h2 className="text-lg tracking-wide font-light">Anlık Notlar</h2>
         <p className="text-[11px] text-muted-foreground/70 font-light mt-1">
           Hızlı bir şey not almak için. Sabitle, renklendir, sil.
         </p>
@@ -179,7 +179,7 @@ const QuickNotesView = () => {
 
       {notes.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
-          <p className="mb-1">空 — Boş</p>
+          <p className="mb-1">Boş</p>
           <p className="text-xs">Henüz not yok</p>
         </div>
       ) : (
