@@ -77,7 +77,7 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
         onChange={(e) => onTitleChange(e.target.value)}
         placeholder="Başlıksız"
         className="w-full bg-transparent outline-none text-3xl sm:text-4xl font-light tracking-wide mb-6 pr-10 placeholder:text-muted-foreground/30"
-        style={{ fontFamily: '"Noto Serif JP", serif' }}
+        style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}
       />
 
       <div className="sticky top-0 z-10 -mx-6 sm:-mx-12 px-6 sm:px-12 py-1 mb-3 bg-background/80 backdrop-blur-sm opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity">

@@ -97,7 +97,7 @@ const Auth = () => {
         <div className="text-center space-y-2">
           <h1 className="text-3xl tracking-widest text-foreground">Zen Planner</h1>
           <p className="text-sm text-muted-foreground tracking-wide">
-            {mode === "login" && "Keikaku — Planlama"}
+            {mode === "login" && "Zen Planner — Planlama"}
             {mode === "signup" && "Yeni Hesap"}
             {mode === "forgot" && "Şifre Sıfırlama"}
           </p>
