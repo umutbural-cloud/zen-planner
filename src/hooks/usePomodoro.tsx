@@ -115,6 +115,37 @@ function playChime() {
 const isDuplicateError = (error: { code?: string; message?: string }) =>
   error.code === "23505" || /duplicate|unique/i.test(error.message || "");
 
+function createPomodoroSessionToken() {
+  const cryptoApi = globalThis.crypto;
+
+  if (cryptoApi?.randomUUID) {
+    return cryptoApi.randomUUID();
+  }
+
+  if (cryptoApi?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    cryptoApi.getRandomValues(bytes);
+
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+
+    return [
+      hex.slice(0, 8),
+      hex.slice(8, 12),
+      hex.slice(12, 16),
+      hex.slice(16, 20),
+      hex.slice(20),
+    ].join("-");
+  }
+
+  const timestamp = Date.now().toString(16).padStart(12, "0").slice(-12);
+  const random = Math.floor(Math.random() * 0xffffffffffff).toString(16).padStart(12, "0").slice(-12);
+
+  return `00000000-0000-4000-8000-${timestamp.slice(0, 6)}${random.slice(0, 6)}`;
+}
+
 export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [workDurationSec, setWorkDurationSec] = useState(DEFAULT_WORK);
@@ -621,7 +652,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         ends_at: new Date(now + dur * 1000).toISOString(),
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: 0,
-        active_session_token: crypto.randomUUID(),
+        active_session_token: createPomodoroSessionToken(),
       });
       activeSessionIdRef.current += 1;
       completedSessionIdRef.current = null;
