@@ -69,7 +69,7 @@ const Pomodoro = () => {
     if (result === "granted") {
       toast.success("Bildirimler açıldı. Pomodoro bittiğinde haber vereceğiz.");
       try {
-        new Notification("Keikaku", { body: "Bildirimler aktif." });
+        new Notification("Zen Planner", { body: "Bildirimler aktif." });
       } catch {
         toast("Bildirim gösterimi tarayıcı tarafından engellendi.");
       }

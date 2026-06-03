@@ -185,7 +185,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
     if (result === "granted") {
       toast.success("Bildirimler açıldı.");
       try {
-        new Notification("Keikaku", { body: "Bildirimler aktif." });
+        new Notification("Zen Planner", { body: "Bildirimler aktif." });
       } catch {
         // Some browsers grant permission but still block immediate notification creation.
       }
