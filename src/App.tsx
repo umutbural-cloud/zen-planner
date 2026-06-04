@@ -11,6 +11,7 @@ import { PageStateProvider } from "@/hooks/usePageState";
 import { UiScaleSync } from "@/components/UiScaleSync";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AccountGateScreen } from "@/components/account-gate/AccountGateScreen";
+import QueryCacheResetter from "@/components/QueryCacheResetter";
 import { useAccountGate } from "@/hooks/useAccountGate";
 import { UserSettingsProvider, useUserSettings } from "@/hooks/useUserSettings";
 import { usePageState } from "@/hooks/usePageState";
@@ -103,6 +104,7 @@ const AuthStartupRedirect = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <QueryCacheResetter />
     <TooltipProvider>
       <Toaster />
       <Sonner />
