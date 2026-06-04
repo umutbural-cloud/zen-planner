@@ -88,7 +88,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
   const { startup, setStartup } = useStartupPage();
   const { projects } = useProjects();
   const workspaceProjects = projects.filter((project) => project.kind === "project");
-  const enabledModules = SIDEBAR_ITEM_ORDER.filter((k) => sidebarPrefs[k]);
+  const enabledModules = SIDEBAR_ITEM_ORDER.filter((k) => sidebarPrefs[k] && k !== "retreat");
   const startupValue =
     startup.type === "module" ? `mod:${startup.value}` :
     startup.type === "project" ? `prj:${startup.value}` :
@@ -97,6 +97,10 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
     if (v === "default") setStartup({ type: "default" });
     else if (v.startsWith("mod:")) {
       const key = v.slice(4);
+      if (key === "home") {
+        setStartup({ type: "module", value: "home" });
+        return;
+      }
       if (SIDEBAR_ITEM_ORDER.includes(key as SidebarItemKey) && key !== "retreat") {
         setStartup({ type: "module", value: key as Exclude<SidebarItemKey, "retreat"> });
       }
@@ -881,9 +885,8 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                     </SelectTrigger>
                     <SelectContent className="max-h-72">
                       <SelectItem value="default">Varsayılan (ilk proje)</SelectItem>
-                      {enabledModules.length > 0 && (
-                        <div className="px-2 pt-1.5 pb-0.5 text-[10px] text-muted-foreground tracking-[0.15em] uppercase">Modüller</div>
-                      )}
+                      <div className="px-2 pt-1.5 pb-0.5 text-[10px] text-muted-foreground tracking-[0.15em] uppercase">Modüller</div>
+                      <SelectItem value="mod:home">Ana Sayfa</SelectItem>
                       {enabledModules.map((k) => (
                         <SelectItem key={`mod:${k}`} value={`mod:${k}`}>{moduleLabel(k)}</SelectItem>
                       ))}

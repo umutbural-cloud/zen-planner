@@ -95,6 +95,7 @@ const AuthStartupRedirect = () => {
   }
 
   if (startup.type === "module") {
+    if (startup.value === "home") return <Navigate to="/" replace />;
     if (startup.value === "pomodoro") return <Navigate to="/pomodoro" replace />;
     if (startup.value === "workHistory") return <Navigate to="/work-history" replace />;
   }
