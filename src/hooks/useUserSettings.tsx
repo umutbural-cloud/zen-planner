@@ -5,7 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { DEFAULT_HOME_FOCUS_OPTIONS, type DailyFocusOption } from "@/features/home/types";
 
 export type StartupPageSetting =
-  | { type: "module"; value: "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" }
+  | { type: "module"; value: "home" | "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" }
   | { type: "project"; value: string }
   | { type: "default" };
 
@@ -161,7 +161,8 @@ const isStartupPageSetting = (value: unknown): value is StartupPageSetting => {
   if (candidate.type === "default") return true;
   if (candidate.type === "project") return typeof candidate.value === "string";
   if (candidate.type === "module") {
-    return candidate.value === "backlog" ||
+    return candidate.value === "home" ||
+      candidate.value === "backlog" ||
       candidate.value === "journal" ||
       candidate.value === "habits" ||
       candidate.value === "workHistory" ||

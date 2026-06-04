@@ -63,6 +63,11 @@ const Index = () => {
     startupAppliedUserRef.current = userId;
 
     if (startup.type === "module") {
+      if (startup.value === "home") {
+        setSelectedProjectId(null);
+        setSection("home");
+        return;
+      }
       if (startup.value === "workHistory") { navigate("/work-history"); return; }
       if (startup.value === "pomodoro") { navigate("/pomodoro"); return; }
       if (startup.value === "backlog" || startup.value === "journal" || startup.value === "habits") {
