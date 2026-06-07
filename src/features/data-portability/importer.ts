@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from "@/integrations/supabase/client";
 import { MAX_IMPORT_ROWS_PER_TABLE, MAX_IMPORT_TOTAL_ROWS, TABLES, validateImportDataLimits, type ExportFile } from "./schema";
+import { normalizeCategoryName } from "@/lib/normalizeCategoryName";
 import { z } from "zod";
 
 export type ImportProgress = {
@@ -69,8 +70,11 @@ const naturalKeyFor = (table: string, row: Record<string, unknown>) => {
   ) {
     return "default_project";
   }
-  if ((table === "habit_categories" || table === "pomodoro_categories") && typeof row.name === "string") {
+  if (table === "habit_categories" && typeof row.name === "string") {
     return `name:${row.name}`;
+  }
+  if (table === "pomodoro_categories" && typeof row.name === "string") {
+    return `normalized_name:${normalizeCategoryName(row.name)}`;
   }
   if (table === "journal_entries" && typeof row.entry_date === "string") {
     return `entry_date:${row.entry_date}`;
@@ -209,15 +213,27 @@ export async function importUserData(
       if (ex) existingNatural.set("default_project", ex.id);
     }
     if (t.name === "habit_categories" || t.name === "pomodoro_categories") {
-      const names = rows.map((r) => r.name).filter((name): name is string => typeof name === "string");
-      for (let i = 0; i < names.length; i += STABLE_ID_QUERY_CHUNK_SIZE) {
-        const chunk = names.slice(i, i + STABLE_ID_QUERY_CHUNK_SIZE);
+      if (t.name === "pomodoro_categories") {
         const { data: ex } = await supabase
-          .from(t.name as any)
+          .from("pomodoro_categories")
           .select("id, name")
-          .eq("user_id", userId)
-          .in("name", chunk);
-        (ex || []).forEach((row: any) => existingNatural.set(`name:${row.name}`, row.id));
+          .eq("user_id", userId);
+        (ex || []).forEach((row: any) => {
+          if (typeof row.name === "string") {
+            existingNatural.set(`normalized_name:${normalizeCategoryName(row.name)}`, row.id);
+          }
+        });
+      } else {
+        const names = rows.map((r) => r.name).filter((name): name is string => typeof name === "string");
+        for (let i = 0; i < names.length; i += STABLE_ID_QUERY_CHUNK_SIZE) {
+          const chunk = names.slice(i, i + STABLE_ID_QUERY_CHUNK_SIZE);
+          const { data: ex } = await supabase
+            .from(t.name as any)
+            .select("id, name")
+            .eq("user_id", userId)
+            .in("name", chunk);
+          (ex || []).forEach((row: any) => existingNatural.set(`name:${row.name}`, row.id));
+        }
       }
     }
     if (t.name === "journal_entries") {
@@ -282,6 +298,10 @@ export async function importUserData(
       }
 
       if (oldId) idMap[t.name].set(oldId, newId);
+      if (t.name === "pomodoro_categories") {
+        const naturalKey = naturalKeyFor(t.name, row);
+        if (naturalKey) existingNatural.set(naturalKey, newId);
+      }
       if (
         t.name === "projects" &&
         !defaultPomodoroProjectId &&
