@@ -424,6 +424,7 @@ export type Database = {
           id: string
           name: string
           position: number
+          normalized_name: string
           stable_export_id: string
           updated_at: string
           user_id: string
@@ -434,6 +435,7 @@ export type Database = {
           id?: string
           name: string
           position?: number
+          normalized_name?: never
           stable_export_id?: string
           updated_at?: string
           user_id: string
@@ -444,6 +446,7 @@ export type Database = {
           id?: string
           name?: string
           position?: number
+          normalized_name?: never
           stable_export_id?: string
           updated_at?: string
           user_id?: string
