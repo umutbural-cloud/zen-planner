@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { Component, useEffect, useRef, type ErrorInfo, type ReactNode } from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
 import { BubbleTextMenu } from "@/components/editor/BubbleTextMenu";
+import { EMPTY_RICH_DOC, ensureSafeRichDoc } from "@/features/knowledge/lib/noteContent";
 
 type Props = {
   value: JSONContent | null | undefined;
@@ -13,15 +14,57 @@ type Props = {
   onTitleChange: (v: string) => void;
 };
 
-const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChange }: Props) => {
+type SurfaceProps = Pick<Props, "value" | "onChange" | "placeholder">;
+
+type ErrorBoundaryProps = {
+  children: ReactNode;
+  resetKey: string;
+};
+
+type ErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class RichEditorErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn("RichNoteEditor rendering failed.", error, info);
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-sm border border-border/70 bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+          Editör içeriği yüklenemedi. Bu test sürümünde eski içerik uyumsuz olabilir.
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) => {
   const debounceRef = useRef<number | null>(null);
+  const safeValue = ensureSafeRichDoc(value);
 
   const editor = useEditor({
     extensions: createRichEditorExtensions({
       placeholder: placeholder || "Yazmaya başla, ya da bir blok ekle...",
       linkClassName: "",
     }),
-    content: value && Object.keys(value || {}).length ? value : { type: "doc", content: [{ type: "paragraph" }] },
+    content: safeValue,
     editorProps: {
       attributes: {
         class: "rich-note-editor focus:outline-none font-light leading-[1.85] text-[12px] prose-rich",
@@ -50,11 +93,15 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
   useEffect(() => {
     if (!editor) return;
     const current = editor.getJSON();
-    if (JSON.stringify(current) !== JSON.stringify(value) && value) {
-      editor.commands.setContent(value && Object.keys(value).length ? value : { type: "doc", content: [{ type: "paragraph" }] }, { emitUpdate: false });
+    if (JSON.stringify(current) !== JSON.stringify(safeValue)) {
+      try {
+        editor.commands.setContent(safeValue, { emitUpdate: false });
+      } catch (error) {
+        console.warn("RichNoteEditor content sync failed. Falling back to an empty document.", error);
+        editor.commands.setContent(EMPTY_RICH_DOC, { emitUpdate: false });
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
+  }, [editor, safeValue]);
 
   if (!editor) return null;
 
@@ -71,21 +118,13 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
   };
 
   return (
-    <div className="max-w-[760px] mx-auto w-full px-6 sm:px-12 pt-2 sm:pt-3 pb-12">
-      <input
-        value={titleValue}
-        onChange={(e) => onTitleChange(e.target.value)}
-        placeholder="Başlıksız"
-        className="w-full bg-transparent outline-none text-3xl sm:text-4xl font-light tracking-wide mb-6 pr-10 placeholder:text-muted-foreground/30"
-        style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}
-      />
-
+    <>
       <div className="sticky top-0 z-10 -mx-6 sm:-mx-12 px-6 sm:px-12 py-1 mb-3 bg-background/80 backdrop-blur-sm opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity">
         <RichTextToolbar
           editor={editor}
-          features={{ link: true, taskList: false, codeBlock: true, toggleBlock: true, history: false }}
+          features={{ link: true, taskList: false, codeBlock: true, details: true, history: false }}
           onInsertLink={insertLink}
-          onInsertToggleBlock={() => editor.chain().focus().insertToggleBlock().run()}
+          onInsertDetails={() => editor.chain().focus().setDetails().run()}
         />
       </div>
 
@@ -96,6 +135,26 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
       </div>
 
       {editor ? <BubbleTextMenu editor={editor} onSetLink={insertLink} /> : null}
+    </>
+  );
+};
+
+const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChange }: Props) => {
+  const resetKey = JSON.stringify(ensureSafeRichDoc(value));
+
+  return (
+    <div className="max-w-[760px] mx-auto w-full px-6 sm:px-12 pt-2 sm:pt-3 pb-12">
+      <input
+        value={titleValue}
+        onChange={(e) => onTitleChange(e.target.value)}
+        placeholder="Başlıksız"
+        className="w-full bg-transparent outline-none text-3xl sm:text-4xl font-light tracking-wide mb-6 pr-10 placeholder:text-muted-foreground/30"
+        style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}
+      />
+
+      <RichEditorErrorBoundary resetKey={resetKey}>
+        <RichNoteEditorSurface value={value} onChange={onChange} placeholder={placeholder} />
+      </RichEditorErrorBoundary>
     </div>
   );
 };

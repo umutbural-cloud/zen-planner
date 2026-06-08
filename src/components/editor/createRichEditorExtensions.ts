@@ -2,8 +2,8 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { common, createLowlight } from "lowlight";
-import ToggleBlock from "@/components/editor/extensions/ToggleBlock";
 import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
 
@@ -23,7 +23,21 @@ export const createRichEditorExtensions = ({ placeholder, linkClassName }: RichE
     link: false,
   }),
   CodeBlockLowlight.configure({ lowlight }),
-  ToggleBlock,
+  Details.configure({
+    persist: true,
+    HTMLAttributes: { class: "details-toggle" },
+    renderToggleButton: ({ element, isOpen }) => {
+      element.className = "details-toggle-button";
+      element.dataset.open = isOpen ? "true" : "false";
+      element.textContent = ">";
+    },
+  }),
+  DetailsSummary.configure({
+    HTMLAttributes: { class: "details-toggle-summary" },
+  }),
+  DetailsContent.configure({
+    HTMLAttributes: { class: "details-toggle-content" },
+  }),
   FontSize,
   LineHeight,
   Placeholder.configure({ placeholder }),
