@@ -41,7 +41,7 @@ type Props = {
     taskList?: boolean;
     blockquote?: boolean;
     codeBlock?: boolean;
-    toggleBlock?: boolean;
+    details?: boolean;
     link?: boolean;
     history?: boolean;
     fontSize?: boolean;
@@ -50,7 +50,7 @@ type Props = {
     headingLevels?: number[];
   };
   onInsertLink?: () => void;
-  onInsertToggleBlock?: () => void;
+  onInsertDetails?: () => void;
 };
 
 const ToolbarButton = ({ onClick, active, title, children }: ToolbarButtonProps) => (
@@ -80,7 +80,7 @@ export const RichTextToolbar = ({
   sticky = false,
   features = {},
   onInsertLink,
-  onInsertToggleBlock,
+  onInsertDetails,
 }: Props) => {
   const [selectedFontSize, setSelectedFontSize] = useState(DEFAULT_FONT_SIZE);
   const [selectedLineHeight, setSelectedLineHeight] = useState(DEFAULT_LINE_HEIGHT);
@@ -91,7 +91,7 @@ export const RichTextToolbar = ({
     taskList: true,
     blockquote: true,
     codeBlock: false,
-    toggleBlock: false,
+    details: false,
     link: false,
     history: true,
     fontSize: true,
@@ -239,8 +239,8 @@ export const RichTextToolbar = ({
           <Code2 className="h-3.5 w-3.5" />
         </ToolbarButton>
       )}
-      {enabled.toggleBlock && (
-        <ToolbarButton onClick={onInsertToggleBlock || (() => {})} active={editor.isActive("toggleBlock")} title="Toggle">
+      {enabled.details && (
+        <ToolbarButton onClick={onInsertDetails || (() => {})} active={editor.isActive("details")} title="Toggle">
           <ListTree className="h-3.5 w-3.5" />
         </ToolbarButton>
       )}

@@ -47,6 +47,7 @@
     "@supabase/supabase-js": "^2.103.2",
     "@tanstack/react-query": "^5.83.0",
     "@tiptap/extension-code-block-lowlight": "^3.23.4",
+    "@tiptap/extension-details": "^3.23.4",
     "@tiptap/extension-link": "^3.23.4",
     "@tiptap/extension-placeholder": "^3.23.4",
     "@tiptap/extension-table": "^3.23.4",
