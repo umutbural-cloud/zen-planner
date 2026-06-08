@@ -3,6 +3,24 @@ import type { Json } from "@/integrations/supabase/types";
 
 export const EMPTY_RICH_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
 const LEGACY_TOGGLE_TYPE = `toggle${"Block"}`;
+const ALLOWED_NODE_TYPES = new Set([
+  "paragraph",
+  "text",
+  "heading",
+  "bulletList",
+  "orderedList",
+  "listItem",
+  "taskList",
+  "taskItem",
+  "codeBlock",
+  "hardBreak",
+  "horizontalRule",
+  "blockquote",
+  "details",
+  "detailsSummary",
+  "detailsContent",
+]);
+const ALLOWED_MARK_TYPES = new Set(["bold", "italic", "strike", "code", "link", "textStyle"]);
 
 export const isJsonObject = (value: Json): value is { [key: string]: Json | undefined } =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -15,7 +33,28 @@ const createParagraphNode = (text?: string): JSONContent => ({
   content: text ? [{ type: "text", text }] : undefined,
 });
 
-const createDetailsNode = (title: unknown, open: unknown, content: unknown): JSONContent => {
+const normalizeInlineContent = (value: unknown): JSONContent[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    if (item.type !== "text" || typeof item.text !== "string") return [];
+
+    const nextTextNode: JSONContent = { type: "text", text: item.text };
+
+    if (Array.isArray(item.marks)) {
+      nextTextNode.marks = item.marks.filter(
+        (mark): mark is NonNullable<JSONContent["marks"]>[number] =>
+          isRecord(mark) && typeof mark.type === "string" && ALLOWED_MARK_TYPES.has(mark.type),
+      );
+    }
+
+    return [nextTextNode];
+  });
+};
+
+const createDetailsNode = (title: unknown, open: unknown, content: unknown, summaryContent?: unknown): JSONContent => {
+  const summaryNodes = normalizeInlineContent(summaryContent);
   const summaryText = typeof title === "string" ? title : "Toggle";
   const normalizedContent = Array.isArray(content)
     ? content.map(normalizeRichNode).filter(Boolean) as JSONContent[]
@@ -27,7 +66,7 @@ const createDetailsNode = (title: unknown, open: unknown, content: unknown): JSO
     content: [
       {
         type: "detailsSummary",
-        content: summaryText ? [{ type: "text", text: summaryText }] : undefined,
+        content: summaryNodes.length > 0 ? summaryNodes : summaryText ? [{ type: "text", text: summaryText }] : undefined,
       },
       {
         type: "detailsContent",
@@ -62,7 +101,12 @@ const normalizeRichNode = (value: unknown): JSONContent | null => {
         : "Toggle",
       attrs.open,
       isRecord(detailsContent) ? detailsContent.content : [],
+      isRecord(summary) ? summary.content : undefined,
     );
+  }
+
+  if (!ALLOWED_NODE_TYPES.has(type)) {
+    return createParagraphNode();
   }
 
   const nextNode: JSONContent = { type };
@@ -72,9 +116,10 @@ const normalizeRichNode = (value: unknown): JSONContent | null => {
   }
 
   if (Array.isArray(value.marks)) {
-    nextNode.marks = value.marks.filter((mark): mark is Exclude<JSONContent["marks"], undefined>[number] => {
-      return isRecord(mark) && typeof mark.type === "string";
-    });
+    nextNode.marks = value.marks.filter(
+      (mark): mark is NonNullable<JSONContent["marks"]>[number] =>
+        isRecord(mark) && typeof mark.type === "string" && ALLOWED_MARK_TYPES.has(mark.type),
+    );
   }
 
   if (typeof value.text === "string") {
