@@ -1,4 +1,4 @@
-import { Component, useEffect, useRef, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
@@ -57,7 +57,10 @@ class RichEditorErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
 
 const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) => {
   const debounceRef = useRef<number | null>(null);
-  const safeValue = ensureSafeRichDoc(value);
+  const lastEmittedJsonRef = useRef<string | null>(null);
+  const lastLocalEditAtRef = useRef(0);
+  const safeValue = useMemo(() => ensureSafeRichDoc(value), [value]);
+  const safeValueJson = useMemo(() => JSON.stringify(safeValue), [safeValue]);
 
   const editor = useEditor({
     extensions: createRichEditorExtensions({
@@ -82,9 +85,12 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
       },
     },
     onUpdate: ({ editor }) => {
+      lastLocalEditAtRef.current = Date.now();
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
       debounceRef.current = window.setTimeout(() => {
-        onChange(editor.getJSON());
+        const nextDoc = editor.getJSON();
+        lastEmittedJsonRef.current = JSON.stringify(nextDoc);
+        onChange(nextDoc);
       }, 500);
     },
   });
@@ -92,8 +98,15 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
   // Sync external content changes (e.g., switching note)
   useEffect(() => {
     if (!editor) return;
+    if (lastEmittedJsonRef.current === safeValueJson) return;
+
     const current = editor.getJSON();
-    if (JSON.stringify(current) !== JSON.stringify(safeValue)) {
+    const currentJson = JSON.stringify(current);
+    const isRecentLocalEdit = Date.now() - lastLocalEditAtRef.current < 5000;
+
+    if (editor.isFocused && isRecentLocalEdit) return;
+
+    if (currentJson !== safeValueJson) {
       try {
         editor.commands.setContent(safeValue, { emitUpdate: false });
       } catch (error) {
@@ -101,7 +114,7 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
         editor.commands.setContent(EMPTY_RICH_DOC, { emitUpdate: false });
       }
     }
-  }, [editor, safeValue]);
+  }, [editor, safeValue, safeValueJson]);
 
   if (!editor) return null;
 
@@ -140,8 +153,6 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
 };
 
 const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChange }: Props) => {
-  const resetKey = JSON.stringify(ensureSafeRichDoc(value));
-
   return (
     <div className="max-w-[760px] mx-auto w-full px-6 sm:px-12 pt-2 sm:pt-3 pb-12">
       <input
@@ -152,7 +163,7 @@ const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChang
         style={{ fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif' }}
       />
 
-      <RichEditorErrorBoundary resetKey={resetKey}>
+      <RichEditorErrorBoundary resetKey="rich-note-editor">
         <RichNoteEditorSurface value={value} onChange={onChange} placeholder={placeholder} />
       </RichEditorErrorBoundary>
     </div>

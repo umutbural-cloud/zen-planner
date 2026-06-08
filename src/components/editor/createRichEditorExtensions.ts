@@ -6,6 +6,7 @@ import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-detai
 import { common, createLowlight } from "lowlight";
 import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
+import { SlashCommand } from "@/components/editor/slash/SlashCommand";
 
 const lowlight = createLowlight(common);
 
@@ -38,6 +39,7 @@ export const createRichEditorExtensions = ({ placeholder, linkClassName }: RichE
   DetailsContent.configure({
     HTMLAttributes: { class: "details-toggle-content" },
   }),
+  SlashCommand,
   FontSize,
   LineHeight,
   Placeholder.configure({ placeholder }),
