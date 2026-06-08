@@ -1,9 +1,11 @@
 import type { JSONContent } from "@tiptap/core";
+import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
 import type { Json } from "@/integrations/supabase/types";
 
 export const EMPTY_RICH_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
 const LEGACY_TOGGLE_TYPE = `toggle${"Block"}`;
 const ALLOWED_NODE_TYPES = new Set([
+  "doc",
   "paragraph",
   "text",
   "heading",
@@ -20,7 +22,16 @@ const ALLOWED_NODE_TYPES = new Set([
   "detailsSummary",
   "detailsContent",
 ]);
-const ALLOWED_MARK_TYPES = new Set(["bold", "italic", "strike", "code", "link", "textStyle"]);
+const ALLOWED_MARK_TYPES = new Set([
+  "bold",
+  "italic",
+  "strike",
+  "code",
+  "link",
+  "textStyle",
+  "fontSize",
+  "underline",
+]);
 
 export const isJsonObject = (value: Json): value is { [key: string]: Json | undefined } =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -33,6 +44,41 @@ const createParagraphNode = (text?: string): JSONContent => ({
   content: text ? [{ type: "text", text }] : undefined,
 });
 
+const normalizeMarks = (marks: unknown): JSONContent["marks"] | undefined => {
+  if (!Array.isArray(marks)) return undefined;
+
+  const normalizedMarks: NonNullable<JSONContent["marks"]> = [];
+
+  for (const mark of marks) {
+    if (!isRecord(mark) || typeof mark.type !== "string" || !ALLOWED_MARK_TYPES.has(mark.type)) {
+      continue;
+    }
+
+    if (mark.type === "link") {
+      if (!isRecord(mark.attrs)) continue;
+      if (typeof mark.attrs.href !== "string") continue;
+
+      const normalizedHref = normalizeSafeLinkUrl(mark.attrs.href);
+      if (!normalizedHref) continue;
+
+      const normalizedMark: NonNullable<JSONContent["marks"]>[number] = {
+        type: mark.type,
+        attrs: { ...mark.attrs, href: normalizedHref },
+      };
+      normalizedMarks.push(normalizedMark);
+      continue;
+    }
+
+    const normalizedMark: NonNullable<JSONContent["marks"]>[number] = { type: mark.type };
+    if (isRecord(mark.attrs)) {
+      normalizedMark.attrs = mark.attrs;
+    }
+    normalizedMarks.push(normalizedMark);
+  }
+
+  return normalizedMarks.length > 0 ? normalizedMarks : undefined;
+};
+
 const normalizeInlineContent = (value: unknown): JSONContent[] => {
   if (!Array.isArray(value)) return [];
 
@@ -41,13 +87,7 @@ const normalizeInlineContent = (value: unknown): JSONContent[] => {
     if (item.type !== "text" || typeof item.text !== "string") return [];
 
     const nextTextNode: JSONContent = { type: "text", text: item.text };
-
-    if (Array.isArray(item.marks)) {
-      nextTextNode.marks = item.marks.filter(
-        (mark): mark is NonNullable<JSONContent["marks"]>[number] =>
-          isRecord(mark) && typeof mark.type === "string" && ALLOWED_MARK_TYPES.has(mark.type),
-      );
-    }
+    nextTextNode.marks = normalizeMarks(item.marks);
 
     return [nextTextNode];
   });
@@ -115,12 +155,7 @@ const normalizeRichNode = (value: unknown): JSONContent | null => {
     nextNode.attrs = value.attrs;
   }
 
-  if (Array.isArray(value.marks)) {
-    nextNode.marks = value.marks.filter(
-      (mark): mark is NonNullable<JSONContent["marks"]>[number] =>
-        isRecord(mark) && typeof mark.type === "string" && ALLOWED_MARK_TYPES.has(mark.type),
-    );
-  }
+  nextNode.marks = normalizeMarks(value.marks);
 
   if (typeof value.text === "string") {
     nextNode.text = value.text;
