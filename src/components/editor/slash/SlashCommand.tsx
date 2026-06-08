@@ -30,17 +30,17 @@ const isInsideCodeBlock = (state: EditorState) => {
   return false;
 };
 
-const safeDeleteSlashRange = (editor: Editor, range: Range) => {
+const safeDeleteSlashRange = (editor: Editor, range: Range): number | null => {
   const { doc, selection } = editor.state;
   const docEnd = doc.content.size;
 
-  if (range.from < 0 || range.to > docEnd || range.from >= range.to) return false;
-  if (selection.from < range.from || selection.from > range.to + 1) return false;
+  if (range.from < 0 || range.to > docEnd || range.from >= range.to) return null;
+  if (selection.from < range.from || selection.from > range.to + 1) return null;
 
   const rangeText = doc.textBetween(range.from, range.to, "\n", "\n");
-  if (!rangeText.startsWith("/")) return false;
-  if (rangeText.includes("\n")) return false;
-  if (rangeText.length > 80) return false;
+  if (!rangeText.startsWith("/")) return null;
+  if (rangeText.includes("\n")) return null;
+  if (rangeText.length > 80) return null;
 
   const deleted = editor.chain().focus().deleteRange(range).setTextSelection(range.from).run();
   return deleted ? range.from : null;
@@ -259,7 +259,7 @@ export const SlashCommand = Extension.create({
             if (!currentProps) return;
             const { editor, range } = currentProps;
             const commandPosition = safeDeleteSlashRange(editor, range);
-            if (commandPosition === null) {
+            if (typeof commandPosition !== "number") {
               exitSuggestion(editor.view, slashCommandPluginKey);
               return;
             }
