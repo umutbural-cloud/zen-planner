@@ -20,6 +20,7 @@ export const createRichEditorExtensions = ({ placeholder, linkClassName }: RichE
     codeBlock: false,
     dropcursor: false,
     gapcursor: false,
+    link: false,
   }),
   CodeBlockLowlight.configure({ lowlight }),
   ToggleBlock,
