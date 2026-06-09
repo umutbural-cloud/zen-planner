@@ -1,4 +1,4 @@
-import { Component, useEffect, useMemo, useRef, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
@@ -60,6 +60,7 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
   const debounceRef = useRef<number | null>(null);
   const lastEmittedJsonRef = useRef<string | null>(null);
   const lastLocalEditAtRef = useRef(0);
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
   const safeValue = useMemo(() => ensureSafeRichDoc(value), [value]);
   const safeValueJson = useMemo(() => JSON.stringify(safeValue), [safeValue]);
 
@@ -134,12 +135,43 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
   return (
     <>
       <div className="sticky top-0 z-10 -mx-6 sm:-mx-12 px-6 sm:px-12 py-1 mb-3 bg-background/80 backdrop-blur-sm opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity">
-        <RichTextToolbar
-          editor={editor}
-          features={{ link: true, taskList: false, codeBlock: true, details: true, history: false }}
-          onInsertLink={insertLink}
-          onInsertDetails={() => editor.chain().focus().setDetails().run()}
-        />
+        {isToolbarCollapsed ? (
+          <button
+            type="button"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={() => setIsToolbarCollapsed(false)}
+            className="rounded-sm border border-border/70 bg-background/80 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+            aria-label="Araç çubuğunu göster"
+          >
+            Araçları göster
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <RichTextToolbar
+                editor={editor}
+                features={{ link: true, taskList: false, codeBlock: true, details: true, history: false }}
+                onInsertLink={insertLink}
+                onInsertDetails={() => editor.chain().focus().setDetails().run()}
+              />
+            </div>
+            <button
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+              onClick={() => setIsToolbarCollapsed(true)}
+              className="shrink-0 rounded-sm border border-border/70 bg-background/80 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+              aria-label="Araç çubuğunu gizle"
+            >
+              Gizle
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="min-h-[60vh]" onMouseDown={(event) => {
