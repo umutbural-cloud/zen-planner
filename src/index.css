@@ -329,6 +329,16 @@
   padding: 0.65rem 0.75rem;
 }
 
+.link-bubble-menu {
+  background: hsl(var(--background) / 0.96);
+  border: 1px solid hsl(var(--border) / 0.7);
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 28px hsl(var(--foreground) / 0.12);
+  color: hsl(var(--foreground));
+  padding: 0.25rem;
+  z-index: 1000;
+}
+
 .quick-note-editor.ProseMirror {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;

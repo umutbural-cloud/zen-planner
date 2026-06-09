@@ -4,6 +4,7 @@ import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
 import { BubbleTextMenu } from "@/components/editor/BubbleTextMenu";
+import { LinkBubbleMenu } from "@/components/editor/LinkBubbleMenu";
 import { EMPTY_RICH_DOC, ensureSafeRichDoc } from "@/features/knowledge/lib/noteContent";
 
 type Props = {
@@ -148,6 +149,7 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
       </div>
 
       {editor ? <BubbleTextMenu editor={editor} onSetLink={insertLink} /> : null}
+      {editor ? <LinkBubbleMenu editor={editor} /> : null}
     </>
   );
 };
