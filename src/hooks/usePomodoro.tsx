@@ -73,14 +73,31 @@ const getAudioContext = (() => {
   };
 })();
 
+const isExpectedAudioUnlockError = (error: unknown) => {
+  if (!(error instanceof DOMException)) return false;
+  return error.name === "NotAllowedError" || error.name === "InvalidStateError";
+};
+
+const canAttemptAudioUnlock = () => {
+  if (typeof document === "undefined") return false;
+  return document.visibilityState === "visible";
+};
+
 async function unlockChime() {
   try {
+    if (!canAttemptAudioUnlock()) return;
     const ctx = getAudioContext();
     if (!ctx || ctx.state !== "suspended") return;
     await ctx.resume();
   } catch (error) {
-    console.warn("[pomodoro] Audio unlock failed", error);
+    if (!isExpectedAudioUnlockError(error)) {
+      console.warn("[pomodoro] Audio unlock failed", error);
+    }
   }
+}
+
+function primeChimeFromUserGesture() {
+  void unlockChime();
 }
 
 function playChime() {
@@ -88,9 +105,18 @@ function playChime() {
     const ctx = getAudioContext();
     if (!ctx) return;
     if (ctx.state === "suspended") {
-      void ctx.resume().catch((error) => {
-        console.warn("[pomodoro] Audio resume failed", error);
-      });
+      void ctx.resume()
+        .then(() => {
+          if (ctx.state === "running") {
+            playChime();
+          }
+        })
+        .catch((error) => {
+          if (!isExpectedAudioUnlockError(error)) {
+            console.warn("[pomodoro] Audio resume failed", error);
+          }
+        });
+      return;
     }
     const now = ctx.currentTime;
     const notes = [880, 1318.5, 1760];
@@ -561,18 +587,6 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   }, [phase, releaseWakeLock, requestWakeLock]);
 
   useEffect(() => {
-    const unlock = () => {
-      void unlockChime();
-    };
-    window.addEventListener("pointerdown", unlock);
-    window.addEventListener("keydown", unlock);
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, []);
-
-  useEffect(() => {
     const original = document.title;
     if (phase === "idle") return;
     const label = kind === "break" ? "Mola" : "Zen";
@@ -637,6 +651,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
 
   const start = () => {
     if (phase === "running") return;
+    primeChimeFromUserGesture();
     void withSync(async () => {
       if (!user) return;
       const now = adjustedNow();
@@ -656,7 +671,6 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       });
       activeSessionIdRef.current += 1;
       completedSessionIdRef.current = null;
-      void unlockChime();
       requestWakeLock();
     });
   };
@@ -689,6 +703,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
 
   const resume = () => {
     if (phase !== "paused" || pausedRemainingSec == null) return;
+    primeChimeFromUserGesture();
     void withSync(async () => {
       if (!user) return;
       const now = adjustedNow();
@@ -705,13 +720,13 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         accumulated_elapsed_seconds: accumulatedElapsedSec,
         active_session_token: activeSessionToken,
       });
-      void unlockChime();
       requestWakeLock();
     });
   };
 
   const complete = () => {
     if (phase !== "running" && phase !== "paused") return;
+    primeChimeFromUserGesture();
     void withSync(async () => {
       if (!user) return;
       const row: ActiveStateRow = {
