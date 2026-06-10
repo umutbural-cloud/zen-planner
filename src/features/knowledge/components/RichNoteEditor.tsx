@@ -188,7 +188,7 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
 
 const RichNoteEditor = ({ value, onChange, placeholder, titleValue, onTitleChange }: Props) => {
   return (
-    <div className="max-w-[760px] mx-auto w-full px-6 sm:px-12 pt-2 sm:pt-3 pb-12">
+    <div className="max-w-[760px] mx-auto w-full px-6 sm:px-12 pt-2 sm:pt-3 pb-12 xl:relative xl:-left-[104px] 2xl:-left-[110px]">
       <input
         value={titleValue}
         onChange={(e) => onTitleChange(e.target.value)}
