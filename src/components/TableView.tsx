@@ -497,6 +497,10 @@ const TableView = ({ projectId }: { projectId: string }) => {
         projectId={projectId}
         open={!!editTask}
         onOpenChange={(o) => !o && setEditTask(null)}
+        tasksOverride={tasks}
+        onUpdateTask={updateTask}
+        onDeleteTask={deleteTask}
+        onCreateTask={createTask}
       />
     </div>
   );
