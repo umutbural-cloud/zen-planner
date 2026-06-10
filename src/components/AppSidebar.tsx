@@ -82,9 +82,10 @@ export const ProjectIconPicker = ({
   const ql = search.trim().toLowerCase();
 
   return (
-    <Popover>
+      <Popover>
       <PopoverTrigger asChild>
         <button
+          type="button"
           onClick={(e) => e.stopPropagation()}
           className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-sm hover:bg-accent/40 transition-colors"
           title="İkon değiştir"
@@ -99,6 +100,7 @@ export const ProjectIconPicker = ({
             const active = c.key === iconColor;
             return (
               <button
+                type="button"
                 key={c.key}
                 onClick={() => onChange({ icon_color: c.key })}
                 title={c.label}
@@ -130,6 +132,7 @@ export const ProjectIconPicker = ({
                   const active = i.name === icon;
                   return (
                     <button
+                      type="button"
                       key={i.name}
                       onClick={() => onChange({ icon: i.name, icon_color: iconColor || "stone" })}
                       title={i.label}
@@ -208,53 +211,67 @@ const ProjectItem = ({
     <>
       <SidebarMenuItem>
         <SidebarMenuButton
-          onClick={handleProjectClick}
           className={`group/item text-sm font-light ${isSelected ? "bg-accent text-accent-foreground" : ""}`}
           style={{ paddingLeft: `${8 + depth * 16}px` }}
+          asChild
         >
-          <button
-            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="shrink-0 mr-0.5"
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleProjectClick}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
+              if (renaming) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                handleProjectClick();
+              }
+            }}
           >
-            <ChevronRight className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
-          </button>
-          <ProjectIconPicker
-            
-            icon={project.icon}
-            iconColor={project.icon_color}
-            onChange={(updates) => onUpdateProject(project.id, updates)}
-          />
-          {renaming ? (
-            <Input
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commitRename();
-                if (e.key === "Escape") { setRenameValue(project.name); setRenaming(false); }
-              }}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-              className="h-6 ml-1.5 text-xs bg-transparent px-1 py-0 flex-1"
-            />
-          ) : (
-            <span
-              className="truncate flex-1 ml-1.5"
-              onDoubleClick={(e) => { e.stopPropagation(); setRenameValue(project.name); setRenaming(true); }}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+              className="shrink-0 mr-0.5"
             >
-              {project.name}
-            </span>
-          )}
-          <div className="flex gap-0.5 opacity-0 group-hover/item:opacity-100 shrink-0">
-            <button onClick={(e) => { e.stopPropagation(); setRenameValue(project.name); setRenaming(true); }} className="text-muted-foreground hover:text-foreground" title="Yeniden adlandır">
-              <Pencil className="h-3 w-3" />
+              <ChevronRight className={`h-3 w-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
             </button>
-            <button onClick={(e) => { e.stopPropagation(); onAddSub(project.id); }} className="text-muted-foreground hover:text-foreground" title="Alt proje">
-              <Plus className="h-3 w-3" />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onDelete(project.id); }} className="text-muted-foreground hover:text-destructive" title="Sil">
-              <Trash2 className="h-3 w-3" />
-            </button>
+            <ProjectIconPicker
+              icon={project.icon}
+              iconColor={project.icon_color}
+              onChange={(updates) => onUpdateProject(project.id, updates)}
+            />
+            {renaming ? (
+              <Input
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitRename();
+                  if (e.key === "Escape") { setRenameValue(project.name); setRenaming(false); }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                className="h-6 ml-1.5 text-xs bg-transparent px-1 py-0 flex-1"
+              />
+            ) : (
+              <span
+                className="truncate flex-1 ml-1.5"
+                onDoubleClick={(e) => { e.stopPropagation(); setRenameValue(project.name); setRenaming(true); }}
+              >
+                {project.name}
+              </span>
+            )}
+            <div className="flex gap-0.5 opacity-0 group-hover/item:opacity-100 shrink-0">
+              <button type="button" onClick={(e) => { e.stopPropagation(); setRenameValue(project.name); setRenaming(true); }} className="text-muted-foreground hover:text-foreground" title="Yeniden adlandır">
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onAddSub(project.id); }} className="text-muted-foreground hover:text-foreground" title="Alt proje">
+                <Plus className="h-3 w-3" />
+              </button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(project.id); }} className="text-muted-foreground hover:text-destructive" title="Sil">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
           </div>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -269,38 +286,54 @@ const ProjectItem = ({
         return (
           <SidebarMenuItem key={vk}>
             <SidebarMenuButton
-              onClick={() => onSelect(project.id, vk)}
               className={`text-xs font-light group/view ${active ? "bg-accent/60 text-accent-foreground" : "text-muted-foreground"}`}
               style={{ paddingLeft: `${8 + (depth + 1) * 16 + 12}px` }}
+              asChild
             >
-              <Icon className="h-3 w-3 shrink-0" />
-              <span className="truncate flex-1">{meta.label}</span>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover/view:opacity-100 shrink-0">
-                <button
-                  onClick={(e) => { e.stopPropagation(); moveView(vk, -1); }}
-                  disabled={isFirst}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:hover:text-muted-foreground"
-                  title="Yukarı taşı"
-                >
-                  <ChevronUp className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); moveView(vk, 1); }}
-                  disabled={isLast}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:hover:text-muted-foreground"
-                  title="Aşağı taşı"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-                {vk !== "notes" && (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelect(project.id, vk)}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(project.id, vk);
+                  }
+                }}
+              >
+                <Icon className="h-3 w-3 shrink-0" />
+                <span className="truncate flex-1">{meta.label}</span>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover/view:opacity-100 shrink-0">
                   <button
-                    onClick={(e) => { e.stopPropagation(); removeView(vk); }}
-                    className="text-muted-foreground hover:text-destructive"
-                    title="Bu görünümü kaldır"
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); moveView(vk, -1); }}
+                    disabled={isFirst}
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:hover:text-muted-foreground"
+                    title="Yukarı taşı"
                   >
-                    <X className="h-3 w-3" />
+                    <ChevronUp className="h-3 w-3" />
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); moveView(vk, 1); }}
+                    disabled={isLast}
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-20 disabled:hover:text-muted-foreground"
+                    title="Aşağı taşı"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  {vk !== "notes" && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeView(vk); }}
+                      className="text-muted-foreground hover:text-destructive"
+                      title="Bu görünümü kaldır"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -321,15 +354,16 @@ const ProjectItem = ({
               </SidebarMenuButton>
             </PopoverTrigger>
             <PopoverContent className="w-44 p-1" align="start">
-              {availableToAdd.map((vk) => {
-                const meta = VIEW_META[vk];
-                const Icon = meta.icon;
-                return (
-                  <button
-                    key={vk}
-                    onClick={() => addView(vk)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded-sm transition-colors"
-                  >
+                {availableToAdd.map((vk) => {
+                  const meta = VIEW_META[vk];
+                  const Icon = meta.icon;
+                  return (
+                    <button
+                      type="button"
+                      key={vk}
+                      onClick={() => addView(vk)}
+                      className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded-sm transition-colors"
+                    >
                     <Icon className="h-3 w-3" />
                     <span>{meta.label}</span>
                     <span className="text-muted-foreground/60 ml-auto text-[9px]">{meta.jp}</span>

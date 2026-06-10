@@ -111,42 +111,58 @@ const NotebookSidebarTree = ({
       <div key={note.id}>
         <SidebarMenuItem>
           <SidebarMenuButton
-            onClick={() => onSelectKnowledgeNote(note.id)}
+            asChild
             className={`group/note text-xs font-light ${active ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
             style={{ paddingLeft: `${ROOT_ITEM_PADDING_LEFT + depth * CHILD_ITEM_INDENT}px` }}
           >
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                if (children.length > 0) setCollapsed((prev) => ({ ...prev, [note.id]: !isCollapsed }));
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelectKnowledgeNote(note.id)}
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelectKnowledgeNote(note.id);
+                }
               }}
-              className="shrink-0"
-              title={children.length > 0 ? "Aç/kapat" : ""}
             >
-              <ChevronRight className={`h-3 w-3 transition-transform ${!isCollapsed ? "rotate-90" : ""} ${children.length === 0 ? "opacity-20" : ""}`} />
-            </button>
-            <FileText className="h-3.5 w-3.5 shrink-0 opacity-80" />
-            <span className="truncate flex-1">{noteLabel(note)}</span>
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                handleCreate(note.type, note.notebook_id, note);
-              }}
-              className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
-              title="Alt sayfa ekle"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                handleDelete(note);
-              }}
-              className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
-              title="Sil"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (children.length > 0) setCollapsed((prev) => ({ ...prev, [note.id]: !isCollapsed }));
+                }}
+                className="shrink-0"
+                title={children.length > 0 ? "Aç/kapat" : ""}
+              >
+                <ChevronRight className={`h-3 w-3 transition-transform ${!isCollapsed ? "rotate-90" : ""} ${children.length === 0 ? "opacity-20" : ""}`} />
+              </button>
+              <FileText className="h-3.5 w-3.5 shrink-0 opacity-80" />
+              <span className="truncate flex-1">{noteLabel(note)}</span>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleCreate(note.type, note.notebook_id, note);
+                }}
+                className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
+                title="Alt sayfa ekle"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDelete(note);
+                }}
+                className="shrink-0 text-muted-foreground hover:text-destructive opacity-0 group-hover/note:opacity-100 focus:opacity-100 transition-opacity"
+                title="Sil"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
 
