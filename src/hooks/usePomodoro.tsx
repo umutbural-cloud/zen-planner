@@ -42,6 +42,9 @@ type NavigatorWithWakeLock = Navigator & {
 type ActiveStateRow = Database["public"]["Tables"]["pomodoro_active_state"]["Row"];
 type ActiveStateInsert = Database["public"]["Tables"]["pomodoro_active_state"]["Insert"];
 type PomodoroSessionInsert = Database["public"]["Tables"]["pomodoro_sessions"]["Insert"];
+type ApplyActiveStateOptions = {
+  resetOnNull?: boolean;
+};
 
 const PomodoroContext = createContext<Ctx | null>(null);
 
@@ -200,6 +203,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
   const wakeLockRequestRef = useRef<Promise<void> | null>(null);
   const wakeLockUnsupportedLoggedRef = useRef(false);
+  const hydratedUserIdRef = useRef<string | null>(null);
 
   const phaseRef = useRef(phase);
   const kindRef = useRef(kind);
@@ -324,9 +328,14 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     return Math.max(0, Math.round((nowMs - new Date(row.started_at).getTime()) / 1000));
   }, []);
 
-  const applyActiveState = useCallback((row: ActiveStateRow | null) => {
+  const applyActiveState = useCallback((row: ActiveStateRow | null, options?: ApplyActiveStateOptions) => {
+    const resetOnNull = options?.resetOnNull ?? true;
+
     if (!row) {
-      resetLocalState();
+      if (resetOnNull) {
+        resetLocalState();
+      }
+      setLastSyncedAt(new Date());
       setIsLoading(false);
       return;
     }
@@ -466,7 +475,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       if (data?.phase === "running" && data.ends_at && new Date(data.ends_at).getTime() <= adjustedNow()) {
         await finalizeRow(data, { notifyUser: false });
       } else {
-        applyActiveState(data);
+        applyActiveState(data, { resetOnNull: source === "load" });
       }
     } catch (error) {
       console.warn("[pomodoro] Active state sync failed", error);
@@ -566,14 +575,26 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchActiveState, finishIfDue, requestWakeLock, tick]);
 
   useEffect(() => {
-    resetLocalState();
     setSyncError(null);
-    if (!user) {
+    const userId = user?.id ?? null;
+
+    if (!userId) {
+      hydratedUserIdRef.current = null;
+      resetLocalState();
       setIsLoading(false);
       return;
     }
+
+    if (hydratedUserIdRef.current === userId) {
+      void fetchActiveState("revalidate");
+      return;
+    }
+
+    hydratedUserIdRef.current = userId;
+    setIsLoading(true);
+    resetLocalState();
     void fetchActiveState("load");
-  }, [fetchActiveState, resetLocalState, user]);
+  }, [fetchActiveState, resetLocalState, user?.id]);
 
   useEffect(() => {
     if (phase === "running") {
