@@ -3,7 +3,7 @@ import { Trash2, Package, Plus, Check, X, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTasks, Task, TaskColor, TaskKind } from "@/hooks/useTasks";
@@ -62,6 +62,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
   const [color, setColor] = useState<TaskColor>("gray");
   const [kind, setKind] = useState<TaskKind>("task");
   const [newSubtitle, setNewSubtitle] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!task) return;
@@ -82,19 +83,24 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
   const activeCategory = categories.find((c) => c.id === categoryId);
 
   const handleSave = async () => {
-    if (!title.trim()) return;
-    await updateTask(task.id, {
-      title: title.trim(),
-      description: description.trim() || null,
-      start_date: startDate || null,
-      end_date: endDate || null,
-      start_time: startTime || null,
-      end_time: endTime || null,
-      category_id: categoryId,
-      color,
-      kind,
-    });
-    onOpenChange(false);
+    if (!title.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      await updateTask(task.id, {
+        title: title.trim(),
+        description: description.trim() || null,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        start_time: startTime || null,
+        end_time: endTime || null,
+        category_id: categoryId,
+        color,
+        kind,
+      });
+      onOpenChange(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -121,6 +127,9 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-light tracking-wide">Görevi Düzenle</DialogTitle>
+          <DialogDescription className="sr-only">
+            Görev başlığı, açıklaması, tarihleri, kategorisi, rengi, tipi ve alt görevleri düzenlenir.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
@@ -136,9 +145,9 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
 
           <div>
             <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Kategori</div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="w-full flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-transparent text-sm text-left">
+              <Popover>
+                <PopoverTrigger asChild>
+                <button type="button" className="w-full flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-transparent text-sm text-left">
                   {activeCategory ? (
                     <>
                       <span className="w-2.5 h-2.5 rounded-full" style={{ background: colorHex(activeCategory.color) }} />
@@ -151,6 +160,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
               </PopoverTrigger>
               <PopoverContent className="w-56 p-1" align="start">
                 <button
+                  type="button"
                   onClick={() => setCategoryId(null)}
                   className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded-sm transition-colors"
                 >
@@ -161,6 +171,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
                 {categories.map((c) => (
                   <button
                     key={c.id}
+                    type="button"
                     onClick={() => setCategoryId(c.id)}
                     className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded-sm transition-colors"
                   >
@@ -240,6 +251,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
                     {s.title}
                   </span>
                   <button
+                    type="button"
                     onClick={() => deleteTask(s.id)}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 transition-opacity"
                   >
@@ -252,10 +264,24 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
                 <Input
                   value={newSubtitle}
                   onChange={(e) => setNewSubtitle(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddSubtask()}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    void handleAddSubtask();
+                  }}
                   placeholder="Alt görev ekle..."
                   className="bg-transparent border-none p-0 h-7 text-sm font-light focus-visible:ring-0"
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void handleAddSubtask()}
+                  disabled={!newSubtitle.trim()}
+                  className="h-7 px-2 text-xs"
+                >
+                  Ekle
+                </Button>
               </div>
             </div>
           </div>
@@ -264,6 +290,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
         <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 pt-2 border-t border-border/40">
           <div className="flex gap-1">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={handleSendToBacklog}
@@ -274,6 +301,7 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
               <span className="text-xs tracking-wide">Heybeye gönder</span>
             </Button>
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={handleDelete}
@@ -284,8 +312,10 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
             </Button>
           </div>
           <div className="flex gap-2 sm:justify-end">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>İptal</Button>
-            <Button size="sm" onClick={handleSave}>Kaydet</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>İptal</Button>
+            <Button type="button" size="sm" onClick={handleSave} disabled={isSaving || !title.trim()}>
+              {isSaving ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
           </div>
         </DialogFooter>
       </DialogContent>
