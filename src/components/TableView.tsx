@@ -373,17 +373,17 @@ const TableView = ({ projectId }: { projectId: string }) => {
           <p className="text-xs">{filterActive ? "Filtreye uygun görev yok" : "Aktif görev yok"}</p>
         </div>
       ) : visible.length > 0 && (
-        <div className="border border-border/60 rounded-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-8"></TableHead>
-                <TableHead className="w-10"></TableHead>
-                <TableHead className="text-xs font-light tracking-wide">Başlık</TableHead>
-                <TableHead className="w-24"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="border border-border/60 rounded-sm overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-8"></TableHead>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="text-xs font-light tracking-wide">Başlık</TableHead>
+                  <TableHead className="w-24"></TableHead>
+                </TableRow>
+              </TableHeader>
               <SortableContext items={visible.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                 <TableBody>
                   {visible.map((task) => (
@@ -400,9 +400,9 @@ const TableView = ({ projectId }: { projectId: string }) => {
                   ))}
                 </TableBody>
               </SortableContext>
-            </DndContext>
-          </Table>
-        </div>
+            </Table>
+          </div>
+        </DndContext>
       )}
 
       {/* Tamamlananlar */}
@@ -433,6 +433,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
                     </TableCell>
                     <TableCell className="w-10 sm:w-12 text-right px-1 sm:px-2 py-1" onClick={(e) => e.stopPropagation()}>
                       <button
+                        type="button"
                         onClick={() => deleteTask(task.id)}
                         className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
                       >
@@ -445,6 +446,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
             </Table>
             {hiddenCount > 0 && (
               <button
+                type="button"
                 onClick={() => setShowDone(!showDone)}
                 className="w-full text-xs text-muted-foreground hover:text-foreground py-2 tracking-wide transition-colors border-t border-border/40"
               >
@@ -459,6 +461,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
       {hiddenTasks.length > 0 && (
         <div className="border border-border/60 rounded-sm overflow-hidden">
           <button
+            type="button"
             onClick={() => setShowHidden(!showHidden)}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-card/40 transition-colors"
           >
@@ -474,6 +477,7 @@ const TableView = ({ projectId }: { projectId: string }) => {
                     <TableCell className="text-sm font-light text-muted-foreground italic px-2 py-1 break-words">{task.title}</TableCell>
                     <TableCell className="w-20 sm:w-24 text-right px-2 py-1">
                       <button
+                        type="button"
                         onClick={() => updateTask(task.id, { hidden: false })}
                         className="text-muted-foreground hover:text-foreground text-[10px] tracking-wide"
                       >
