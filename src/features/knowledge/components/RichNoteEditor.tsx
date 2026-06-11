@@ -1,9 +1,10 @@
 import { Component, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
-import { useEditor, EditorContent, type JSONContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor, type JSONContent } from "@tiptap/react";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
 import { normalizeSafeLinkUrl } from "@/components/editor/linkSafety";
 import { BubbleTextMenu } from "@/components/editor/BubbleTextMenu";
+import { LinkPopover } from "@/components/editor/LinkPopover";
 import { LinkBubbleMenu } from "@/components/editor/LinkBubbleMenu";
 import { EMPTY_RICH_DOC, ensureSafeRichDoc } from "@/features/knowledge/lib/noteContent";
 
@@ -60,6 +61,12 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
   const debounceRef = useRef<number | null>(null);
   const lastEmittedJsonRef = useRef<string | null>(null);
   const lastLocalEditAtRef = useRef(0);
+  const editorRef = useRef<Editor | null>(null);
+  const [linkPopover, setLinkPopover] = useState<{
+    href: string;
+    rect: DOMRect;
+    range: { from: number; to: number };
+  } | null>(null);
   const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
   const safeValue = useMemo(() => ensureSafeRichDoc(value), [value]);
   const safeValueJson = useMemo(() => JSON.stringify(safeValue), [safeValue]);
@@ -70,14 +77,37 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
       linkClassName: "",
     }),
     content: safeValue,
-    editorProps: {
-      attributes: {
-        class: "rich-note-editor focus:outline-none font-light leading-[1.85] text-[12px] prose-rich",
-      },
-      handleDOMEvents: {
-        copy: () => false,
-        cut: () => false,
-        paste: () => false,
+      editorProps: {
+        attributes: {
+          class: "rich-note-editor focus:outline-none font-light leading-[1.85] text-[12px] prose-rich",
+        },
+        handleDOMEvents: {
+          click: (_view, event) => {
+            const activeEditor = editorRef.current;
+            const target = event.target;
+            if (!activeEditor || !(target instanceof Element)) return false;
+
+            const anchor = target.closest<HTMLAnchorElement>(".ProseMirror a[href]");
+            if (!anchor) return false;
+
+            event.preventDefault();
+
+            const position = activeEditor.view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (!position) return true;
+
+            activeEditor.chain().focus().setTextSelection(position.pos).extendMarkRange("link").run();
+            const { from, to } = activeEditor.state.selection;
+            setLinkPopover({
+              href: anchor.getAttribute("href") || "",
+              rect: anchor.getBoundingClientRect(),
+              range: { from, to },
+            });
+
+            return true;
+          },
+          copy: () => false,
+          cut: () => false,
+          paste: () => false,
         keydown: (_view, event) => {
           if ((event.metaKey || event.ctrlKey) && ["c", "x", "v", "a", "z", "y"].includes(event.key.toLowerCase())) {
             return false;
@@ -96,6 +126,8 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
       }, 500);
     },
   });
+
+  editorRef.current = editor;
 
   // Sync external content changes (e.g., switching note)
   useEffect(() => {
@@ -120,9 +152,13 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
 
   if (!editor) return null;
 
-  const insertLink = () => {
+  const selectLinkRange = (range: { from: number; to: number }) => {
+    editor.chain().focus().setTextSelection(range).extendMarkRange("link").run();
+  };
+
+  const insertLink = (initialUrl = "") => {
     const { from, to } = editor.state.selection;
-    const url = window.prompt("URL");
+    const url = window.prompt("URL", initialUrl);
     if (!url) return;
     const safeUrl = normalizeSafeLinkUrl(url);
     if (!safeUrl) {
@@ -181,6 +217,23 @@ const RichNoteEditorSurface = ({ value, onChange, placeholder }: SurfaceProps) =
       </div>
 
       {editor ? <BubbleTextMenu editor={editor} onSetLink={insertLink} /> : null}
+      {linkPopover ? (
+        <LinkPopover
+          href={linkPopover.href}
+          rect={linkPopover.rect}
+          onClose={() => setLinkPopover(null)}
+          onEdit={() => {
+            selectLinkRange(linkPopover.range);
+            setLinkPopover(null);
+            insertLink(linkPopover.href);
+          }}
+          onRemove={() => {
+            selectLinkRange(linkPopover.range);
+            editor.chain().focus().unsetLink().run();
+            setLinkPopover(null);
+          }}
+        />
+      ) : null}
       {editor ? <LinkBubbleMenu editor={editor} /> : null}
     </>
   );
