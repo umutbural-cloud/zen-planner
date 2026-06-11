@@ -47,8 +47,10 @@ export const createRichEditorExtensions = ({ placeholder, linkClassName }: RichE
   Placeholder.configure({ placeholder }),
   Link.configure({
     openOnClick: false,
+    enableClickSelection: true,
     autolink: true,
     HTMLAttributes: linkClassName ? { class: linkClassName } : {},
+    isAllowedUri: (href) => normalizeSafeLinkUrl(href) !== null,
     validate: (href) => normalizeSafeLinkUrl(href) !== null,
   }),
 ];
