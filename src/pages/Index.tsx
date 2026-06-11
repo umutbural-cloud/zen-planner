@@ -4,7 +4,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid, type LucideIcon } from "lucide-react";
 import { ProjectIconPicker } from "@/components/AppSidebar";
 import NotesView from "@/components/NotesView";
-import TableView from "@/components/TableView";
 import GanttView from "@/components/GanttView";
 import KanbanView from "@/components/KanbanView";
 import WeeklyCalendarView from "@/components/WeeklyCalendarView";
@@ -14,6 +13,7 @@ import TrashView from "@/components/TrashView";
 import HabitsView from "@/components/HabitsView";
 import InzivaView from "@/components/InzivaView";
 import HomeView from "@/features/home/HomeView";
+import ProjectTableView from "@/features/advanced-table/ProjectTableView";
 import NotebookView from "@/features/knowledge/components/NotebookView";
 import { useKnowledgeNotes } from "@/features/knowledge/hooks/useNotebookNotes";
 import { useAppShellProjects } from "@/components/AppShell";
@@ -313,7 +313,7 @@ const Index = () => {
               ) : (
                 <>
                   {view === "notes" && <NotesView key={selectedProject.id} projectId={selectedProject.id} />}
-                  {view === "table" && <TableView projectId={selectedProject.id} />}
+                  {view === "table" && <ProjectTableView projectId={selectedProject.id} />}
                   {view === "gantt" && <GanttView projectId={selectedProject.id} />}
                   {view === "kanban" && <KanbanView projectId={selectedProject.id} />}
                   {view === "calendar" && <WeeklyCalendarView projectId={selectedProject.id} />}
