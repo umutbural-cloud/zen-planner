@@ -30,6 +30,11 @@ import { CSS } from "@dnd-kit/utilities";
 
 type StatusFilter = "all" | "active" | "done";
 
+type TableViewProps = {
+  projectId: string;
+  showHeader?: boolean;
+};
+
 const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpen, categoryDot }: {
   task: Task;
   subtasks: Task[];
@@ -195,7 +200,7 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
   );
 };
 
-const TableView = ({ projectId }: { projectId: string }) => {
+const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
   const { tasks, loading, createTask, updateTask, deleteTask, reorderTasks } = useTasks(projectId);
   const { categories } = usePomodoroCategories();
   const [newTitle, setNewTitle] = useState("");
@@ -293,7 +298,9 @@ const TableView = ({ projectId }: { projectId: string }) => {
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto w-full">
-      <h2 className="text-lg tracking-wide font-light">Tablo</h2>
+      {showHeader && (
+        <h2 className="text-lg tracking-wide font-light">Tablo</h2>
+      )}
 
       <div className="flex gap-2">
         <Input
