@@ -7,7 +7,7 @@ import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { ADVANCED_TASK_COLUMNS, DEFAULT_HIDDEN_COLUMN_IDS, REQUIRED_COLUMN_IDS } from "./columns";
 import { applyTaskFilters } from "./filters";
 import { groupTasks } from "./grouping";
-import { loadTableConfig, saveTableConfig } from "./storage";
+import { createDefaultTableConfig, loadTableConfig, resetTableConfig, saveTableConfig } from "./storage";
 import type { AdvancedTaskColumnId, CurrentTableConfig, TableFilter } from "./types";
 import AdvancedTaskTable from "./components/AdvancedTaskTable";
 import AdvancedTaskTableToolbar from "./components/AdvancedTaskTableToolbar";
@@ -35,6 +35,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
 
   useEffect(() => {
     setConfig(loadTableConfig(projectId));
+    setShowDone(false);
+    setShowHidden(false);
+    setEditTask(null);
   }, [projectId]);
 
   const updateConfig = useCallback((updater: (current: CurrentTableConfig) => CurrentTableConfig) => {
@@ -68,6 +71,13 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     () => applyTaskFilters(topLevelTasks, config.filters, categories, subtaskCountOf),
     [categories, config.filters, subtaskCountOf, topLevelTasks],
   );
+
+  const hasFilters = config.filters.length > 0;
+  const hasTasks = topLevelTasks.length > 0;
+  const filteredOutByFilters = hasFilters && hasTasks && filteredTasks.length === 0;
+  const activeGroupLabel = config.groupBy
+    ? ADVANCED_TASK_COLUMNS.find((column) => column.id === config.groupBy)?.label || config.groupBy
+    : null;
 
   const activeTasks = useMemo(
     () => filteredTasks.filter((task) => !task.hidden && task.status !== "done"),
@@ -162,6 +172,14 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     updateConfig((current) => ({ ...current, hiddenColumnIds: [...DEFAULT_HIDDEN_COLUMN_IDS] }));
   };
 
+  const handleResetView = () => {
+    const next = createDefaultTableConfig();
+    setShowDone(false);
+    setShowHidden(false);
+    setConfig(next);
+    resetTableConfig(projectId);
+  };
+
   if (loading) {
     return (
       <DelayedLoading
@@ -195,14 +213,33 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
         onSetCategoryFilter={handleSetCategoryFilter}
         onSetHiddenFilter={handleSetHiddenFilter}
         onClearFilters={handleClearFilters}
+        onResetView={handleResetView}
+        groupLabel={activeGroupLabel}
       />
 
       {visibleColumns.length === 0 ? (
-        <div className="rounded-sm border border-border/60 py-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-sm border border-border/60 px-4 py-12 text-center text-sm text-muted-foreground">
           <p className="mb-2">Görünür sütun yok</p>
           <button type="button" onClick={handleResetColumns} className="text-xs text-foreground hover:underline">
             Varsayılan sütunları göster
           </button>
+        </div>
+      ) : filteredOutByFilters ? (
+        <div className="rounded-sm border border-border/60 px-4 py-12 text-center text-sm text-muted-foreground">
+          <p className="mb-1">Filtreye uygun görev yok</p>
+          <p className="text-xs">Filtreleri temizle</p>
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="mt-3 rounded-sm border border-border/60 px-3 py-1.5 text-xs text-foreground hover:bg-accent/50"
+          >
+            Filtreleri temizle
+          </button>
+        </div>
+      ) : !hasTasks ? (
+        <div className="rounded-sm border border-border/60 px-4 py-12 text-center text-sm text-muted-foreground">
+          <p className="mb-1">Henüz görev yok</p>
+          <p className="text-xs">Yukarıdan yeni görev ekleyebilirsin</p>
         </div>
       ) : config.groupBy === null ? (
         <div className="space-y-3">
