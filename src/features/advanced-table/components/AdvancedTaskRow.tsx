@@ -25,6 +25,15 @@ const formatDateTime = (value: string | null) => {
   return value.slice(0, 16).replace("T", " ");
 };
 
+const blurActiveElement = () => {
+  if (typeof document === "undefined") return;
+
+  const activeElement = document.activeElement;
+  if (activeElement instanceof HTMLElement) {
+    activeElement.blur();
+  }
+};
+
 const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, onDelete, onOpen }: AdvancedTaskRowProps) => {
   const [title, setTitle] = useState(task.title);
   const category = categories.find((item) => item.id === task.category_id);
@@ -107,7 +116,16 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
       ))}
       <TableCell className="w-28 px-2 py-1 text-right">
         <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-          <button type="button" onClick={() => onOpen(task)} className="p-1 text-muted-foreground hover:text-foreground" title="Düzenle">
+          <button
+            type="button"
+            onClick={() => {
+              flushTitle();
+              blurActiveElement();
+              onOpen(task);
+            }}
+            className="p-1 text-muted-foreground hover:text-foreground"
+            title="Düzenle"
+          >
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button
