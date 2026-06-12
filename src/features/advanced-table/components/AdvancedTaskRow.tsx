@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, Pencil, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock3, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { Task } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { colorHex } from "@/hooks/useHabitCategories";
-import { formatDateTimeParts } from "../columns";
 import { formatTaskStatus } from "../statusLabels";
 import type { AdvancedTaskColumnId } from "../types";
 
@@ -37,13 +39,131 @@ const blurActiveElement = () => {
   }
 };
 
+const formatDateForDisplay = (value: string | null) => {
+  if (!value) return "";
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+
+  const [, year, month, day] = match;
+  return `${day}.${month}.${year}`;
+};
+
+const formatDateForStorage = (date: Date) =>
+  `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const parseStorageDate = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const [, yearRaw, monthRaw, dayRaw] = match;
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+};
+
+const formatTimeForDisplay = (value: string | null) => {
+  if (!value) return "";
+  return value.slice(0, 5);
+};
+
+const formatDateMask = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+};
+
+const formatTimeMask = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+};
+
+const parseDisplayDate = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (!match) return undefined;
+
+  const [, dayRaw, monthRaw, yearRaw] = match;
+  const day = Number(dayRaw);
+  const month = Number(monthRaw);
+  const year = Number(yearRaw);
+
+  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return undefined;
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) return undefined;
+
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return undefined;
+
+  return formatDateForStorage(date);
+};
+
+const parseDisplayTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return undefined;
+
+  const [, hourRaw, minuteRaw] = match;
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return undefined;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return undefined;
+
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+const generateTimeOptions = () => {
+  const options: string[] = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      options.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+    }
+  }
+  return options;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
 const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, onDelete, onOpen }: AdvancedTaskRowProps) => {
   const [title, setTitle] = useState(task.title);
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [startTimeOpen, setStartTimeOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+  const [endTimeOpen, setEndTimeOpen] = useState(false);
+  const [startDateInput, setStartDateInput] = useState(formatDateForDisplay(task.start_date));
+  const [startTimeInput, setStartTimeInput] = useState(formatTimeForDisplay(task.start_time));
+  const [endDateInput, setEndDateInput] = useState(formatDateForDisplay(task.end_date));
+  const [endTimeInput, setEndTimeInput] = useState(formatTimeForDisplay(task.end_time));
   const category = categories.find((item) => item.id === task.category_id);
 
   useEffect(() => {
     setTitle(task.title);
   }, [task.title]);
+
+  useEffect(() => {
+    setStartDateOpen(false);
+    setStartTimeOpen(false);
+    setEndDateOpen(false);
+    setEndTimeOpen(false);
+  }, [task.id]);
+
+  useEffect(() => {
+    setStartDateInput(formatDateForDisplay(task.start_date));
+    setStartTimeInput(formatTimeForDisplay(task.start_time));
+    setEndDateInput(formatDateForDisplay(task.end_date));
+    setEndTimeInput(formatTimeForDisplay(task.end_time));
+  }, [task.end_date, task.end_time, task.start_date, task.start_time]);
 
   const flushTitle = () => {
     const nextTitle = title.trim();
@@ -70,6 +190,101 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
     if (nextHidden === task.hidden) return;
     onUpdate(task.id, { hidden: nextHidden });
   };
+
+  const commitDateValue = (
+    inputValue: string,
+    currentValue: string | null,
+    setInputValue: (value: string) => void,
+    onCommit: (value: string | null) => void,
+  ) => {
+    const parsed = parseDisplayDate(inputValue);
+    if (parsed === undefined) {
+      setInputValue(formatDateForDisplay(currentValue));
+      return;
+    }
+    if (parsed !== currentValue) {
+      onCommit(parsed);
+    }
+    setInputValue(formatDateForDisplay(parsed));
+  };
+
+  const commitTimeValue = (
+    inputValue: string,
+    currentValue: string | null,
+    setInputValue: (value: string) => void,
+    onCommit: (value: string | null) => void,
+  ) => {
+    const parsed = parseDisplayTime(inputValue);
+    if (parsed === undefined) {
+      setInputValue(formatTimeForDisplay(currentValue));
+      return;
+    }
+    if (parsed !== currentValue) {
+      onCommit(parsed);
+    }
+    setInputValue(formatTimeForDisplay(parsed));
+  };
+
+  const renderDatePopover = (
+    value: string | null,
+    onSelect: (next: Date | undefined) => void,
+  ) => {
+    const selectedDate = value ? parseStorageDate(value) : null;
+    return (
+      <PopoverContent
+        align="start"
+        className="z-50 w-auto rounded-sm border border-border/60 bg-popover/95 p-2 shadow-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <Calendar
+          mode="single"
+          selected={selectedDate ?? undefined}
+          onSelect={onSelect}
+          className="p-1"
+          classNames={{
+            caption_label: "text-xs",
+            day: "h-8 w-8 text-xs",
+            head_cell: "w-8 text-[0.7rem]",
+            cell: "h-8 w-8",
+          }}
+        />
+      </PopoverContent>
+    );
+  };
+
+  const renderTimePopover = (
+    value: string | null,
+    onSelect: (next: string | null) => void,
+  ) => (
+    <PopoverContent
+      align="start"
+      className="z-50 w-24 rounded-sm border border-border/60 bg-popover/95 p-1 shadow-lg"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div className="max-h-48 overflow-y-auto">
+        <div className="flex flex-col gap-1">
+          {TIME_OPTIONS.map((option) => {
+            const active = option === value?.slice(0, 5);
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect(option);
+                }}
+                className={`block w-full rounded-sm px-2 py-1 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
+                  active ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </PopoverContent>
+  );
 
   const renderCell = (columnId: AdvancedTaskColumnId) => {
     switch (columnId) {
@@ -126,9 +341,253 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
           </div>
         );
       case "start":
-        return <span className="text-xs text-muted-foreground">{formatDateTimeParts(task.start_date, task.start_time)}</span>;
+        return (
+          <div className="flex min-w-[13rem] items-center gap-1 whitespace-nowrap">
+            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+              <div className="inline-flex h-7 items-center rounded-sm border border-transparent bg-transparent hover:border-border/60 hover:bg-card/40 focus-within:border-ring/50">
+                <Input
+                  value={startDateInput}
+                  onChange={(event) => setStartDateInput(formatDateMask(event.target.value))}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onBlur={() => {
+                    commitDateValue(startDateInput, task.start_date, setStartDateInput, (next) => onUpdate(task.id, { start_date: next }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === "Escape") {
+                      setStartDateInput(formatDateForDisplay(task.start_date));
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="gg.aa.yyyy"
+                  inputMode="numeric"
+                  maxLength={10}
+                  className="h-7 w-[7.25rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                />
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setStartDateOpen(true);
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setStartDateOpen(true);
+                    }}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-colors hover:border-border/60 hover:bg-card/40 hover:text-foreground"
+                    aria-label="Başlangıç takvimini aç"
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                  </button>
+                </PopoverTrigger>
+              </div>
+              {renderDatePopover(task.start_date, (next) => {
+                  if (!next) return;
+                  const nextValue = formatDateForStorage(next);
+                  setStartDateInput(formatDateForDisplay(nextValue));
+                  onUpdate(task.id, { start_date: nextValue });
+                  setStartDateOpen(false);
+                })}
+            </Popover>
+            <Popover open={startTimeOpen} onOpenChange={setStartTimeOpen}>
+              <div className="inline-flex h-7 items-center rounded-sm border border-transparent bg-transparent hover:border-border/60 hover:bg-card/40 focus-within:border-ring/50">
+                <Input
+                  value={startTimeInput}
+                  onChange={(event) => setStartTimeInput(formatTimeMask(event.target.value))}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onBlur={() => {
+                    commitTimeValue(startTimeInput, task.start_time, setStartTimeInput, (next) => onUpdate(task.id, { start_time: next }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === "Escape") {
+                      setStartTimeInput(formatTimeForDisplay(task.start_time));
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="ss:dd"
+                  inputMode="numeric"
+                  maxLength={5}
+                  className="h-7 w-[4.75rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                />
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setStartTimeOpen(true);
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setStartTimeOpen(true);
+                    }}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-colors hover:border-border/60 hover:bg-card/40 hover:text-foreground"
+                    aria-label="Başlangıç saat önerilerini aç"
+                  >
+                    <Clock3 className="h-3.5 w-3.5" />
+                  </button>
+                </PopoverTrigger>
+              </div>
+              {renderTimePopover(task.start_time, (next) => {
+                  setStartTimeInput(formatTimeForDisplay(next));
+                  onUpdate(task.id, { start_time: next });
+                  setStartTimeOpen(false);
+                })}
+            </Popover>
+            {(task.start_date || task.start_time) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setStartDateInput("");
+                  setStartTimeInput("");
+                  onUpdate(task.id, { start_date: null, start_time: null });
+                }}
+                className="h-7 w-7 px-0 text-[11px]"
+                title="Temizle"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        );
       case "end":
-        return <span className="text-xs text-muted-foreground">{formatDateTimeParts(task.end_date, task.end_time)}</span>;
+        return (
+          <div className="flex min-w-[13rem] items-center gap-1 whitespace-nowrap">
+            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+              <div className="inline-flex h-7 items-center rounded-sm border border-transparent bg-transparent hover:border-border/60 hover:bg-card/40 focus-within:border-ring/50">
+                <Input
+                  value={endDateInput}
+                  onChange={(event) => setEndDateInput(formatDateMask(event.target.value))}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onBlur={() => {
+                    commitDateValue(endDateInput, task.end_date, setEndDateInput, (next) => onUpdate(task.id, { end_date: next }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === "Escape") {
+                      setEndDateInput(formatDateForDisplay(task.end_date));
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="gg.aa.yyyy"
+                  inputMode="numeric"
+                  maxLength={10}
+                  className="h-7 w-[7.25rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                />
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setEndDateOpen(true);
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setEndDateOpen(true);
+                    }}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-colors hover:border-border/60 hover:bg-card/40 hover:text-foreground"
+                    aria-label="Bitiş takvimini aç"
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                  </button>
+                </PopoverTrigger>
+              </div>
+              {renderDatePopover(task.end_date, (next) => {
+                  if (!next) return;
+                  const nextValue = formatDateForStorage(next);
+                  setEndDateInput(formatDateForDisplay(nextValue));
+                  onUpdate(task.id, { end_date: nextValue });
+                  setEndDateOpen(false);
+                })}
+            </Popover>
+            <Popover open={endTimeOpen} onOpenChange={setEndTimeOpen}>
+              <div className="inline-flex h-7 items-center rounded-sm border border-transparent bg-transparent hover:border-border/60 hover:bg-card/40 focus-within:border-ring/50">
+                <Input
+                  value={endTimeInput}
+                  onChange={(event) => setEndTimeInput(formatTimeMask(event.target.value))}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onBlur={() => {
+                    commitTimeValue(endTimeInput, task.end_time, setEndTimeInput, (next) => onUpdate(task.id, { end_time: next }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === "Escape") {
+                      setEndTimeInput(formatTimeForDisplay(task.end_time));
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  placeholder="ss:dd"
+                  inputMode="numeric"
+                  maxLength={5}
+                  className="h-7 w-[4.75rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                />
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setEndTimeOpen(true);
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setEndTimeOpen(true);
+                    }}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-transparent text-muted-foreground transition-colors hover:border-border/60 hover:bg-card/40 hover:text-foreground"
+                    aria-label="Bitiş saat önerilerini aç"
+                  >
+                    <Clock3 className="h-3.5 w-3.5" />
+                  </button>
+                </PopoverTrigger>
+              </div>
+              {renderTimePopover(task.end_time, (next) => {
+                  setEndTimeInput(formatTimeForDisplay(next));
+                  onUpdate(task.id, { end_time: next });
+                  setEndTimeOpen(false);
+                })}
+            </Popover>
+            {(task.end_date || task.end_time) && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setEndDateInput("");
+                  setEndTimeInput("");
+                  onUpdate(task.id, { end_date: null, end_time: null });
+                }}
+                className="h-7 w-7 px-0 text-[11px]"
+                title="Temizle"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        );
       case "completed_at":
         return <span className="text-xs text-muted-foreground">{formatDateTime(task.completed_at)}</span>;
       case "hidden":
