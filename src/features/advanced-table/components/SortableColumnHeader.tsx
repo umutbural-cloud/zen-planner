@@ -7,11 +7,12 @@ import { CSS } from "@dnd-kit/utilities";
 
 type SortableColumnHeaderProps = {
   columnId: AdvancedTaskColumnId;
+  sortableId: string;
 };
 
-const SortableColumnHeader = ({ columnId }: SortableColumnHeaderProps) => {
+const SortableColumnHeader = ({ columnId, sortableId }: SortableColumnHeaderProps) => {
   const column = getColumn(columnId);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: columnId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sortableId });
   const adjustedTransform = transform ? { ...transform, y: 0 } : null;
   const style = {
     transform: adjustedTransform ? CSS.Transform.toString(adjustedTransform) : undefined,

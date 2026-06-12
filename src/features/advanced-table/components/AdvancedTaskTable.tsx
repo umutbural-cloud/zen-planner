@@ -39,11 +39,23 @@ const AdvancedTaskTable = ({
 }: AdvancedTaskTableProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const columnDragEnabled = Boolean(onReorderColumns) && columns.length > 1;
+  const getColumnSortableId = (groupKey: string, columnId: AdvancedTaskColumnId) => `column:${groupKey}:${columnId}`;
+  const getColumnIdFromSortableId = (id: unknown): AdvancedTaskColumnId | null => {
+    const value = String(id);
+    const columnId = value.split(":").pop();
+    return columns.includes(columnId as AdvancedTaskColumnId) ? (columnId as AdvancedTaskColumnId) : null;
+  };
 
   const handleColumnDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !onReorderColumns) return;
-    onReorderColumns(active.id as AdvancedTaskColumnId, over.id as AdvancedTaskColumnId);
+    if (!over || !onReorderColumns) return;
+
+    const activeColumnId = getColumnIdFromSortableId(active.id);
+    const overColumnId = getColumnIdFromSortableId(over.id);
+
+    if (!activeColumnId || !overColumnId || activeColumnId === overColumnId) return;
+
+    onReorderColumns(activeColumnId, overColumnId);
   };
 
   if (groups.every((group) => group.rows.length === 0)) {
@@ -70,9 +82,13 @@ const AdvancedTaskTable = ({
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-9 px-2"></TableHead>
                 {columnDragEnabled ? (
-                  <SortableContext items={columns} strategy={horizontalListSortingStrategy}>
+                  <SortableContext items={columns.map((columnId) => getColumnSortableId(group.key, columnId))} strategy={horizontalListSortingStrategy}>
                     {columns.map((columnId) => (
-                      <SortableColumnHeader key={columnId} columnId={columnId} />
+                      <SortableColumnHeader
+                        key={columnId}
+                        columnId={columnId}
+                        sortableId={getColumnSortableId(group.key, columnId)}
+                      />
                     ))}
                   </SortableContext>
                 ) : (
