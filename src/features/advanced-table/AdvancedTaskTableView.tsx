@@ -85,6 +85,11 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     [filteredTasks],
   );
 
+  const activeGroups = useMemo(
+    () => groupTasks(activeTasks, config.groupBy, categories, subtaskCountOf),
+    [activeTasks, categories, config.groupBy, subtaskCountOf],
+  );
+
   const doneTasks = useMemo(
     () =>
       filteredTasks
@@ -191,6 +196,67 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     resetTableConfig(projectId);
   };
 
+  const renderDoneSection = () => {
+    if (doneTasks.length === 0) return null;
+
+    const visibleDone = showDone ? doneTasks : doneTasks.slice(0, 3);
+    const hiddenDoneCount = Math.max(0, doneTasks.length - 3);
+
+    return (
+      <div className="space-y-0">
+        <AdvancedTaskTable
+          groups={[{ key: "done", label: "Tamamlananlar", count: doneTasks.length, rows: visibleDone }]}
+          columns={visibleColumns}
+          categories={categories}
+          subtaskCountOf={subtaskCountOf}
+          onUpdate={updateTask}
+          onDelete={deleteTask}
+          onOpen={setEditTask}
+          onReorderColumns={handleReorderColumns}
+        />
+        {hiddenDoneCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowDone((current) => !current)}
+            className="w-full rounded-b-sm border-x border-b border-border/60 py-2 text-xs tracking-wide text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {showDone ? "↑ Sadece son 3'ü göster" : `↓ ${hiddenDoneCount} tane daha göster`}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderHiddenSection = () => {
+    if (hiddenTasks.length === 0) return null;
+
+    return (
+      <div className="overflow-hidden rounded-sm border border-border/60">
+        <button
+          type="button"
+          onClick={() => setShowHidden((current) => !current)}
+          className="flex w-full items-center gap-2 bg-card/30 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-card/40"
+        >
+          <span>{showHidden ? "↓" : "→"}</span>
+          <span className="tracking-wide">Gizlenenler</span>
+          <span className="text-muted-foreground/60">{hiddenTasks.length}</span>
+        </button>
+        {showHidden && (
+          <AdvancedTaskTable
+            groups={[{ key: "hidden", label: "Gizlenenler", count: hiddenTasks.length, rows: hiddenTasks }]}
+            columns={visibleColumns}
+            categories={categories}
+            subtaskCountOf={subtaskCountOf}
+            onUpdate={updateTask}
+            onDelete={deleteTask}
+            onOpen={setEditTask}
+            onReorderColumns={handleReorderColumns}
+          />
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <DelayedLoading
@@ -267,71 +333,26 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
             />
           )}
 
-          {doneTasks.length > 0 && (() => {
-            const visibleDone = showDone ? doneTasks : doneTasks.slice(0, 3);
-            const hiddenDoneCount = Math.max(0, doneTasks.length - 3);
-            return (
-              <div className="space-y-0">
-                <AdvancedTaskTable
-                  groups={[{ key: "done", label: "Tamamlananlar", count: doneTasks.length, rows: visibleDone }]}
-                  columns={visibleColumns}
-                  categories={categories}
-                  subtaskCountOf={subtaskCountOf}
-                  onUpdate={updateTask}
-                  onDelete={deleteTask}
-                  onOpen={setEditTask}
-                  onReorderColumns={handleReorderColumns}
-                />
-                {hiddenDoneCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowDone((current) => !current)}
-                    className="w-full rounded-b-sm border-x border-b border-border/60 py-2 text-xs tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    {showDone ? "↑ Sadece son 3'ü göster" : `↓ ${hiddenDoneCount} tane daha göster`}
-                  </button>
-                )}
-              </div>
-            );
-          })()}
-
-          {hiddenTasks.length > 0 && (
-            <div className="overflow-hidden rounded-sm border border-border/60">
-              <button
-                type="button"
-                onClick={() => setShowHidden((current) => !current)}
-                className="flex w-full items-center gap-2 bg-card/30 px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-card/40"
-              >
-                <span>{showHidden ? "↓" : "→"}</span>
-                <span className="tracking-wide">Gizlenenler</span>
-                <span className="text-muted-foreground/60">{hiddenTasks.length}</span>
-              </button>
-              {showHidden && (
-                <AdvancedTaskTable
-                  groups={[{ key: "hidden", label: "Gizlenenler", count: hiddenTasks.length, rows: hiddenTasks }]}
-                  columns={visibleColumns}
-                  categories={categories}
-                  subtaskCountOf={subtaskCountOf}
-                  onUpdate={updateTask}
-                  onDelete={deleteTask}
-                  onOpen={setEditTask}
-                  onReorderColumns={handleReorderColumns}
-                />
-              )}
-            </div>
-          )}
+          {renderDoneSection()}
+          {renderHiddenSection()}
         </div>
       ) : (
-        <AdvancedTaskTable
-          groups={groups}
-          columns={visibleColumns}
-          categories={categories}
-          subtaskCountOf={subtaskCountOf}
-          onUpdate={updateTask}
-          onDelete={deleteTask}
-          onOpen={setEditTask}
-          onReorderColumns={handleReorderColumns}
-        />
+        <div className="space-y-3">
+          {(activeGroups.length > 0 || (doneTasks.length === 0 && hiddenTasks.length === 0)) && (
+            <AdvancedTaskTable
+              groups={activeGroups}
+              columns={visibleColumns}
+              categories={categories}
+              subtaskCountOf={subtaskCountOf}
+              onUpdate={updateTask}
+              onDelete={deleteTask}
+              onOpen={setEditTask}
+              onReorderColumns={handleReorderColumns}
+            />
+          )}
+          {renderDoneSection()}
+          {renderHiddenSection()}
+        </div>
       )}
 
       <TaskEditDialog
