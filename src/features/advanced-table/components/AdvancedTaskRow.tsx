@@ -51,6 +51,23 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
     }
   };
 
+  const handleStatusChange = (value: string) => {
+    if (value === task.status) return;
+    onUpdate(task.id, { status: value === "done" ? "done" : value === "in_progress" ? "in_progress" : "todo" });
+  };
+
+  const handleCategoryChange = (value: string) => {
+    const nextCategoryId = value === "none" ? null : value;
+    if (nextCategoryId === task.category_id) return;
+    onUpdate(task.id, { category_id: nextCategoryId });
+  };
+
+  const handleHiddenChange = (value: string) => {
+    const nextHidden = value === "hidden";
+    if (nextHidden === task.hidden) return;
+    onUpdate(task.id, { hidden: nextHidden });
+  };
+
   const renderCell = (columnId: AdvancedTaskColumnId) => {
     switch (columnId) {
       case "title":
@@ -72,15 +89,38 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
           />
         );
       case "status":
-        return <span className="text-xs text-muted-foreground">{formatTaskStatus(task.status)}</span>;
+        return (
+          <select
+            value={task.status}
+            onChange={(event) => handleStatusChange(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            aria-label="Durum değiştir"
+            className="h-7 rounded-sm border border-border/50 bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="todo">{formatTaskStatus("todo")}</option>
+            <option value="in_progress">{formatTaskStatus("in_progress")}</option>
+            <option value="done">{formatTaskStatus("done")}</option>
+          </select>
+        );
       case "category":
-        return category ? (
-          <span className="inline-flex items-center gap-1.5 text-xs">
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: colorHex(category.color) }} />
-            {category.name}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground/70">Kategorisiz</span>
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full" style={{ background: category ? colorHex(category.color) : "transparent" }} />
+            <select
+              value={task.category_id ?? "none"}
+              onChange={(event) => handleCategoryChange(event.target.value)}
+              onClick={(event) => event.stopPropagation()}
+              aria-label="Kategori değiştir"
+              className="h-7 max-w-[13rem] rounded-sm border border-border/50 bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="none">Kategorisiz</option>
+              {categories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
         );
       case "start":
         return <span className="text-xs text-muted-foreground">{formatDateTimeParts(task.start_date, task.start_time)}</span>;
@@ -89,7 +129,18 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
       case "completed_at":
         return <span className="text-xs text-muted-foreground">{formatDateTime(task.completed_at)}</span>;
       case "hidden":
-        return <span className="text-xs text-muted-foreground">{task.hidden ? "Gizli" : "Görünür"}</span>;
+        return (
+          <select
+            value={task.hidden ? "hidden" : "visible"}
+            onChange={(event) => handleHiddenChange(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            aria-label="Görünürlük değiştir"
+            className="h-7 rounded-sm border border-border/50 bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="visible">Görünür</option>
+            <option value="hidden">Gizli</option>
+          </select>
+        );
       case "kind":
         return <span className="text-xs text-muted-foreground">{task.kind === "timebox" ? "Timebox" : "Görev"}</span>;
       case "color":
