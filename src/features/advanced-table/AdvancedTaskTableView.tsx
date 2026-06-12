@@ -11,6 +11,7 @@ import { createDefaultTableConfig, loadTableConfig, resetTableConfig, saveTableC
 import type { AdvancedTaskColumnId, CurrentTableConfig, TableFilter } from "./types";
 import AdvancedTaskTable from "./components/AdvancedTaskTable";
 import AdvancedTaskTableToolbar from "./components/AdvancedTaskTableToolbar";
+import { arrayMove } from "@dnd-kit/sortable";
 
 type AdvancedTaskTableViewProps = {
   projectId: string;
@@ -120,6 +121,16 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
         ? current.hiddenColumnIds.filter((item) => item !== columnId)
         : [...current.hiddenColumnIds, columnId];
       return { ...current, hiddenColumnIds };
+    });
+  };
+
+  const handleReorderColumns = (activeColumnId: AdvancedTaskColumnId, overColumnId: AdvancedTaskColumnId) => {
+    if (activeColumnId === overColumnId) return;
+    updateConfig((current) => {
+      const oldIndex = current.columnOrder.indexOf(activeColumnId);
+      const newIndex = current.columnOrder.indexOf(overColumnId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return current;
+      return { ...current, columnOrder: arrayMove(current.columnOrder, oldIndex, newIndex) };
     });
   };
 
@@ -252,6 +263,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onUpdate={updateTask}
               onDelete={deleteTask}
               onOpen={setEditTask}
+              onReorderColumns={handleReorderColumns}
             />
           )}
 
@@ -268,6 +280,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
                   onUpdate={updateTask}
                   onDelete={deleteTask}
                   onOpen={setEditTask}
+                  onReorderColumns={handleReorderColumns}
                 />
                 {hiddenDoneCount > 0 && (
                   <button
@@ -302,6 +315,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
                   onUpdate={updateTask}
                   onDelete={deleteTask}
                   onOpen={setEditTask}
+                  onReorderColumns={handleReorderColumns}
                 />
               )}
             </div>
@@ -316,6 +330,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           onUpdate={updateTask}
           onDelete={deleteTask}
           onOpen={setEditTask}
+          onReorderColumns={handleReorderColumns}
         />
       )}
 
