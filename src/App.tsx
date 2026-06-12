@@ -128,7 +128,7 @@ const App = () => (
                   <Route path="/pomodoro" element={<Pomodoro />} />
                   <Route path="/work-history" element={<WorkHistory />} />
                 </Route>
-                <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/*" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </PageStateProvider>
