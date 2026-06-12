@@ -1,6 +1,6 @@
-import { Navigate, useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Settings, ShieldCheck } from "lucide-react";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { Activity, AlertTriangle, BarChart3, Home, Settings, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   AdminAccountStatusActionModal,
@@ -18,7 +18,6 @@ import { AdminMemberDetailPanel } from "@/components/admin/AdminMemberDetailPane
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdminAccountStatusActions } from "@/hooks/useAdminAccountStatusActions";
 import { useAdminGate } from "@/hooks/useAdminGate";
 import { useAdminFeatureAccessMatrix } from "@/hooks/useAdminFeatureAccessMatrix";
@@ -27,11 +26,23 @@ import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
 
-type AdminTab = "members" | "audit" | "feature-access";
+const adminNavigationItems = [
+  { label: "Ana Sayfa", to: "/admin", icon: Home, end: true },
+  { label: "İstatistikler", to: "/admin/stats", icon: BarChart3 },
+  { label: "Üyeler", to: "/admin/users", icon: Users },
+  { label: "Ayarlar", to: "/admin/settings", icon: Settings },
+] as const;
+
+const getPageTitle = (pathname: string) => {
+  if (pathname.startsWith("/admin/stats")) return "İstatistikler";
+  if (pathname.startsWith("/admin/users")) return "Üyeler";
+  if (pathname.startsWith("/admin/settings")) return "Ayarlar";
+  return "Ana Sayfa";
+};
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<AdminTab>("members");
+  const location = useLocation();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [membershipAction, setMembershipAction] = useState<{
     member: AdminMemberDetail;
@@ -44,21 +55,14 @@ const Admin = () => {
   } | null>(null);
   const [accountStatusReasonCode, setAccountStatusReasonCode] = useState<AdminAccountStatusReasonCode | null>(null);
   const { status, adminContext, error, refreshAdminContext } = useAdminGate();
-  const adminMembers = useAdminMembers(status === "admin");
-  const memberDetail = useAdminMemberDetail(status === "admin" && selectedUserId !== null, selectedUserId);
+  const isUsersRoute = location.pathname === "/admin/users";
+  const isSettingsRoute = location.pathname === "/admin/settings";
+  const adminMembers = useAdminMembers(status === "admin" && isUsersRoute);
+  const memberDetail = useAdminMemberDetail(status === "admin" && isUsersRoute && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
   const isSuperManager = adminContext?.is_super_manager === true;
-  const featureAccessMatrix = useAdminFeatureAccessMatrix(activeTab === "feature-access" && isSuperManager);
-
-  useEffect(() => {
-    if (!isSuperManager && activeTab === "audit") {
-      setActiveTab("members");
-    }
-    if (!isSuperManager && activeTab === "feature-access") {
-      setActiveTab("members");
-    }
-  }, [activeTab, isSuperManager]);
+  const featureAccessMatrix = useAdminFeatureAccessMatrix(isSettingsRoute && isSuperManager);
 
   const closeMemberDetail = useCallback(() => {
     setSelectedUserId(null);
@@ -218,112 +222,254 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-3 border-b border-border/70 pb-6">
-          <div className="flex h-11 w-11 items-center justify-center border border-border/70">
-            <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-medium tracking-wide text-foreground">Neverfap Admin Panel</h1>
-            <p className="text-sm leading-6 text-muted-foreground">Üye yönetimi ve hesap durumu işlemleri</p>
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+        <header className="flex flex-col gap-3 border-b border-border/70 pb-5">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center border border-border/70">
+              <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-medium tracking-wide text-foreground">Neverfap Admin Panel</h1>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Operasyonel üye yönetimi, erişim kontrolleri ve admin kayıtları
+              </p>
+            </div>
           </div>
         </header>
 
-        <section className="space-y-4">
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => {
-              if ((value === "audit" || value === "feature-access") && !isSuperManager) {
-                return;
-              }
+        <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <AdminSidebar />
 
-              if (value === "audit" || value === "feature-access") {
-                setActiveTab(value);
-                return;
-              }
+          <section className="min-w-0 space-y-4">
+            <div className="border-b border-border/70 pb-4">
+              <h2 className="text-xl font-medium tracking-wide text-foreground">{getPageTitle(location.pathname)}</h2>
+            </div>
 
-              setActiveTab("members");
-            }}
-          >
-            <TabsList className="h-auto w-full justify-start rounded-none border border-border/70 bg-muted/30 p-1">
-              <TabsTrigger value="members" className="rounded-none">
-                Üyeler
-              </TabsTrigger>
-              {isSuperManager && (
-                <>
-                  <TabsTrigger value="audit" className="rounded-none">
-                    Audit Log
-                  </TabsTrigger>
-                  <TabsTrigger value="feature-access" className="rounded-none">
-                    Erişim Matrisi
-                  </TabsTrigger>
-                </>
-              )}
-            </TabsList>
+            <Routes>
+              <Route index element={<AdminHomePage />} />
+              <Route path="stats" element={<AdminStatsPage />} />
+              <Route
+                path="users"
+                element={
+                  <AdminUsersPage
+                    adminMembers={adminMembers}
+                    memberDetail={memberDetail}
+                    currentAdminUserId={adminContext?.user_id ?? null}
+                    onSelectMember={setSelectedUserId}
+                    onCloseMemberDetail={closeMemberDetail}
+                    onPrepareAccountStatusChange={prepareAccountStatusChange}
+                    onPrepareMembershipChange={prepareMembershipChange}
+                  />
+                }
+              />
+              <Route
+                path="settings"
+                element={
+                  <AdminSettingsPage
+                    isSuperManager={isSuperManager}
+                    featureAccessMatrix={featureAccessMatrix}
+                  />
+                }
+              />
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+            </Routes>
+          </section>
+        </div>
 
-            <TabsContent value="members" className="mt-4">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-                <AdminMembersTable members={adminMembers} onSelectMember={setSelectedUserId} />
-                <AdminMemberDetailPanel
-                  detail={memberDetail}
-                  currentAdminUserId={adminContext?.user_id ?? null}
-                  onClose={closeMemberDetail}
-                  onPrepareAccountStatusChange={prepareAccountStatusChange}
-                  onPrepareMembershipChange={prepareMembershipChange}
-                />
-              </div>
-            </TabsContent>
+        <AdminAccountStatusActionModal
+          member={status === "admin" ? accountStatusAction?.member ?? null : null}
+          open={status === "admin" && accountStatusAction !== null}
+          targetStatus={accountStatusAction?.targetStatus ?? null}
+          reasonCode={accountStatusReasonCode}
+          onReasonCodeChange={setAccountStatusReasonCode}
+          onOpenChange={closeAccountStatusAction}
+          onConfirm={handleAccountStatusConfirm}
+          loading={accountStatusActions.loading}
+          errorMessage={accountStatusActions.errorMessage}
+        />
 
-            {activeTab === "audit" && isSuperManager && (
-              <TabsContent value="audit" className="mt-4">
-                <AdminAuditLogPanel enabled={activeTab === "audit" && isSuperManager} isSuperManager={isSuperManager} />
-              </TabsContent>
-            )}
-
-            {activeTab === "feature-access" && isSuperManager && (
-              <TabsContent value="feature-access" className="mt-4">
-                <AdminFeatureAccessMatrixPanel
-                  items={featureAccessMatrix.items}
-                  isLoading={featureAccessMatrix.isLoading}
-                  error={featureAccessMatrix.error}
-                  onRetry={featureAccessMatrix.refetch}
-                />
-              </TabsContent>
-            )}
-          </Tabs>
-
-          <AdminAccountStatusActionModal
-            member={status === "admin" ? accountStatusAction?.member ?? null : null}
-            open={status === "admin" && accountStatusAction !== null}
-            targetStatus={accountStatusAction?.targetStatus ?? null}
-            reasonCode={accountStatusReasonCode}
-            onReasonCodeChange={setAccountStatusReasonCode}
-            onOpenChange={closeAccountStatusAction}
-            onConfirm={handleAccountStatusConfirm}
-            loading={accountStatusActions.loading}
-            errorMessage={accountStatusActions.errorMessage}
-          />
-
-          <AdminMemberActionModal
-            member={status === "admin" ? membershipAction?.member ?? null : null}
-            open={status === "admin" && membershipAction !== null}
-            targetMembership={membershipAction?.targetMembership ?? null}
-            reasonCode={membershipReasonCode}
-            onReasonCodeChange={setMembershipReasonCode}
-            onOpenChange={closeMembershipAction}
-            onConfirm={handleMembershipConfirm}
-            loading={memberActions.loading}
-            errorMessage={memberActions.errorMessage}
-          />
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <AdminPlaceholderCard title="Ayarlar" icon={Settings} />
-          </div>
-        </section>
+        <AdminMemberActionModal
+          member={status === "admin" ? membershipAction?.member ?? null : null}
+          open={status === "admin" && membershipAction !== null}
+          targetMembership={membershipAction?.targetMembership ?? null}
+          reasonCode={membershipReasonCode}
+          onReasonCodeChange={setMembershipReasonCode}
+          onOpenChange={closeMembershipAction}
+          onConfirm={handleMembershipConfirm}
+          loading={memberActions.loading}
+          errorMessage={memberActions.errorMessage}
+        />
       </main>
     </div>
   );
 };
+
+const AdminSidebar = () => (
+  <aside className="border border-border/70 bg-card/60 p-2 lg:sticky lg:top-6 lg:self-start">
+    <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible" aria-label="Admin menüsü">
+      {adminNavigationItems.map((item) => {
+        const Icon = item.icon;
+
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              [
+                "inline-flex h-10 shrink-0 items-center gap-2 rounded-none border px-3 text-sm transition-colors",
+                isActive
+                  ? "border-border bg-background text-foreground"
+                  : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-background/60 hover:text-foreground",
+              ].join(" ")
+            }
+          >
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </NavLink>
+        );
+      })}
+    </nav>
+  </aside>
+);
+
+const AdminHomePage = () => (
+  <div className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <AdminMetricPlaceholderCard title="Toplam üye" status="PR-ADMIN-2'de bağlanacak" />
+      <AdminMetricPlaceholderCard title="Son 24 saatte aktif üyeler" status="Veri altyapısı gerekiyor" />
+      <AdminMetricPlaceholderCard title="7 gündür pasif üyeler" status="Veri altyapısı gerekiyor" />
+      <AdminMetricPlaceholderCard title="Son 7 gün yeni üyeler" status="Veri altyapısı gerekiyor" />
+    </div>
+
+    <Card className="rounded-none border-border/70 shadow-none">
+      <CardHeader className="space-y-1 p-5">
+        <CardTitle className="text-base font-medium tracking-wide">Üye özeti</CardTitle>
+      </CardHeader>
+      <CardContent className="px-5 pb-5 pt-0">
+        <p className="text-sm leading-6 text-muted-foreground">
+          Gerçek üye özeti PR-ADMIN-2 kapsamında güvenilir veri kaynağıyla bağlanacak.
+        </p>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+const AdminStatsPage = () => (
+  <div className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <AdminMetricPlaceholderCard title="Son 24 saatte aktif üyeler" status="Veri altyapısı gerekiyor" />
+      <AdminMetricPlaceholderCard title="Haftalık aktif kullanıcı" status="Veri altyapısı gerekiyor" />
+      <AdminMetricPlaceholderCard title="7 gündür pasif üyeler" status="Veri altyapısı gerekiyor" />
+      <AdminMetricPlaceholderCard title="Son 30 günde yeni kayıt sayısı" status="Veri altyapısı gerekiyor" />
+    </div>
+
+    <Card className="rounded-none border-border/70 shadow-none">
+      <CardHeader className="space-y-1 p-5">
+        <CardTitle className="text-base font-medium tracking-wide">Grand plan metrikleri</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-2 px-5 pb-5 pt-0 md:grid-cols-2">
+        {[
+          "Modül kullanım oranları",
+          "Ortalama günlük kullanım süresi",
+          "Üye başı ortalama çalışma süresi",
+          "Üye başı ortalama tamamlanan task sayısı",
+          "Üye başı ortalama tamamlanan pomodoro seansı sayısı",
+          "Haftalık / aylık trend grafikler",
+        ].map((metric) => (
+          <div key={metric} className="flex items-center justify-between gap-3 border border-border/60 px-3 py-2">
+            <span className="text-sm text-foreground">{metric}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">Veri altyapısı gerekiyor</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  </div>
+);
+
+type AdminUsersPageProps = {
+  adminMembers: ReturnType<typeof useAdminMembers>;
+  memberDetail: ReturnType<typeof useAdminMemberDetail>;
+  currentAdminUserId: string | null;
+  onSelectMember: (userId: string) => void;
+  onCloseMemberDetail: () => void;
+  onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
+  onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
+};
+
+const AdminUsersPage = ({
+  adminMembers,
+  memberDetail,
+  currentAdminUserId,
+  onSelectMember,
+  onCloseMemberDetail,
+  onPrepareAccountStatusChange,
+  onPrepareMembershipChange,
+}: AdminUsersPageProps) => (
+  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <AdminMembersTable members={adminMembers} onSelectMember={onSelectMember} />
+    <AdminMemberDetailPanel
+      detail={memberDetail}
+      currentAdminUserId={currentAdminUserId}
+      onClose={onCloseMemberDetail}
+      onPrepareAccountStatusChange={onPrepareAccountStatusChange}
+      onPrepareMembershipChange={onPrepareMembershipChange}
+    />
+  </div>
+);
+
+type AdminSettingsPageProps = {
+  isSuperManager: boolean;
+  featureAccessMatrix: ReturnType<typeof useAdminFeatureAccessMatrix>;
+};
+
+const AdminSettingsPage = ({ isSuperManager, featureAccessMatrix }: AdminSettingsPageProps) => (
+  <div className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2">
+      <AdminPlaceholderCard title="Admin kullanıcıları" icon={ShieldCheck} />
+      <AdminPlaceholderCard title="Roller" icon={Users} />
+    </div>
+
+    {isSuperManager ? (
+      <>
+        <AdminFeatureAccessMatrixPanel
+          items={featureAccessMatrix.items}
+          isLoading={featureAccessMatrix.isLoading}
+          error={featureAccessMatrix.error}
+          onRetry={featureAccessMatrix.refetch}
+        />
+        <AdminAuditLogPanel enabled={isSuperManager} isSuperManager={isSuperManager} />
+      </>
+    ) : (
+      <Card className="rounded-none border-border/70 shadow-none">
+        <CardHeader className="space-y-0 p-5">
+          <CardTitle className="text-base font-medium tracking-wide">Super manager alanları</CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 pb-5 pt-0">
+          <p className="text-sm leading-6 text-muted-foreground">
+            Audit Log ve Erişim Matrisi yalnızca super manager yetkisine sahip adminler için görünür.
+          </p>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+);
+
+const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: string }) => (
+  <Card className="rounded-none border-border/70 shadow-none">
+    <CardHeader className="space-y-0 p-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center border border-border/70">
+          <Activity className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <CardTitle className="text-sm font-medium tracking-wide">{title}</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent className="px-5 pb-5 pt-0">
+      <p className="text-xs text-muted-foreground">{status}</p>
+    </CardContent>
+  </Card>
+);
 
 type AdminPlaceholderCardProps = {
   title: string;
