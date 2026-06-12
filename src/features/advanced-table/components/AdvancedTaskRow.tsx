@@ -25,6 +25,9 @@ const formatDateTime = (value: string | null) => {
   return value.slice(0, 16).replace("T", " ");
 };
 
+const cellControlClassName =
+  "h-7 rounded-sm border border-transparent bg-transparent px-1.5 text-xs text-muted-foreground transition-colors hover:border-border/60 hover:bg-card/40 hover:text-foreground focus:border-ring/50 focus:outline-none focus:ring-1 focus:ring-ring/40";
+
 const blurActiveElement = () => {
   if (typeof document === "undefined") return;
 
@@ -85,7 +88,7 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
                 event.currentTarget.blur();
               }
             }}
-            className="h-7 min-w-[12rem] border-none bg-transparent p-0 text-sm font-light focus-visible:ring-0"
+            className="h-7 min-w-[12rem] border border-transparent bg-transparent px-1.5 text-sm font-light text-foreground transition-colors hover:border-border/60 hover:bg-card/40 focus-visible:ring-1 focus-visible:ring-ring/40"
           />
         );
       case "status":
@@ -95,7 +98,7 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
             onChange={(event) => handleStatusChange(event.target.value)}
             onClick={(event) => event.stopPropagation()}
             aria-label="Durum değiştir"
-            className="h-7 rounded-sm border border-border/50 bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className={cellControlClassName}
           >
             <option value="todo">{formatTaskStatus("todo")}</option>
             <option value="in_progress">{formatTaskStatus("in_progress")}</option>
@@ -111,7 +114,7 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
               onChange={(event) => handleCategoryChange(event.target.value)}
               onClick={(event) => event.stopPropagation()}
               aria-label="Kategori değiştir"
-              className="h-7 max-w-[13rem] rounded-sm border border-border/50 bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              className={`${cellControlClassName} max-w-[13rem]`}
             >
               <option value="none">Kategorisiz</option>
               {categories.map((item) => (
@@ -135,7 +138,7 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
             onChange={(event) => handleHiddenChange(event.target.value)}
             onClick={(event) => event.stopPropagation()}
             aria-label="Görünürlük değiştir"
-            className="h-7 rounded-sm border border-border/50 bg-transparent px-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className={cellControlClassName}
           >
             <option value="visible">Görünür</option>
             <option value="hidden">Gizli</option>
