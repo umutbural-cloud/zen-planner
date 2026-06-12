@@ -9,12 +9,12 @@ import {
 } from "@/components/admin/AdminAccountStatusActionModal";
 import { AdminAuditLogPanel } from "@/components/admin/AdminAuditLogPanel";
 import { AdminFeatureAccessMatrixPanel } from "@/components/admin/AdminFeatureAccessMatrixPanel";
+import { AdminMemberDetailDialog } from "@/components/admin/AdminMemberDetailDialog";
 import {
   AdminMemberActionModal,
   type AdminMembershipReasonCode,
   type AdminMembershipTarget,
 } from "@/components/admin/AdminMemberActionModal";
-import { AdminMemberDetailPanel } from "@/components/admin/AdminMemberDetailPanel";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -256,9 +256,14 @@ const Admin = () => {
                     memberDetail={memberDetail}
                     currentAdminUserId={adminContext?.user_id ?? null}
                     onSelectMember={setSelectedUserId}
-                    onCloseMemberDetail={closeMemberDetail}
                     onPrepareAccountStatusChange={prepareAccountStatusChange}
                     onPrepareMembershipChange={prepareMembershipChange}
+                    selectedUserId={selectedUserId}
+                    onDialogOpenChange={(open) => {
+                      if (!open) {
+                        closeMemberDetail();
+                      }
+                    }}
                   />
                 }
               />
@@ -392,9 +397,10 @@ type AdminUsersPageProps = {
   memberDetail: ReturnType<typeof useAdminMemberDetail>;
   currentAdminUserId: string | null;
   onSelectMember: (userId: string) => void;
-  onCloseMemberDetail: () => void;
   onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
   onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
+  selectedUserId: string | null;
+  onDialogOpenChange: (open: boolean) => void;
 };
 
 const AdminUsersPage = ({
@@ -402,16 +408,19 @@ const AdminUsersPage = ({
   memberDetail,
   currentAdminUserId,
   onSelectMember,
-  onCloseMemberDetail,
   onPrepareAccountStatusChange,
   onPrepareMembershipChange,
+  selectedUserId,
+  onDialogOpenChange,
 }: AdminUsersPageProps) => (
-  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+  <div className="space-y-4">
     <AdminMembersTable members={adminMembers} onSelectMember={onSelectMember} />
-    <AdminMemberDetailPanel
+
+    <AdminMemberDetailDialog
+      open={selectedUserId !== null}
+      onOpenChange={onDialogOpenChange}
       detail={memberDetail}
       currentAdminUserId={currentAdminUserId}
-      onClose={onCloseMemberDetail}
       onPrepareAccountStatusChange={onPrepareAccountStatusChange}
       onPrepareMembershipChange={onPrepareMembershipChange}
     />

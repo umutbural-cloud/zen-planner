@@ -14,6 +14,8 @@ type AdminMemberDetailPanelProps = {
   onClose: () => void;
   onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
   onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
+  showHeader?: boolean;
+  showCloseButton?: boolean;
 };
 
 const formatDate = (value: string | null) => {
@@ -46,20 +48,26 @@ export const AdminMemberDetailPanel = ({
   onClose,
   onPrepareAccountStatusChange,
   onPrepareMembershipChange,
+  showHeader = true,
+  showCloseButton = true,
 }: AdminMemberDetailPanelProps) => {
   return (
     <Card className="rounded-none border-border/70 shadow-none">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 p-5">
-        <div className="space-y-1">
-          <CardTitle className="text-base font-medium tracking-wide">Üye detayı</CardTitle>
-          <p className="text-sm text-muted-foreground">Sadece operasyonel hesap bilgileri</p>
-        </div>
-        <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Kapat">
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
+      {showHeader && (
+        <CardHeader className="flex flex-row items-start justify-between gap-4 p-5">
+          <div className="space-y-1">
+            <CardTitle className="text-base font-medium tracking-wide">Üye detayı</CardTitle>
+            <p className="text-sm text-muted-foreground">Sadece operasyonel hesap bilgileri</p>
+          </div>
+          {showCloseButton && (
+            <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Kapat">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </CardHeader>
+      )}
 
-      <CardContent className="space-y-4 px-5 pb-5 pt-0">
+      <CardContent className={showHeader ? "space-y-4 px-5 pb-5 pt-0" : "space-y-4 p-5"}>
         {!detail.loading && !detail.error && !detail.member && (
           <div className="border border-border/70 p-6 text-sm text-muted-foreground">Üye seçilmedi.</div>
         )}
