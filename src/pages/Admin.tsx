@@ -25,6 +25,7 @@ import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
+import { useAdminMemberStats } from "@/hooks/useAdminMemberStats";
 
 const adminNavigationItems = [
   { label: "Ana Sayfa", to: "/admin", icon: Home, end: true },
@@ -56,10 +57,12 @@ const Admin = () => {
   const [accountStatusReasonCode, setAccountStatusReasonCode] = useState<AdminAccountStatusReasonCode | null>(null);
   const { status, adminContext, error, refreshAdminContext } = useAdminGate();
   const isHomeRoute = location.pathname === "/admin";
+  const isStatsRoute = location.pathname === "/admin/stats";
   const isUsersRoute = location.pathname === "/admin/users";
   const isSettingsRoute = location.pathname === "/admin/settings";
   const adminHomeMembers = useAdminMembers(status === "admin" && isHomeRoute);
   const adminMembers = useAdminMembers(status === "admin" && isUsersRoute);
+  const adminMemberStats = useAdminMemberStats(status === "admin" && isStatsRoute);
   const memberDetail = useAdminMemberDetail(status === "admin" && isUsersRoute && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
@@ -249,7 +252,7 @@ const Admin = () => {
 
             <Routes>
               <Route index element={<AdminHomePage members={adminHomeMembers} />} />
-              <Route path="stats" element={<AdminStatsPage />} />
+              <Route path="stats" element={<AdminStatsPage stats={adminMemberStats} />} />
               <Route
                 path="users"
                 element={
@@ -340,37 +343,130 @@ const AdminSidebar = () => (
   </aside>
 );
 
-const AdminStatsPage = () => (
-  <div className="space-y-4">
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <AdminMetricPlaceholderCard title="Son 24 saatte aktif üyeler" status="Veri altyapısı gerekiyor" />
-      <AdminMetricPlaceholderCard title="Haftalık aktif kullanıcı" status="Veri altyapısı gerekiyor" />
-      <AdminMetricPlaceholderCard title="7 gündür pasif üyeler" status="Veri altyapısı gerekiyor" />
-      <AdminMetricPlaceholderCard title="Son 30 günde yeni kayıt sayısı" status="Veri altyapısı gerekiyor" />
-    </div>
+type AdminStatsPageProps = {
+  stats: ReturnType<typeof useAdminMemberStats>;
+};
 
-    <Card className="rounded-none border-border/70 shadow-none">
-      <CardHeader className="space-y-1 p-5">
-        <CardTitle className="text-base font-medium tracking-wide">Grand plan metrikleri</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-2 px-5 pb-5 pt-0 md:grid-cols-2">
-        {[
-          "Modül kullanım oranları",
-          "Ortalama günlük kullanım süresi",
-          "Üye başı ortalama çalışma süresi",
-          "Üye başı ortalama tamamlanan task sayısı",
-          "Üye başı ortalama tamamlanan pomodoro seansı sayısı",
-          "Haftalık / aylık trend grafikler",
-        ].map((metric) => (
-          <div key={metric} className="flex items-center justify-between gap-3 border border-border/60 px-3 py-2">
-            <span className="text-sm text-foreground">{metric}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">Veri altyapısı gerekiyor</span>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  </div>
-);
+const AdminStatsPage = ({ stats }: AdminStatsPageProps) => {
+  const label = stats.loading
+    ? "Hesaplanıyor..."
+    : stats.error
+      ? "Veri alınamadı"
+      : stats.isPartial
+        ? "Kısmi hesaplandı: İlk 5000 kayıt"
+        : "Gerçek admin üye verisinden hesaplandı";
+
+  return (
+    <div className="space-y-4">
+      <Card className="rounded-none border-border/70 shadow-none">
+        <CardContent className="px-5 py-4">
+          <p className="text-sm leading-6 text-muted-foreground">
+            Bu istatistikler, mevcut admin üye sorgusundan dönen operasyonel metadata üzerinden hesaplanır. Kişisel
+            içerikler gösterilmez.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <AdminStatsMetricCard
+          title="Toplam üye"
+          value={stats.loading ? null : stats.error ? null : String(stats.totalCount)}
+          pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+          label={label}
+          description="Admin üye sorgusundan dönen toplam kayıt."
+        />
+        <AdminStatsMetricCard
+          title="Son 24 saatte aktif üyeler"
+          value={stats.loading ? null : stats.error ? null : String(stats.active24hCount)}
+          pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+          label={label}
+          description="Günlük aktif kullanıcı sayısı için aggregate sayaç gerekir."
+        />
+        <AdminStatsMetricCard
+          title="Haftalık aktif kullanıcı"
+          value={stats.loading ? null : stats.error ? null : String(stats.weeklyActiveCount)}
+          pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+          label={label}
+          description="WAU takibi için haftalık aggregate veri gerekir."
+        />
+        <AdminStatsMetricCard
+          title="7 gündür pasif üyeler"
+          value={stats.loading ? null : stats.error ? null : String(stats.inactive7dCount)}
+          pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+          label={label}
+          description="Pasif kullanıcı tespiti sayfalı listeden hesaplanmaz."
+        />
+        <AdminStatsMetricCard
+          title="Son 30 günde yeni kayıt"
+          value={stats.loading ? null : stats.error ? null : String(stats.new30dCount)}
+          pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+          label={label}
+          description="Kayıt trendi için güvenilir aggregate veri gerekir."
+        />
+        <AdminStatsMetricCard
+          title="Son aktiflik bilinmiyor"
+          value={stats.loading ? null : stats.error ? null : String(stats.unknownLastSeenCount)}
+          pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+          label={label}
+          description="last_seen_at değeri olmayan veya geçersiz kayıtlar."
+        />
+      </div>
+
+      <Card className="rounded-none border-border/70 shadow-none">
+        <CardHeader className="space-y-1 p-5">
+          <CardTitle className="text-base font-medium tracking-wide">Veri altyapısı gerektiren metrikler</CardTitle>
+          <p className="text-sm text-muted-foreground">Bu bölümdeki alanlar için güvenilir aggregate veri gerekiyor.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 px-5 pb-5 pt-0 md:grid-cols-2">
+          {[
+            "Modül kullanım oranları",
+            "Ortalama günlük kullanım süresi",
+            "Üye başı ortalama çalışma süresi",
+            "Üye başı ortalama tamamlanan task sayısı",
+            "Üye başı ortalama pomodoro seansı",
+            "Haftalık / aylık trendler",
+          ].map((metric) => (
+            <AdminStatsRequirementCard key={metric} title={metric} />
+          ))}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <Card className="rounded-none border-border/70 shadow-none">
+          <CardHeader className="space-y-1 p-5">
+            <CardTitle className="text-base font-medium tracking-wide">Veri güvenilirliği notu</CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 pt-0">
+            <p className="text-sm leading-6 text-muted-foreground">
+              Bu ekranda yalnızca aggregate ve operasyonel metrikler gösterilir. Kişisel günlük, kriz notu, relapse
+              analizi, check-in içeriği veya görev içeriği gösterilmez.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-none border-border/70 shadow-none">
+          <CardHeader className="space-y-1 p-5">
+            <CardTitle className="text-base font-medium tracking-wide">Sonraki veri gereksinimleri</CardTitle>
+            <p className="text-sm text-muted-foreground">Bu liste yalnızca altyapı planını görünür kılar.</p>
+          </CardHeader>
+          <CardContent className="space-y-2 px-5 pb-5 pt-0">
+            {[
+              "Günlük aktif kullanıcı aggregate sayacı",
+              "Haftalık aktif kullanıcı aggregate sayacı",
+              "Pasif kullanıcı aggregate sayacı",
+              "Yeni kayıt aggregate sayacı",
+              "Modül kullanım aggregate tablosu",
+            ].map((item) => (
+              <div key={item} className="border border-border/60 px-3 py-2 text-sm text-foreground">
+                {item}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
 
 type AdminHomePageProps = {
   members: ReturnType<typeof useAdminMembers>;
@@ -585,6 +681,53 @@ const AdminMetricCard = ({
       <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
     </CardContent>
   </Card>
+);
+
+const AdminStatsMetricCard = ({
+  title,
+  value,
+  pendingText,
+  label,
+  description,
+}: {
+  title: string;
+  value: string | null;
+  pendingText: string | null;
+  label: string;
+  description: string;
+}) => (
+  <Card className="rounded-none border-border/70 shadow-none">
+    <CardHeader className="space-y-0 p-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center border border-border/70">
+          <Activity className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <CardTitle className="text-sm font-medium tracking-wide">{title}</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent className="px-5 pb-5 pt-0">
+      {value !== null ? (
+        <p className="text-3xl font-medium tracking-wide text-foreground">{value}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">{pendingText ?? label}</p>
+      )}
+      <div className="mt-2">
+        <DataPendingBadge label={label} />
+      </div>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
+    </CardContent>
+  </Card>
+);
+
+const AdminStatsRequirementCard = ({ title }: { title: string }) => (
+  <div className="flex items-start justify-between gap-3 border border-border/60 px-3 py-2">
+    <span className="text-sm text-foreground">{title}</span>
+    <DataPendingBadge label="Veri altyapısı gerekiyor" />
+  </div>
+);
+
+const DataPendingBadge = ({ label }: { label: string }) => (
+  <span className="shrink-0 border border-border/70 px-2 py-1 text-xs text-muted-foreground">{label}</span>
 );
 
 const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: string }) => (
