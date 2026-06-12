@@ -77,45 +77,47 @@ const AdvancedTaskTable = ({
             <span className="text-muted-foreground/60">·</span>
             <span className="text-muted-foreground/60">{group.count}</span>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-9 px-2"></TableHead>
-                {columnDragEnabled ? (
-                  <SortableContext items={columns.map((columnId) => getColumnSortableId(group.key, columnId))} strategy={horizontalListSortingStrategy}>
-                    {columns.map((columnId) => (
-                      <SortableColumnHeader
-                        key={columnId}
-                        columnId={columnId}
-                        sortableId={getColumnSortableId(group.key, columnId)}
-                      />
-                    ))}
-                  </SortableContext>
-                ) : (
-                  columns.map((columnId) => (
-                    <TableHead key={columnId} className="h-9 whitespace-nowrap px-2 text-xs font-light tracking-wide">
-                      {getColumn(columnId)?.label || columnId}
-                    </TableHead>
-                  ))
-                )}
-                <TableHead className="w-28 px-2"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {group.rows.map((task) => (
-                <AdvancedTaskRow
-                  key={task.id}
-                  task={task}
-                  columns={columns}
-                  categories={categories}
-                  subtaskCount={subtaskCountOf(task.id)}
-                  onUpdate={onUpdate}
-                  onDelete={onDelete}
-                  onOpen={onOpen}
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[760px]">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-9 px-2"></TableHead>
+                  {columnDragEnabled ? (
+                    <SortableContext items={columns.map((columnId) => getColumnSortableId(group.key, columnId))} strategy={horizontalListSortingStrategy}>
+                      {columns.map((columnId) => (
+                        <SortableColumnHeader
+                          key={columnId}
+                          columnId={columnId}
+                          sortableId={getColumnSortableId(group.key, columnId)}
+                        />
+                      ))}
+                    </SortableContext>
+                  ) : (
+                    columns.map((columnId) => (
+                      <TableHead key={columnId} className="h-9 whitespace-nowrap px-2 text-xs font-light tracking-wide">
+                        {getColumn(columnId)?.label || columnId}
+                      </TableHead>
+                    ))
+                  )}
+                  <TableHead className="w-28 px-2"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {group.rows.map((task) => (
+                  <AdvancedTaskRow
+                    key={task.id}
+                    task={task}
+                    columns={columns}
+                    categories={categories}
+                    subtaskCount={subtaskCountOf(task.id)}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                    onOpen={onOpen}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </section>
       ))}
     </div>

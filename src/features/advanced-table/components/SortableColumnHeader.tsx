@@ -28,13 +28,13 @@ const SortableColumnHeader = ({ columnId, sortableId }: SortableColumnHeaderProp
     >
       <button
         type="button"
-        className="inline-flex cursor-grab touch-none items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
+        className="inline-flex cursor-grab touch-none items-center gap-1.5 rounded-sm px-1 py-0.5 text-muted-foreground transition-colors hover:bg-card/40 hover:text-foreground active:cursor-grabbing"
         title="Sütunu sürükle"
         aria-label={`Sütunu taşı: ${column?.label || columnId}`}
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-3 w-3" />
+        <GripVertical className="h-3 w-3 opacity-50 transition-opacity group-hover:opacity-100" />
         <span>{column?.label || columnId}</span>
       </button>
     </TableHead>
