@@ -2,8 +2,8 @@ import { Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -28,24 +28,30 @@ const GroupByMenu = ({ groupBy, onChange }: GroupByMenuProps) => {
           size="sm"
           className={`h-9 px-2 ${groupBy ? "text-foreground" : "text-muted-foreground"}`}
           title="Grupla"
+          aria-label="Gruplama seçeneklerini aç"
         >
           <Rows3 className="h-3.5 w-3.5" />
           {activeColumn && <span className="ml-1 hidden sm:inline text-xs">{activeColumn.label}</span>}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           Grupla
         </DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => onChange(null)} className="text-xs">
-          Gruplama yok
-        </DropdownMenuItem>
+        <DropdownMenuCheckboxItem checked={!groupBy} onCheckedChange={() => onChange(null)} className="text-xs">
+          Yok
+        </DropdownMenuCheckboxItem>
         {ADVANCED_TASK_COLUMNS
           .filter((column) => GROUPABLE_COLUMN_IDS.includes(column.id))
           .map((column) => (
-            <DropdownMenuItem key={column.id} onClick={() => onChange(column.id)} className="text-xs">
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              checked={groupBy === column.id}
+              onCheckedChange={() => onChange(column.id)}
+              className="text-xs"
+            >
               {column.label}
-            </DropdownMenuItem>
+            </DropdownMenuCheckboxItem>
           ))}
       </DropdownMenuContent>
     </DropdownMenu>

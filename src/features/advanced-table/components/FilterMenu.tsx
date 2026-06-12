@@ -51,6 +51,7 @@ const FilterMenu = ({ filters, categories, onSetTitle, onSetStatus, onSetCategor
           size="sm"
           className={`h-9 px-2 ${active ? "text-foreground" : "text-muted-foreground"}`}
           title="Filtre"
+          aria-label="Filtre seçeneklerini aç"
         >
           <Filter className="h-3.5 w-3.5" />
           {active && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-foreground" />}
@@ -59,8 +60,14 @@ const FilterMenu = ({ filters, categories, onSetTitle, onSetStatus, onSetCategor
       <PopoverContent className="w-72 p-2" align="end">
         <div className="flex items-center justify-between px-1 pb-2">
           <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Filtreler</div>
-          <button type="button" onClick={onClear} className="text-muted-foreground hover:text-foreground" title="Temizle">
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex items-center gap-1 rounded-sm px-1.5 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="Filtreleri temizle"
+          >
             <X className="h-3.5 w-3.5" />
+            <span>Temizle</span>
           </button>
         </div>
 
@@ -129,10 +136,10 @@ const FilterMenu = ({ filters, categories, onSetTitle, onSetStatus, onSetCategor
                 className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors ${
                   !categoryFilter ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
                 }`}
-              >
-                <span className="h-2 w-2 rounded-full bg-muted-foreground/30" />
-                Hepsi
-              </button>
+                >
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/30" />
+                  Hepsi
+                </button>
               {categories.map((category) => (
                 <button
                   key={category.id}

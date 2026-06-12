@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
@@ -12,6 +12,7 @@ type AdvancedTaskTableToolbarProps = {
   newTitle: string;
   config: CurrentTableConfig;
   categories: PomodoroCategory[];
+  groupLabel: string | null;
   onNewTitleChange: (value: string) => void;
   onCreate: () => void;
   onToggleColumn: (columnId: AdvancedTaskColumnId) => void;
@@ -21,12 +22,14 @@ type AdvancedTaskTableToolbarProps = {
   onSetCategoryFilter: (value: string | "all") => void;
   onSetHiddenFilter: (value: "visible" | "hidden" | "all") => void;
   onClearFilters: () => void;
+  onResetView: () => void;
 };
 
 const AdvancedTaskTableToolbar = ({
   newTitle,
   config,
   categories,
+  groupLabel,
   onNewTitleChange,
   onCreate,
   onToggleColumn,
@@ -36,12 +39,13 @@ const AdvancedTaskTableToolbar = ({
   onSetCategoryFilter,
   onSetHiddenFilter,
   onClearFilters,
+  onResetView,
 }: AdvancedTaskTableToolbarProps) => {
   const activeFilters: TableFilter[] = config.filters;
-
+  const activeFilterCount = activeFilters.length;
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           value={newTitle}
           onChange={(event) => onNewTitleChange(event.target.value)}
@@ -49,9 +53,9 @@ const AdvancedTaskTableToolbar = ({
             if (event.key === "Enter") onCreate();
           }}
           placeholder="Yeni görev..."
-          className="h-9 bg-transparent text-sm"
+          className="h-9 min-w-[14rem] flex-1 bg-transparent text-sm"
         />
-        <Button variant="ghost" size="sm" onClick={onCreate} className="h-9">
+        <Button variant="ghost" size="sm" onClick={onCreate} className="h-9 shrink-0" title="Görev ekle" aria-label="Görev ekle">
           <Plus className="h-3.5 w-3.5" />
         </Button>
         <FilterMenu
@@ -64,12 +68,44 @@ const AdvancedTaskTableToolbar = ({
           onClear={onClearFilters}
         />
         <GroupByMenu groupBy={config.groupBy} onChange={onGroupByChange} />
-        <ColumnVisibilityMenu hiddenColumnIds={config.hiddenColumnIds} onToggle={onToggleColumn} />
+        <ColumnVisibilityMenu
+          hiddenColumnIds={config.hiddenColumnIds}
+          onToggle={onToggleColumn}
+          onReset={onResetView}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 shrink-0 px-2 text-muted-foreground"
+          onClick={onResetView}
+          title="Görünüm ayarlarını sıfırla"
+          aria-label="Görünüm ayarlarını sıfırla"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </Button>
       </div>
-      {(activeFilters.length > 0 || config.groupBy) && (
+      {(activeFilterCount > 0 || config.groupBy) && (
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-          {config.groupBy && <span className="rounded-sm bg-accent/50 px-1.5 py-0.5">Gruplu görünüm</span>}
-          {activeFilters.length > 0 && <span className="rounded-sm bg-accent/50 px-1.5 py-0.5">{activeFilters.length} ek filtre</span>}
+          {config.groupBy && (
+            <span className="rounded-sm bg-accent/50 px-1.5 py-0.5">
+              Gruplama: {groupLabel || "Yok"}
+            </span>
+          )}
+          {activeFilterCount > 0 && (
+            <span className="rounded-sm bg-accent/50 px-1.5 py-0.5">
+              Filtre: {activeFilterCount} aktif
+            </span>
+          )}
+          {(activeFilterCount > 0 || config.groupBy) && (
+            <button
+              type="button"
+              onClick={onResetView}
+              className="rounded-sm px-1.5 py-0.5 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              title="Görünüm ayarlarını sıfırla"
+            >
+              Sıfırla
+            </button>
+          )}
         </div>
       )}
     </div>

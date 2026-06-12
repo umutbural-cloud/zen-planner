@@ -73,3 +73,7 @@ export const saveTableConfig = (projectId: string, config: CurrentTableConfig) =
   if (typeof window === "undefined") return;
   window.localStorage.setItem(getAdvancedTaskTableKey(projectId), JSON.stringify(normalizeTableConfig(config)));
 };
+
+export const resetTableConfig = (projectId: string) => {
+  saveTableConfig(projectId, createDefaultTableConfig());
+};

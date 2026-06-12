@@ -33,6 +33,7 @@ const AdvancedTaskTable = ({ groups, columns, categories, subtaskCountOf, onUpda
           <div className="flex items-center gap-2 border-b border-border/50 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
             {group.color && <span className="h-1.5 w-1.5 rounded-full" style={{ background: group.color }} />}
             <span className="tracking-wide">{group.label}</span>
+            <span className="text-muted-foreground/60">·</span>
             <span className="text-muted-foreground/60">{group.count}</span>
           </div>
           <Table>
