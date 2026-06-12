@@ -469,6 +469,12 @@ type AdminHomeMemberListProps = {
   members: ReturnType<typeof useAdminMembers>;
 };
 
+const renderMembershipLabel = (value: string | null) => (
+  <span className="inline-flex border border-border/70 px-2 py-1 text-xs text-foreground">
+    {value ?? "-"}
+  </span>
+);
+
 const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
   <Card className="rounded-none border-border/70 shadow-none">
     <CardHeader className="space-y-1 p-5">
@@ -510,7 +516,7 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
                 <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
                   <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
                   <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>
-                  <td className="px-3 py-3">{statusBadge(member.membership)}</td>
+                  <td className="px-3 py-3">{renderMembershipLabel(member.membership)}</td>
                   <td className="px-3 py-3 text-sm text-foreground">{formatDate(member.created_at)}</td>
                   <td className="px-3 py-3">{getActivityLabel(member.last_seen_at)}</td>
                 </tr>
