@@ -55,8 +55,10 @@ const Admin = () => {
   } | null>(null);
   const [accountStatusReasonCode, setAccountStatusReasonCode] = useState<AdminAccountStatusReasonCode | null>(null);
   const { status, adminContext, error, refreshAdminContext } = useAdminGate();
+  const isHomeRoute = location.pathname === "/admin";
   const isUsersRoute = location.pathname === "/admin/users";
   const isSettingsRoute = location.pathname === "/admin/settings";
+  const adminHomeMembers = useAdminMembers(status === "admin" && isHomeRoute);
   const adminMembers = useAdminMembers(status === "admin" && isUsersRoute);
   const memberDetail = useAdminMemberDetail(status === "admin" && isUsersRoute && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
@@ -246,7 +248,7 @@ const Admin = () => {
             </div>
 
             <Routes>
-              <Route index element={<AdminHomePage />} />
+              <Route index element={<AdminHomePage members={adminHomeMembers} />} />
               <Route path="stats" element={<AdminStatsPage />} />
               <Route
                 path="users"
@@ -338,28 +340,6 @@ const AdminSidebar = () => (
   </aside>
 );
 
-const AdminHomePage = () => (
-  <div className="space-y-4">
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <AdminMetricPlaceholderCard title="Toplam üye" status="PR-ADMIN-2'de bağlanacak" />
-      <AdminMetricPlaceholderCard title="Son 24 saatte aktif üyeler" status="Veri altyapısı gerekiyor" />
-      <AdminMetricPlaceholderCard title="7 gündür pasif üyeler" status="Veri altyapısı gerekiyor" />
-      <AdminMetricPlaceholderCard title="Son 7 gün yeni üyeler" status="Veri altyapısı gerekiyor" />
-    </div>
-
-    <Card className="rounded-none border-border/70 shadow-none">
-      <CardHeader className="space-y-1 p-5">
-        <CardTitle className="text-base font-medium tracking-wide">Üye özeti</CardTitle>
-      </CardHeader>
-      <CardContent className="px-5 pb-5 pt-0">
-        <p className="text-sm leading-6 text-muted-foreground">
-          Gerçek üye özeti PR-ADMIN-2 kapsamında güvenilir veri kaynağıyla bağlanacak.
-        </p>
-      </CardContent>
-    </Card>
-  </div>
-);
-
 const AdminStatsPage = () => (
   <div className="space-y-4">
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -389,6 +369,27 @@ const AdminStatsPage = () => (
         ))}
       </CardContent>
     </Card>
+  </div>
+);
+
+type AdminHomePageProps = {
+  members: ReturnType<typeof useAdminMembers>;
+};
+
+const AdminHomePage = ({ members }: AdminHomePageProps) => (
+  <div className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <AdminMetricCard
+        title="Toplam üye"
+        value={members.loading ? null : String(members.totalCount)}
+        status="Veri altyapısı gerekiyor"
+      />
+      <AdminMetricPlaceholderCard title="Son 24 saatte aktif üyeler" status="Aggregate veri bekliyor" />
+      <AdminMetricPlaceholderCard title="7 gündür pasif üyeler" status="Aggregate veri bekliyor" />
+      <AdminMetricPlaceholderCard title="Son 7 gün yeni üyeler" status="Aggregate veri bekliyor" />
+    </div>
+
+    <AdminHomeMemberList members={members} />
   </div>
 );
 
@@ -464,6 +465,84 @@ const AdminSettingsPage = ({ isSuperManager, featureAccessMatrix }: AdminSetting
   </div>
 );
 
+type AdminHomeMemberListProps = {
+  members: ReturnType<typeof useAdminMembers>;
+};
+
+const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
+  <Card className="rounded-none border-border/70 shadow-none">
+    <CardHeader className="space-y-1 p-5">
+      <CardTitle className="text-base font-medium tracking-wide">Operasyonel üye listesi</CardTitle>
+      <p className="text-sm text-muted-foreground">Mevcut admin üye sorgusundan gelen ilk kayıtlar.</p>
+    </CardHeader>
+    <CardContent className="px-5 pb-5 pt-0">
+      {members.error && (
+        <div className="border border-destructive/30 bg-destructive/5 p-4">
+          <p className="text-sm font-medium text-destructive">Üye özeti alınamadı.</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{members.error.message}</p>
+        </div>
+      )}
+
+      {!members.error && members.loading && (
+        <div className="border border-border/70 p-6 text-sm text-muted-foreground">Üye özeti yükleniyor...</div>
+      )}
+
+      {!members.error && !members.loading && members.items.length === 0 && (
+        <div className="border border-border/70 p-6 text-sm text-muted-foreground">
+          Üye özeti için veri bulunamadı.
+        </div>
+      )}
+
+      {!members.error && members.items.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="min-w-[760px] w-full border-collapse">
+            <thead>
+              <tr className="border-b border-border/70">
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Ad soyad</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-posta</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Plan</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Kayıt tarihi</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Aktiflik durumu</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.items.map((member) => (
+                <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
+                  <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
+                  <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>
+                  <td className="px-3 py-3">{statusBadge(member.membership)}</td>
+                  <td className="px-3 py-3 text-sm text-foreground">{formatDate(member.created_at)}</td>
+                  <td className="px-3 py-3">{getActivityLabel(member.last_seen_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const AdminMetricCard = ({ title, value, status }: { title: string; value: string | null; status: string }) => (
+  <Card className="rounded-none border-border/70 shadow-none">
+    <CardHeader className="space-y-0 p-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center border border-border/70">
+          <Activity className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <CardTitle className="text-sm font-medium tracking-wide">{title}</CardTitle>
+      </div>
+    </CardHeader>
+    <CardContent className="px-5 pb-5 pt-0">
+      {value !== null ? (
+        <p className="text-3xl font-medium tracking-wide text-foreground">{value}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">{status}</p>
+      )}
+    </CardContent>
+  </Card>
+);
+
 const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: string }) => (
   <Card className="rounded-none border-border/70 shadow-none">
     <CardHeader className="space-y-0 p-5">
@@ -479,6 +558,43 @@ const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: 
     </CardContent>
   </Card>
 );
+
+const formatDate = (value: string | null) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+  }).format(date);
+};
+
+const getActivityLabel = (value: string | null) => {
+  if (!value) {
+    return <span className="text-sm text-muted-foreground">Bilinmiyor</span>;
+  }
+
+  const lastSeen = new Date(value);
+  if (Number.isNaN(lastSeen.getTime())) {
+    return <span className="text-sm text-muted-foreground">Bilinmiyor</span>;
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - lastSeen.getTime();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const sevenDays = 7 * oneDay;
+
+  if (diffMs <= oneDay) {
+    return <span className="text-sm text-foreground">Son 24 saat aktif</span>;
+  }
+
+  if (diffMs <= sevenDays) {
+    return <span className="text-sm text-foreground">Son 7 gün aktif</span>;
+  }
+
+  return <span className="text-sm text-muted-foreground">Pasif</span>;
+};
 
 type AdminPlaceholderCardProps = {
   title: string;
