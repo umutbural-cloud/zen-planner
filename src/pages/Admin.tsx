@@ -378,18 +378,45 @@ type AdminHomePageProps = {
 
 const AdminHomePage = ({ members }: AdminHomePageProps) => (
   <div className="space-y-4">
+    <Card className="rounded-none border-border/70 shadow-none">
+      <CardContent className="px-5 py-4">
+        <p className="text-sm leading-6 text-muted-foreground">
+          Admin panelinin genel operasyon özetini buradan takip edebilirsin. Kişisel içerikler gösterilmez; yalnızca
+          operasyonel ve aggregate veriler kullanılır.
+        </p>
+      </CardContent>
+    </Card>
+
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <AdminMetricCard
         title="Toplam üye"
-        value={members.loading ? null : String(members.totalCount)}
-        status="Veri altyapısı gerekiyor"
+        value={members.loading ? null : members.error ? null : String(members.totalCount)}
+        status={members.loading ? "Yükleniyor..." : members.error ? "Alınamadı" : "Veri altyapısı gerekiyor"}
+        description="Admin üye sorgusundaki toplam kayıt."
       />
-      <AdminMetricPlaceholderCard title="Son 24 saatte aktif üyeler" status="Aggregate veri bekliyor" />
-      <AdminMetricPlaceholderCard title="7 gündür pasif üyeler" status="Aggregate veri bekliyor" />
-      <AdminMetricPlaceholderCard title="Son 7 gün yeni üyeler" status="Aggregate veri bekliyor" />
+      <AdminMetricPlaceholderCard
+        title="Son 24 saatte aktif üyeler"
+        status="Aggregate veri bekliyor"
+        description="Güvenilir aggregate sayaç eklendiğinde bağlanacak."
+      />
+      <AdminMetricPlaceholderCard
+        title="7 gündür pasif üyeler"
+        status="Aggregate veri bekliyor"
+        description="Sayfalı listeden hesaplanmaz; aggregate veri gerekir."
+      />
+      <AdminMetricPlaceholderCard
+        title="Son 7 gün yeni üyeler"
+        status="Aggregate veri bekliyor"
+        description="Kayıt trendi için ayrı aggregate veri gerekir."
+      />
     </div>
 
-    <AdminHomeMemberList members={members} />
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <AdminHomeMemberList members={members} />
+      <AdminQuickAccessCard />
+    </div>
+
+    <AdminDataNote />
   </div>
 );
 
@@ -529,7 +556,17 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
   </Card>
 );
 
-const AdminMetricCard = ({ title, value, status }: { title: string; value: string | null; status: string }) => (
+const AdminMetricCard = ({
+  title,
+  value,
+  status,
+  description,
+}: {
+  title: string;
+  value: string | null;
+  status: string;
+  description: string;
+}) => (
   <Card className="rounded-none border-border/70 shadow-none">
     <CardHeader className="space-y-0 p-5">
       <div className="flex items-center gap-3">
@@ -545,6 +582,7 @@ const AdminMetricCard = ({ title, value, status }: { title: string; value: strin
       ) : (
         <p className="text-xs text-muted-foreground">{status}</p>
       )}
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
     </CardContent>
   </Card>
 );
@@ -561,6 +599,42 @@ const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: 
     </CardHeader>
     <CardContent className="px-5 pb-5 pt-0">
       <p className="text-xs text-muted-foreground">{status}</p>
+    </CardContent>
+  </Card>
+);
+
+const AdminQuickAccessCard = () => (
+  <Card className="rounded-none border-border/70 shadow-none">
+    <CardHeader className="space-y-1 p-5">
+      <CardTitle className="text-base font-medium tracking-wide">Hızlı erişim</CardTitle>
+      <p className="text-sm text-muted-foreground">Sık kullanılan admin sayfalarına hızlı geçiş.</p>
+    </CardHeader>
+    <CardContent className="space-y-2 px-5 pb-5 pt-0">
+      <NavLink
+        to="/admin/users"
+        className="flex items-center justify-between border border-border/70 px-3 py-3 text-sm text-foreground transition-colors hover:bg-muted/30"
+      >
+        <span>Üye yönetimine git</span>
+        <span className="text-xs text-muted-foreground">/admin/users</span>
+      </NavLink>
+      <NavLink
+        to="/admin/stats"
+        className="flex items-center justify-between border border-border/70 px-3 py-3 text-sm text-foreground transition-colors hover:bg-muted/30"
+      >
+        <span>İstatistiklere git</span>
+        <span className="text-xs text-muted-foreground">/admin/stats</span>
+      </NavLink>
+    </CardContent>
+  </Card>
+);
+
+const AdminDataNote = () => (
+  <Card className="rounded-none border-border/70 bg-muted/20 shadow-none">
+    <CardContent className="px-5 py-4">
+      <p className="text-xs leading-5 text-muted-foreground">
+        Bu ekranda sahte metrik gösterilmez. Güvenilir aggregate verisi olmayan alanlar "veri altyapısı gerekiyor"
+        olarak işaretlenir.
+      </p>
     </CardContent>
   </Card>
 );
