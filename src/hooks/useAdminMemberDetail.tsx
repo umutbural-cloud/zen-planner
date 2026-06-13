@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { AdminAccountStatus } from "@/hooks/useAdminMembers";
 
 export type AdminMemberDetail = {
   user_id: string;
   email: string | null;
   full_name: string | null;
-  account_status: string | null;
+  account_status: AdminAccountStatus | null;
   membership: string | null;
   membership_status: string | null;
   last_seen_at: string | null;

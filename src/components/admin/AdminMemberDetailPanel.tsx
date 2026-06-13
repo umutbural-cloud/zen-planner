@@ -10,8 +10,11 @@ type AdminMemberDetailState = ReturnType<typeof useAdminMemberDetail>;
 type AdminMemberDetailPanelProps = {
   detail: AdminMemberDetailState;
   currentAdminUserId: string | null;
+  isSuperManager: boolean;
   onClose: () => void;
   onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
+  onPrepareArchiveMember: (member: AdminMemberDetail) => void;
+  onPrepareRestoreMember: (member: AdminMemberDetail) => void;
   onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
   showHeader?: boolean;
   showCloseButton?: boolean;
@@ -35,7 +38,7 @@ const accountStatusLabels: Record<string, string> = {
   active: "Aktif",
   suspended: "Askıya alındı",
   security_blocked: "Güvenlik nedeniyle engellendi",
-  deleted: "Silindi",
+  deleted: "Silinen",
   anonymized: "Anonimleştirildi",
 };
 
@@ -65,8 +68,11 @@ const displayValue = (value: string | null | undefined, labels?: Record<string, 
 export const AdminMemberDetailPanel = ({
   detail,
   currentAdminUserId,
+  isSuperManager,
   onClose,
   onPrepareAccountStatusChange,
+  onPrepareArchiveMember,
+  onPrepareRestoreMember,
   onPrepareMembershipChange,
   showHeader = true,
   showCloseButton = true,
@@ -114,7 +120,10 @@ export const AdminMemberDetailPanel = ({
             <AccountStatusActions
               member={detail.member}
               currentAdminUserId={currentAdminUserId}
+              isSuperManager={isSuperManager}
               onPrepareAccountStatusChange={onPrepareAccountStatusChange}
+              onPrepareArchiveMember={onPrepareArchiveMember}
+              onPrepareRestoreMember={onPrepareRestoreMember}
             />
             <MembershipActions member={detail.member} onPrepareMembershipChange={onPrepareMembershipChange} />
           </>
@@ -127,11 +136,17 @@ export const AdminMemberDetailPanel = ({
 const AccountStatusActions = ({
   member,
   currentAdminUserId,
+  isSuperManager,
   onPrepareAccountStatusChange,
+  onPrepareArchiveMember,
+  onPrepareRestoreMember,
 }: {
   member: AdminMemberDetail;
   currentAdminUserId: string | null;
+  isSuperManager: boolean;
   onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
+  onPrepareArchiveMember: (member: AdminMemberDetail) => void;
+  onPrepareRestoreMember: (member: AdminMemberDetail) => void;
 }) => {
   const currentStatus = member.account_status;
   const isSelfTarget = currentAdminUserId !== null && member.user_id === currentAdminUserId;
@@ -173,7 +188,31 @@ const AccountStatusActions = ({
     );
   }
 
-  if (currentStatus === "deleted" || currentStatus === "anonymized") {
+  if (currentStatus === "deleted") {
+    if (!isSuperManager) {
+      return (
+        <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+          Silinen üyeleri geri almak yalnızca super manager için kullanılabilir.
+        </div>
+      );
+    }
+
+    return (
+      <div className="border border-border/70 p-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium text-foreground">Silinen üye</h3>
+          <p className="text-xs leading-5 text-muted-foreground">
+            Bu üye normal listeden gizlenir ve Silinen üyeler bölümünden geri alınabilir.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => onPrepareRestoreMember(member)}>
+          Geri al
+        </Button>
+      </div>
+    );
+  }
+
+  if (currentStatus === "anonymized") {
     return (
       <div className="border border-border/70 p-4 text-sm text-muted-foreground">
         Bu hesap durumu V1 kapsamı dışında.
@@ -194,22 +233,48 @@ const AccountStatusActions = ({
   const buttonVariant = currentStatus === "active" ? "destructive" : "outline";
 
   return (
-    <div className="border border-border/70 p-4">
-      <div className="space-y-1">
-        <h3 className="text-sm font-medium text-foreground">Hesap durumu işlemi</h3>
-        <p className="text-xs leading-5 text-muted-foreground">
-          Bu aşamada yalnızca hesap durumu onay ekranı hazırlanır.
-        </p>
+    <div className="space-y-4">
+      <div className="border border-border/70 p-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-medium text-foreground">Hesap durumu işlemi</h3>
+          <p className="text-xs leading-5 text-muted-foreground">
+            Bu aşamada yalnızca hesap durumu onay ekranı hazırlanır.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant={buttonVariant}
+          size="sm"
+          className="mt-4"
+          onClick={() => onPrepareAccountStatusChange(member, targetStatus)}
+        >
+          {buttonLabel}
+        </Button>
       </div>
-      <Button
-        type="button"
-        variant={buttonVariant}
-        size="sm"
-        className="mt-4"
-        onClick={() => onPrepareAccountStatusChange(member, targetStatus)}
-      >
-        {buttonLabel}
-      </Button>
+
+      {isSuperManager ? (
+        <div className="border border-border/70 p-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium text-foreground">Silinenlere taşı</h3>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Bu işlem kalıcı silme yapmaz. Üye normal listeden gizlenir.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="mt-4"
+            onClick={() => onPrepareArchiveMember(member)}
+          >
+            Silinenlere taşı
+          </Button>
+        </div>
+      ) : (
+        <div className="border border-border/70 p-4 text-sm text-muted-foreground">
+          Silinenlere taşı işlemi yalnızca super manager için kullanılabilir.
+        </div>
+      )}
     </div>
   );
 };

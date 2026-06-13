@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+export type AdminAccountStatus = "active" | "suspended" | "security_blocked" | "deleted" | "anonymized";
+
 export type AdminMember = {
   user_id: string;
   email: string | null;
   full_name: string | null;
-  account_status: string | null;
+  account_status: AdminAccountStatus | null;
   membership: string | null;
   membership_status: string | null;
   last_seen_at: string | null;
@@ -21,6 +23,10 @@ type AdminMembersResponse = {
   total_count: number;
   limit: number;
   offset: number;
+};
+
+type UseAdminMembersOptions = {
+  initialAccountStatus?: AdminAccountStatus | null;
 };
 
 type SupabaseRpcClient = typeof supabase & {
@@ -87,7 +93,7 @@ const parseAdminMembersResponse = (data: unknown): AdminMembersResponse => {
   };
 };
 
-export const useAdminMembers = (enabled: boolean) => {
+export const useAdminMembers = (enabled: boolean, options: UseAdminMembersOptions = {}) => {
   const mountedRef = useRef(true);
   const requestIdRef = useRef(0);
   const [items, setItems] = useState<AdminMember[]>([]);
@@ -99,7 +105,7 @@ export const useAdminMembers = (enabled: boolean) => {
   const [query, setQueryValue] = useState("");
   const [membership, setMembershipValue] = useState<string | null>(null);
   const [membershipStatus, setMembershipStatusValue] = useState<string | null>(null);
-  const [accountStatus, setAccountStatusValue] = useState<string | null>(null);
+  const [accountStatus, setAccountStatusValue] = useState<AdminAccountStatus | null>(options.initialAccountStatus ?? null);
   const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
@@ -125,7 +131,7 @@ export const useAdminMembers = (enabled: boolean) => {
     setOffset(0);
   }, []);
 
-  const setAccountStatus = useCallback((value: string | null) => {
+  const setAccountStatus = useCallback((value: AdminAccountStatus | null) => {
     setAccountStatusValue(value);
     setOffset(0);
   }, []);

@@ -15,6 +15,13 @@ import {
   type AdminMembershipReasonCode,
   type AdminMembershipTarget,
 } from "@/components/admin/AdminMemberActionModal";
+import {
+  AdminMemberSoftDeleteActionModal,
+  type AdminSoftDeleteActionMode,
+  type AdminSoftDeleteReasonCode,
+  type AdminSoftDeleteTarget,
+} from "@/components/admin/AdminMemberSoftDeleteActionModal";
+import { AdminDeletedMembersSection } from "@/components/admin/AdminDeletedMembersSection";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +32,7 @@ import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
+import { useAdminMemberSoftDeleteActions } from "@/hooks/useAdminMemberSoftDeleteActions";
 import { useAdminMemberStats } from "@/hooks/useAdminMemberStats";
 
 const adminNavigationItems = [
@@ -55,6 +63,13 @@ const Admin = () => {
     targetStatus: AdminAccountStatusTarget;
   } | null>(null);
   const [accountStatusReasonCode, setAccountStatusReasonCode] = useState<AdminAccountStatusReasonCode | null>(null);
+  const [softDeleteAction, setSoftDeleteAction] = useState<{
+    member: AdminSoftDeleteTarget;
+    mode: AdminSoftDeleteActionMode;
+  } | null>(null);
+  const [softDeleteReasonCode, setSoftDeleteReasonCode] = useState("");
+  const [softDeleteConfirmText, setSoftDeleteConfirmText] = useState("");
+  const [deletedMembersOpen, setDeletedMembersOpen] = useState(false);
   const { status, adminContext, error, refreshAdminContext } = useAdminGate();
   const isHomeRoute = location.pathname === "/admin";
   const isStatsRoute = location.pathname === "/admin/stats";
@@ -62,10 +77,15 @@ const Admin = () => {
   const isSettingsRoute = location.pathname === "/admin/settings";
   const adminHomeMembers = useAdminMembers(status === "admin" && isHomeRoute);
   const adminMembers = useAdminMembers(status === "admin" && isUsersRoute);
+  const deletedMembers = useAdminMembers(
+    status === "admin" && isUsersRoute && deletedMembersOpen,
+    { initialAccountStatus: "deleted" },
+  );
   const adminMemberStats = useAdminMemberStats(status === "admin" && (isHomeRoute || isStatsRoute));
   const memberDetail = useAdminMemberDetail(status === "admin" && isUsersRoute && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
+  const softDeleteActions = useAdminMemberSoftDeleteActions();
   const isSuperManager = adminContext?.is_super_manager === true;
   const featureAccessMatrix = useAdminFeatureAccessMatrix(isSettingsRoute && isSuperManager);
 
@@ -75,6 +95,9 @@ const Admin = () => {
     setMembershipReasonCode(null);
     setAccountStatusAction(null);
     setAccountStatusReasonCode(null);
+    setSoftDeleteAction(null);
+    setSoftDeleteReasonCode("");
+    setSoftDeleteConfirmText("");
     memberDetail.clear();
   }, [memberDetail]);
 
@@ -106,6 +129,24 @@ const Admin = () => {
     setMembershipAction({ member, targetMembership });
     setMembershipReasonCode(null);
   }, [memberActions]);
+
+  const prepareArchiveMember = useCallback((member: AdminSoftDeleteTarget) => {
+    if (!isSuperManager) return;
+
+    softDeleteActions.reset();
+    setSoftDeleteAction({ member, mode: "archive" });
+    setSoftDeleteReasonCode("");
+    setSoftDeleteConfirmText("");
+  }, [isSuperManager, softDeleteActions]);
+
+  const prepareRestoreMember = useCallback((member: AdminSoftDeleteTarget) => {
+    if (!isSuperManager) return;
+
+    softDeleteActions.reset();
+    setSoftDeleteAction({ member, mode: "restore" });
+    setSoftDeleteReasonCode("");
+    setSoftDeleteConfirmText("");
+  }, [isSuperManager, softDeleteActions]);
 
   const closeMembershipAction = useCallback((open: boolean) => {
     if (open) return;
@@ -177,6 +218,50 @@ const Admin = () => {
     setAccountStatusAction(null);
     setAccountStatusReasonCode(null);
   }, [accountStatusAction, accountStatusActions, accountStatusReasonCode, adminContext?.user_id, adminMembers, memberDetail]);
+
+  const closeSoftDeleteAction = useCallback((open: boolean) => {
+    if (open) return;
+
+    softDeleteActions.reset();
+    setSoftDeleteAction(null);
+    setSoftDeleteReasonCode("");
+    setSoftDeleteConfirmText("");
+  }, [softDeleteActions]);
+
+  const handleSoftDeleteConfirm = useCallback(async () => {
+    if (!softDeleteAction || !softDeleteReasonCode.trim()) return;
+
+    const normalizedConfirm = softDeleteConfirmText.trim().toUpperCase();
+    const expectedConfirm = softDeleteAction.mode === "archive" ? "SİLİNENLERE TAŞI" : "GERİ AL";
+
+    if (normalizedConfirm !== expectedConfirm) {
+      return;
+    }
+
+    const actionTarget = {
+      targetUserId: softDeleteAction.member.user_id,
+      reasonCode: softDeleteReasonCode.trim() as AdminSoftDeleteReasonCode,
+      reasonNote: null,
+    };
+
+    const changed =
+      softDeleteAction.mode === "archive"
+        ? await softDeleteActions.archiveMember(actionTarget)
+        : await softDeleteActions.restoreMember(actionTarget);
+
+    if (!changed) {
+      return;
+    }
+
+    adminMembers.refresh();
+    deletedMembers.refresh();
+    memberDetail.refresh();
+    toast.success(softDeleteAction.mode === "archive" ? "Üye silinenlere taşındı." : "Üye geri alındı.");
+    softDeleteActions.reset();
+    setSoftDeleteAction(null);
+    setSoftDeleteReasonCode("");
+    setSoftDeleteConfirmText("");
+  }, [adminMembers, deletedMembers, memberDetail, softDeleteAction, softDeleteActions, softDeleteConfirmText, softDeleteReasonCode]);
 
   if (status === "loading") {
     return (
@@ -258,11 +343,17 @@ const Admin = () => {
                 element={
                   <AdminUsersPage
                     adminMembers={adminMembers}
+                    deletedMembers={deletedMembers}
+                    deletedMembersOpen={deletedMembersOpen}
                     memberDetail={memberDetail}
                     currentAdminUserId={adminContext?.user_id ?? null}
+                    isSuperManager={isSuperManager}
                     onSelectMember={setSelectedUserId}
                     onPrepareAccountStatusChange={prepareAccountStatusChange}
                     onPrepareMembershipChange={prepareMembershipChange}
+                    onPrepareArchiveMember={prepareArchiveMember}
+                    onPrepareRestoreMember={prepareRestoreMember}
+                    onOpenChangeDeletedMembers={setDeletedMembersOpen}
                     selectedUserId={selectedUserId}
                     onDialogOpenChange={(open) => {
                       if (!open) {
@@ -308,6 +399,20 @@ const Admin = () => {
           onConfirm={handleMembershipConfirm}
           loading={memberActions.loading}
           errorMessage={memberActions.errorMessage}
+        />
+
+        <AdminMemberSoftDeleteActionModal
+          member={status === "admin" ? softDeleteAction?.member ?? null : null}
+          open={status === "admin" && softDeleteAction !== null}
+          mode={softDeleteAction?.mode ?? null}
+          reasonCode={softDeleteReasonCode}
+          confirmText={softDeleteConfirmText}
+          onReasonCodeChange={setSoftDeleteReasonCode}
+          onConfirmTextChange={setSoftDeleteConfirmText}
+          onOpenChange={closeSoftDeleteAction}
+          onConfirm={handleSoftDeleteConfirm}
+          loading={softDeleteActions.loading}
+          errorMessage={softDeleteActions.errorMessage}
         />
       </main>
     </div>
@@ -518,34 +623,58 @@ const AdminHomePage = ({ members, stats }: AdminHomePageProps) => (
 
 type AdminUsersPageProps = {
   adminMembers: ReturnType<typeof useAdminMembers>;
+  deletedMembers: ReturnType<typeof useAdminMembers>;
+  deletedMembersOpen: boolean;
   memberDetail: ReturnType<typeof useAdminMemberDetail>;
   currentAdminUserId: string | null;
+  isSuperManager: boolean;
   onSelectMember: (userId: string) => void;
   onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
+  onPrepareArchiveMember: (member: AdminSoftDeleteTarget) => void;
+  onPrepareRestoreMember: (member: AdminSoftDeleteTarget) => void;
   onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
+  onOpenChangeDeletedMembers: (open: boolean) => void;
   selectedUserId: string | null;
   onDialogOpenChange: (open: boolean) => void;
 };
 
 const AdminUsersPage = ({
   adminMembers,
+  deletedMembers,
+  deletedMembersOpen,
   memberDetail,
   currentAdminUserId,
+  isSuperManager,
   onSelectMember,
   onPrepareAccountStatusChange,
+  onPrepareArchiveMember,
+  onPrepareRestoreMember,
   onPrepareMembershipChange,
+  onOpenChangeDeletedMembers,
   selectedUserId,
   onDialogOpenChange,
 }: AdminUsersPageProps) => (
   <div className="space-y-4">
     <AdminMembersTable members={adminMembers} onSelectMember={onSelectMember} />
 
+    <AdminDeletedMembersSection
+      members={deletedMembers}
+      isSuperManager={isSuperManager}
+      open={deletedMembersOpen}
+      onOpenChange={onOpenChangeDeletedMembers}
+      onSelectMember={onSelectMember}
+      onRequestRestore={onPrepareRestoreMember}
+    />
+
     <AdminMemberDetailDialog
       open={selectedUserId !== null}
       onOpenChange={onDialogOpenChange}
       detail={memberDetail}
       currentAdminUserId={currentAdminUserId}
+      isSuperManager={isSuperManager}
       onPrepareAccountStatusChange={onPrepareAccountStatusChange}
+      onPrepareArchiveMember={onPrepareArchiveMember}
+      onPrepareRestoreMember={onPrepareRestoreMember}
       onPrepareMembershipChange={onPrepareMembershipChange}
     />
   </div>
@@ -592,55 +721,59 @@ type AdminHomeMemberListProps = {
   members: ReturnType<typeof useAdminMembers>;
 };
 
-const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
-  <Card className="rounded-none border-border/70 shadow-none">
-    <CardHeader className="space-y-1 p-5">
-      <CardTitle className="text-base font-medium tracking-wide">Operasyonel üye listesi</CardTitle>
-      <p className="text-sm text-muted-foreground">Son görülen üyelere ait temel bilgiler.</p>
-    </CardHeader>
-    <CardContent className="px-5 pb-5 pt-0">
-      {members.error && (
-        <div className="border border-destructive/30 bg-destructive/5 p-4">
-          <p className="text-sm font-medium text-destructive">Üye özeti alınamadı.</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{members.error.message}</p>
-        </div>
-      )}
+const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => {
+  const visibleMembers = members.items.filter((member) => member.account_status !== "deleted");
 
-      {!members.error && members.loading && (
-        <div className="border border-border/70 p-6 text-sm text-muted-foreground">Üye özeti yükleniyor...</div>
-      )}
+  return (
+    <Card className="rounded-none border-border/70 shadow-none">
+      <CardHeader className="space-y-1 p-5">
+        <CardTitle className="text-base font-medium tracking-wide">Operasyonel üye listesi</CardTitle>
+        <p className="text-sm text-muted-foreground">Son görülen üyelere ait temel bilgiler.</p>
+      </CardHeader>
+      <CardContent className="px-5 pb-5 pt-0">
+        {members.error && (
+          <div className="border border-destructive/30 bg-destructive/5 p-4">
+            <p className="text-sm font-medium text-destructive">Üye özeti alınamadı.</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">{members.error.message}</p>
+          </div>
+        )}
 
-      {!members.error && !members.loading && members.items.length === 0 && (
-        <div className="border border-border/70 p-6 text-sm text-muted-foreground">
-          Üye özeti için veri bulunamadı.
-        </div>
-      )}
+        {!members.error && members.loading && (
+          <div className="border border-border/70 p-6 text-sm text-muted-foreground">Üye özeti yükleniyor...</div>
+        )}
 
-      {!members.error && members.items.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse">
-            <thead>
-              <tr className="border-b border-border/70">
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">AD SOYAD</th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-POSTA</th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">SON GÖRÜLME</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.items.map((member) => (
-                <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
-                  <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
-                  <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>
-                  <td className="px-3 py-3 text-sm text-foreground">{formatDateTime(member.last_seen_at)}</td>
+        {!members.error && !members.loading && visibleMembers.length === 0 && (
+          <div className="border border-border/70 p-6 text-sm text-muted-foreground">
+            Üye özeti için veri bulunamadı.
+          </div>
+        )}
+
+        {!members.error && visibleMembers.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] border-collapse">
+              <thead>
+                <tr className="border-b border-border/70">
+                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">AD SOYAD</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-POSTA</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">SON GÖRÜLME</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </CardContent>
-  </Card>
-);
+              </thead>
+              <tbody>
+                {visibleMembers.map((member) => (
+                  <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
+                    <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
+                    <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>
+                    <td className="px-3 py-3 text-sm text-foreground">{formatDateTime(member.last_seen_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const AdminMetricCard = ({
   title,
@@ -715,6 +848,12 @@ const AdminStatsRequirementCard = ({ title }: { title: string }) => (
     <span className="text-sm text-foreground">{title}</span>
     <DataPendingBadge label="Veri altyapısı gerekiyor" />
   </div>
+);
+
+const DataPendingBadge = ({ label }: { label: string }) => (
+  <span className="inline-flex shrink-0 items-center border border-border/60 px-2 py-1 text-xs text-muted-foreground">
+    {label}
+  </span>
 );
 
 const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: string }) => (

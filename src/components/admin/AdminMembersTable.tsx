@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { AdminMember, useAdminMembers } from "@/hooks/useAdminMembers";
+import type { AdminAccountStatus, AdminMember, useAdminMembers } from "@/hooks/useAdminMembers";
 
 type AdminMembersState = ReturnType<typeof useAdminMembers>;
 
@@ -21,7 +21,7 @@ type AdminMembersTableProps = {
 };
 
 const filterValue = (value: string | null) => value ?? "all";
-const fromFilterValue = (value: string) => (value === "all" ? null : value);
+const fromFilterValue = (value: string): AdminAccountStatus | null => (value === "all" ? null : (value as AdminAccountStatus));
 
 const formatDate = (value: string | null) => {
   if (!value) return "-";
@@ -42,6 +42,7 @@ const displayPlan = (value: string | null) => {
 };
 
 export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTableProps) => {
+  const visibleMembers = members.items.filter((member) => member.account_status !== "deleted");
   const canGoPrevious = members.offset > 0;
   const canGoNext = members.offset + members.limit < members.totalCount;
   const rangeStart = members.totalCount === 0 ? 0 : members.offset + 1;
@@ -107,7 +108,6 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
               <SelectItem value="active">Aktif</SelectItem>
               <SelectItem value="suspended">Askıya alındı</SelectItem>
               <SelectItem value="security_blocked">Güvenlik nedeniyle engellendi</SelectItem>
-              <SelectItem value="deleted">Silindi</SelectItem>
               <SelectItem value="anonymized">Anonimleştirildi</SelectItem>
             </SelectContent>
           </Select>
@@ -126,11 +126,11 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
           <div className="border border-border/70 p-6 text-sm text-muted-foreground">Üyeler yükleniyor...</div>
         )}
 
-        {!members.error && !members.loading && members.items.length === 0 && (
+        {!members.error && !members.loading && visibleMembers.length === 0 && (
           <div className="border border-border/70 p-6 text-sm text-muted-foreground">Kriterlere uygun üye bulunamadı.</div>
         )}
 
-        {!members.error && members.items.length > 0 && (
+        {!members.error && visibleMembers.length > 0 && (
           <Table>
             <TableHeader>
               <TableRow>
@@ -143,7 +143,7 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.items.map((member) => (
+              {visibleMembers.map((member) => (
                 <MemberRow key={member.user_id} member={member} onSelectMember={onSelectMember} />
               ))}
             </TableBody>

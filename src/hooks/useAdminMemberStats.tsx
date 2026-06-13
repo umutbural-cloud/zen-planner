@@ -95,6 +95,10 @@ const countStats = (members: AdminMember[]): AdminMemberStats => {
 
   return members.reduce<AdminMemberStats>(
     (acc, member) => {
+      if (member.account_status === "deleted") {
+        return acc;
+      }
+
       const lastSeen = parseDate(member.last_seen_at);
       const createdAt = parseDate(member.created_at);
 
