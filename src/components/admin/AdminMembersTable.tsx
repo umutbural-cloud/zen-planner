@@ -1,5 +1,4 @@
 import { RefreshCw } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,19 +34,11 @@ const formatDate = (value: string | null) => {
     timeStyle: "short",
   }).format(date);
 };
-
-const statusLabel = (value: string | null) => value ?? "-";
-
-const booleanLabel = (value: boolean) => (value ? "Evet" : "Hayır");
-
-const statusBadge = (value: string | null) => {
-  if (!value) return <Badge variant="outline">-</Badge>;
-
-  return (
-    <Badge variant="outline" className="rounded-none font-normal">
-      {value}
-    </Badge>
-  );
+const displayPlan = (value: string | null) => {
+  if (!value) return "-";
+  if (value === "beginner") return "Başlangıç";
+  if (value === "plus") return "Plus";
+  return value;
 };
 
 export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTableProps) => {
@@ -80,12 +71,12 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
 
           <Select value={filterValue(members.membership)} onValueChange={(value) => members.setMembership(fromFilterValue(value))}>
             <SelectTrigger className="rounded-none">
-              <SelectValue placeholder="Plan" />
+              <SelectValue placeholder="Plan seçin" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tüm planlar</SelectItem>
-              <SelectItem value="beginner">beginner</SelectItem>
-              <SelectItem value="plus">plus</SelectItem>
+              <SelectItem value="beginner">Başlangıç</SelectItem>
+              <SelectItem value="plus">Plus</SelectItem>
             </SelectContent>
           </Select>
 
@@ -94,13 +85,13 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
             onValueChange={(value) => members.setMembershipStatus(fromFilterValue(value))}
           >
             <SelectTrigger className="rounded-none">
-              <SelectValue placeholder="Plan durumu" />
+              <SelectValue placeholder="Plan durumu seçin" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tüm plan durumları</SelectItem>
-              <SelectItem value="active">active</SelectItem>
-              <SelectItem value="cancelled">cancelled</SelectItem>
-              <SelectItem value="expired">expired</SelectItem>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="cancelled">İptal edildi</SelectItem>
+              <SelectItem value="expired">Süresi doldu</SelectItem>
             </SelectContent>
           </Select>
 
@@ -109,15 +100,15 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
             onValueChange={(value) => members.setAccountStatus(fromFilterValue(value))}
           >
             <SelectTrigger className="rounded-none">
-              <SelectValue placeholder="Hesap durumu" />
+              <SelectValue placeholder="Hesap durumu seçin" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tüm hesap durumları</SelectItem>
-              <SelectItem value="active">active</SelectItem>
-              <SelectItem value="suspended">suspended</SelectItem>
-              <SelectItem value="security_blocked">security_blocked</SelectItem>
-              <SelectItem value="deleted">deleted</SelectItem>
-              <SelectItem value="anonymized">anonymized</SelectItem>
+              <SelectItem value="active">Aktif</SelectItem>
+              <SelectItem value="suspended">Askıya alındı</SelectItem>
+              <SelectItem value="security_blocked">Güvenlik nedeniyle engellendi</SelectItem>
+              <SelectItem value="deleted">Silindi</SelectItem>
+              <SelectItem value="anonymized">Anonimleştirildi</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -143,16 +134,11 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Ad soyad</TableHead>
                 <TableHead>E-posta</TableHead>
-                <TableHead>Ad</TableHead>
                 <TableHead>Plan</TableHead>
-                <TableHead>Plan durumu</TableHead>
-                <TableHead>Hesap durumu</TableHead>
                 <TableHead>Son görülme</TableHead>
                 <TableHead>Oluşturulma</TableHead>
-                <TableHead>Kullanabilir</TableHead>
-                <TableHead>Dışa aktarabilir</TableHead>
-                <TableHead>Engel nedeni</TableHead>
                 <TableHead className="text-right">Detay</TableHead>
               </TableRow>
             </TableHeader>
@@ -184,16 +170,11 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
 
 const MemberRow = ({ member, onSelectMember }: { member: AdminMember; onSelectMember: (userId: string) => void }) => (
   <TableRow>
-    <TableCell className="font-medium">{member.email ?? "-"}</TableCell>
-    <TableCell>{member.full_name ?? "-"}</TableCell>
-    <TableCell>{statusBadge(member.membership)}</TableCell>
-    <TableCell>{statusBadge(member.membership_status)}</TableCell>
-    <TableCell>{statusBadge(member.account_status)}</TableCell>
+    <TableCell className="font-medium">{member.full_name ?? "-"}</TableCell>
+    <TableCell>{member.email ?? "-"}</TableCell>
+    <TableCell>{displayPlan(member.membership)}</TableCell>
     <TableCell>{formatDate(member.last_seen_at)}</TableCell>
     <TableCell>{formatDate(member.created_at)}</TableCell>
-    <TableCell>{booleanLabel(member.can_use_app)}</TableCell>
-    <TableCell>{booleanLabel(member.can_export)}</TableCell>
-    <TableCell>{statusLabel(member.block_reason)}</TableCell>
     <TableCell className="text-right">
       <Button type="button" variant="outline" size="sm" onClick={() => onSelectMember(member.user_id)}>
         Detay

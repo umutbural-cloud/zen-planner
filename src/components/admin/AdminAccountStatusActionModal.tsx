@@ -34,16 +34,21 @@ type AdminAccountStatusActionModalProps = {
 };
 
 const suspendReasonCodeOptions: { value: AdminAccountStatusReasonCode; label: string }[] = [
-  { value: "policy_violation", label: "policy_violation" },
-  { value: "payment_issue", label: "payment_issue" },
-  { value: "user_request", label: "user_request" },
-  { value: "admin_correction", label: "admin_correction" },
+  { value: "policy_violation", label: "Politika ihlali" },
+  { value: "payment_issue", label: "Ödeme sorunu" },
+  { value: "user_request", label: "Kullanıcı talebi" },
+  { value: "admin_correction", label: "Yönetici düzeltmesi" },
 ];
 
 const reactivateReasonCodeOptions: { value: AdminAccountStatusReasonCode; label: string }[] = [
-  { value: "reactivation_approved", label: "reactivation_approved" },
-  { value: "admin_correction", label: "admin_correction" },
+  { value: "reactivation_approved", label: "Yeniden aktif etme onayı" },
+  { value: "admin_correction", label: "Yönetici düzeltmesi" },
 ];
+
+const accountStatusLabels: Record<string, string> = {
+  active: "Aktif",
+  suspended: "Askıya alındı",
+};
 
 const getReasonCodeOptions = (targetStatus: AdminAccountStatusTarget | null) => {
   if (targetStatus === "suspended") return suspendReasonCodeOptions;
@@ -99,19 +104,19 @@ export const AdminAccountStatusActionModal = ({
       <DialogContent className="rounded-none sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base font-medium tracking-wide">Hesap durumu değişikliği</DialogTitle>
-          <DialogDescription>Bu işlem audit log'a yazılır.</DialogDescription>
+          <DialogDescription>Bu işlem denetim kaydına işlenir.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ModalField label="E-posta" value={member?.email ?? "-"} />
-            <ModalField label="Ad" value={member?.full_name ?? "-"} />
-            <ModalField label="Mevcut hesap durumu" value={currentStatus ?? "-"} />
-            <ModalField label="Hedef hesap durumu" value={targetStatus ?? "-"} />
+            <ModalField label="Ad soyad" value={member?.full_name ?? "-"} />
+            <ModalField label="Mevcut hesap durumu" value={currentStatus ? accountStatusLabels[currentStatus] ?? currentStatus : "-"} />
+            <ModalField label="Hedef hesap durumu" value={targetStatus ? accountStatusLabels[targetStatus] ?? targetStatus : "-"} />
           </dl>
 
           <div className="space-y-2">
-            <label className="text-xs uppercase tracking-wide text-muted-foreground">Reason code</label>
+            <label className="text-xs uppercase tracking-wide text-muted-foreground">İşlem nedeni</label>
             <Select
               value={reasonCode ?? undefined}
               onValueChange={(value) => onReasonCodeChange(value as AdminAccountStatusReasonCode)}
@@ -132,8 +137,8 @@ export const AdminAccountStatusActionModal = ({
 
           <Alert className="rounded-none">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Audit log</AlertTitle>
-            <AlertDescription>Bu işlem audit log'a yazılır.</AlertDescription>
+            <AlertTitle>Denetim kaydı</AlertTitle>
+            <AlertDescription>Bu işlem denetim kaydına işlenir.</AlertDescription>
           </Alert>
 
           {errorMessage && (

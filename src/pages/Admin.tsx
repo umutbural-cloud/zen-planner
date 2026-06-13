@@ -62,7 +62,7 @@ const Admin = () => {
   const isSettingsRoute = location.pathname === "/admin/settings";
   const adminHomeMembers = useAdminMembers(status === "admin" && isHomeRoute);
   const adminMembers = useAdminMembers(status === "admin" && isUsersRoute);
-  const adminMemberStats = useAdminMemberStats(status === "admin" && isStatsRoute);
+  const adminMemberStats = useAdminMemberStats(status === "admin" && (isHomeRoute || isStatsRoute));
   const memberDetail = useAdminMemberDetail(status === "admin" && isUsersRoute && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
@@ -251,7 +251,7 @@ const Admin = () => {
             </div>
 
             <Routes>
-              <Route index element={<AdminHomePage members={adminHomeMembers} />} />
+              <Route index element={<AdminHomePage members={adminHomeMembers} stats={adminMemberStats} />} />
               <Route path="stats" element={<AdminStatsPage stats={adminMemberStats} />} />
               <Route
                 path="users"
@@ -348,14 +348,6 @@ type AdminStatsPageProps = {
 };
 
 const AdminStatsPage = ({ stats }: AdminStatsPageProps) => {
-  const label = stats.loading
-    ? "Hesaplanıyor..."
-    : stats.error
-      ? "Veri alınamadı"
-      : stats.isPartial
-        ? "Kısmi hesaplandı: İlk 5000 kayıt"
-        : "Gerçek admin üye verisinden hesaplandı";
-
   return (
     <div className="space-y-4">
       <Card className="rounded-none border-border/70 shadow-none">
@@ -372,43 +364,43 @@ const AdminStatsPage = ({ stats }: AdminStatsPageProps) => {
           title="Toplam üye"
           value={stats.loading ? null : stats.error ? null : String(stats.totalCount)}
           pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
-          label={label}
-          description="Admin üye sorgusundan dönen toplam kayıt."
+          partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+          description="Toplam kayıtlı üye sayısı."
         />
         <AdminStatsMetricCard
           title="Son 24 saatte aktif üyeler"
           value={stats.loading ? null : stats.error ? null : String(stats.active24hCount)}
           pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
-          label={label}
-          description="Günlük aktif kullanıcı sayısı için aggregate sayaç gerekir."
+          partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+          description="Son 24 saat içinde uygulamada görünen üyeler."
         />
         <AdminStatsMetricCard
           title="Haftalık aktif kullanıcı"
           value={stats.loading ? null : stats.error ? null : String(stats.weeklyActiveCount)}
           pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
-          label={label}
+          partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
           description="WAU takibi için haftalık aggregate veri gerekir."
         />
         <AdminStatsMetricCard
           title="7 gündür pasif üyeler"
           value={stats.loading ? null : stats.error ? null : String(stats.inactive7dCount)}
           pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
-          label={label}
-          description="Pasif kullanıcı tespiti sayfalı listeden hesaplanmaz."
+          partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+          description="Son 7 gün içinde aktifliği görünmeyen üyeler."
         />
         <AdminStatsMetricCard
           title="Son 30 günde yeni kayıt"
           value={stats.loading ? null : stats.error ? null : String(stats.new30dCount)}
           pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
-          label={label}
-          description="Kayıt trendi için güvenilir aggregate veri gerekir."
+          partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+          description="Son 30 gün içinde kaydolan üyeler."
         />
         <AdminStatsMetricCard
           title="Son aktiflik bilinmiyor"
           value={stats.loading ? null : stats.error ? null : String(stats.unknownLastSeenCount)}
           pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
-          label={label}
-          description="last_seen_at değeri olmayan veya geçersiz kayıtlar."
+          partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+          description="Aktiflik tarihi bulunmayan üyeler."
         />
       </div>
 
@@ -470,9 +462,10 @@ const AdminStatsPage = ({ stats }: AdminStatsPageProps) => {
 
 type AdminHomePageProps = {
   members: ReturnType<typeof useAdminMembers>;
+  stats: ReturnType<typeof useAdminMemberStats>;
 };
 
-const AdminHomePage = ({ members }: AdminHomePageProps) => (
+const AdminHomePage = ({ members, stats }: AdminHomePageProps) => (
   <div className="space-y-4">
     <Card className="rounded-none border-border/70 shadow-none">
       <CardContent className="px-5 py-4">
@@ -486,24 +479,31 @@ const AdminHomePage = ({ members }: AdminHomePageProps) => (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <AdminMetricCard
         title="Toplam üye"
-        value={members.loading ? null : members.error ? null : String(members.totalCount)}
-        status={members.loading ? "Yükleniyor..." : members.error ? "Alınamadı" : "Veri altyapısı gerekiyor"}
-        description="Admin üye sorgusundaki toplam kayıt."
+        value={stats.loading ? null : stats.error ? null : String(stats.totalCount)}
+        pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+        partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+        description="Toplam kayıtlı üye sayısı."
       />
-      <AdminMetricPlaceholderCard
+      <AdminMetricCard
         title="Son 24 saatte aktif üyeler"
-        status="Aggregate veri bekliyor"
-        description="Güvenilir aggregate sayaç eklendiğinde bağlanacak."
+        value={stats.loading ? null : stats.error ? null : String(stats.active24hCount)}
+        pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+        partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+        description="Son 24 saat içinde uygulamada görünen üyeler."
       />
-      <AdminMetricPlaceholderCard
+      <AdminMetricCard
         title="7 gündür pasif üyeler"
-        status="Aggregate veri bekliyor"
-        description="Sayfalı listeden hesaplanmaz; aggregate veri gerekir."
+        value={stats.loading ? null : stats.error ? null : String(stats.inactive7dCount)}
+        pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+        partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+        description="Son 7 gün içinde aktifliği görünmeyen üyeler."
       />
-      <AdminMetricPlaceholderCard
+      <AdminMetricCard
         title="Son 7 gün yeni üyeler"
-        status="Aggregate veri bekliyor"
-        description="Kayıt trendi için ayrı aggregate veri gerekir."
+        value={stats.loading ? null : stats.error ? null : String(stats.new7dCount)}
+        pendingText={stats.loading ? "Hesaplanıyor..." : stats.error ? "Veri alınamadı" : null}
+        partialText={stats.isPartial ? "İlk 5000 kayıt üzerinden hesaplandı." : null}
+        description="Son 7 gün içinde kaydolan üyeler."
       />
     </div>
 
@@ -592,17 +592,11 @@ type AdminHomeMemberListProps = {
   members: ReturnType<typeof useAdminMembers>;
 };
 
-const renderMembershipLabel = (value: string | null) => (
-  <span className="inline-flex border border-border/70 px-2 py-1 text-xs text-foreground">
-    {value ?? "-"}
-  </span>
-);
-
 const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
   <Card className="rounded-none border-border/70 shadow-none">
     <CardHeader className="space-y-1 p-5">
       <CardTitle className="text-base font-medium tracking-wide">Operasyonel üye listesi</CardTitle>
-      <p className="text-sm text-muted-foreground">Mevcut admin üye sorgusundan gelen ilk kayıtlar.</p>
+      <p className="text-sm text-muted-foreground">Son görülen üyelere ait temel bilgiler.</p>
     </CardHeader>
     <CardContent className="px-5 pb-5 pt-0">
       {members.error && (
@@ -624,14 +618,12 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
 
       {!members.error && members.items.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="min-w-[760px] w-full border-collapse">
+          <table className="w-full min-w-[520px] border-collapse">
             <thead>
               <tr className="border-b border-border/70">
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Ad soyad</th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-posta</th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Plan</th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Kayıt tarihi</th>
-                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">Aktiflik durumu</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">AD SOYAD</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-POSTA</th>
+                <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">SON GÖRÜLME</th>
               </tr>
             </thead>
             <tbody>
@@ -639,9 +631,7 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
                 <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
                   <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
                   <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>
-                  <td className="px-3 py-3">{renderMembershipLabel(member.membership)}</td>
-                  <td className="px-3 py-3 text-sm text-foreground">{formatDate(member.created_at)}</td>
-                  <td className="px-3 py-3">{getActivityLabel(member.last_seen_at)}</td>
+                  <td className="px-3 py-3 text-sm text-foreground">{formatDateTime(member.last_seen_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -655,12 +645,14 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => (
 const AdminMetricCard = ({
   title,
   value,
-  status,
+  pendingText,
+  partialText,
   description,
 }: {
   title: string;
   value: string | null;
-  status: string;
+  pendingText: string | null;
+  partialText: string | null;
   description: string;
 }) => (
   <Card className="rounded-none border-border/70 shadow-none">
@@ -676,8 +668,9 @@ const AdminMetricCard = ({
       {value !== null ? (
         <p className="text-3xl font-medium tracking-wide text-foreground">{value}</p>
       ) : (
-        <p className="text-xs text-muted-foreground">{status}</p>
+        <p className="text-xs text-muted-foreground">{pendingText}</p>
       )}
+      {partialText && <p className="mt-2 text-xs text-muted-foreground">{partialText}</p>}
       <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
     </CardContent>
   </Card>
@@ -687,13 +680,13 @@ const AdminStatsMetricCard = ({
   title,
   value,
   pendingText,
-  label,
+  partialText,
   description,
 }: {
   title: string;
   value: string | null;
   pendingText: string | null;
-  label: string;
+  partialText: string | null;
   description: string;
 }) => (
   <Card className="rounded-none border-border/70 shadow-none">
@@ -709,11 +702,9 @@ const AdminStatsMetricCard = ({
       {value !== null ? (
         <p className="text-3xl font-medium tracking-wide text-foreground">{value}</p>
       ) : (
-        <p className="text-xs text-muted-foreground">{pendingText ?? label}</p>
+        <p className="text-xs text-muted-foreground">{pendingText}</p>
       )}
-      <div className="mt-2">
-        <DataPendingBadge label={label} />
-      </div>
+      {partialText && <p className="mt-2 text-xs text-muted-foreground">{partialText}</p>}
       <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
     </CardContent>
   </Card>
@@ -724,10 +715,6 @@ const AdminStatsRequirementCard = ({ title }: { title: string }) => (
     <span className="text-sm text-foreground">{title}</span>
     <DataPendingBadge label="Veri altyapısı gerekiyor" />
   </div>
-);
-
-const DataPendingBadge = ({ label }: { label: string }) => (
-  <span className="shrink-0 border border-border/70 px-2 py-1 text-xs text-muted-foreground">{label}</span>
 );
 
 const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: string }) => (
@@ -782,41 +769,16 @@ const AdminDataNote = () => (
   </Card>
 );
 
-const formatDate = (value: string | null) => {
-  if (!value) return "-";
+const formatDateTime = (value: string | null) => {
+  if (!value) return "Bilinmiyor";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
+  if (Number.isNaN(date.getTime())) return "Bilinmiyor";
 
   return new Intl.DateTimeFormat("tr-TR", {
     dateStyle: "medium",
+    timeStyle: "short",
   }).format(date);
-};
-
-const getActivityLabel = (value: string | null) => {
-  if (!value) {
-    return <span className="text-sm text-muted-foreground">Bilinmiyor</span>;
-  }
-
-  const lastSeen = new Date(value);
-  if (Number.isNaN(lastSeen.getTime())) {
-    return <span className="text-sm text-muted-foreground">Bilinmiyor</span>;
-  }
-
-  const now = new Date();
-  const diffMs = now.getTime() - lastSeen.getTime();
-  const oneDay = 24 * 60 * 60 * 1000;
-  const sevenDays = 7 * oneDay;
-
-  if (diffMs <= oneDay) {
-    return <span className="text-sm text-foreground">Son 24 saat aktif</span>;
-  }
-
-  if (diffMs <= sevenDays) {
-    return <span className="text-sm text-foreground">Son 7 gün aktif</span>;
-  }
-
-  return <span className="text-sm text-muted-foreground">Pasif</span>;
 };
 
 type AdminPlaceholderCardProps = {
