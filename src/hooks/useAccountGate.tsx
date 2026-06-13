@@ -30,6 +30,10 @@ type SupabaseRpcClient = typeof supabase & {
     fn: "get_current_account_gate",
     args?: Record<string, never>,
   ): Promise<{ data: AccountGatePayload | null; error: Error | null }>;
+  rpc(
+    fn: "touch_last_seen",
+    args?: Record<string, never>,
+  ): Promise<{ data: unknown; error: Error | null }>;
 };
 
 const deriveStatus = (userId: string | undefined, gate: AccountGatePayload | null): AccountGateStatus => {
@@ -51,6 +55,30 @@ type CachedGateState = {
 };
 
 const gateCache = new Map<string, CachedGateState>();
+const LAST_SEEN_TOUCH_INTERVAL_MS = 15 * 60 * 1000;
+const LAST_SEEN_TOUCH_KEY_PREFIX = "zen:last-seen-touch:";
+
+const shouldTouchLastSeen = (userId: string) => {
+  try {
+    const lastTouchRaw = window.localStorage.getItem(`${LAST_SEEN_TOUCH_KEY_PREFIX}${userId}`);
+    if (!lastTouchRaw) return true;
+
+    const lastTouch = Number(lastTouchRaw);
+    if (!Number.isFinite(lastTouch)) return true;
+
+    return Date.now() - lastTouch >= LAST_SEEN_TOUCH_INTERVAL_MS;
+  } catch {
+    return true;
+  }
+};
+
+const markLastSeenTouched = (userId: string) => {
+  try {
+    window.localStorage.setItem(`${LAST_SEEN_TOUCH_KEY_PREFIX}${userId}`, String(Date.now()));
+  } catch {
+    // Ignore storage failures; the RPC itself is already best-effort.
+  }
+};
 
 type AccountGateContextValue = {
   gate: AccountGatePayload | null;
@@ -175,6 +203,33 @@ export const AccountGateProvider = ({ children }: AccountGateProviderProps) => {
     setLoading(false);
     await authSignOut();
   }, [authSignOut]);
+
+  useEffect(() => {
+    if (status !== "allowed" || !user?.id) return;
+
+    const currentUserId = user.id;
+    if (!shouldTouchLastSeen(currentUserId)) return;
+
+    const touch = async () => {
+      try {
+        const { error: rpcError } = await (supabase as SupabaseRpcClient).rpc("touch_last_seen");
+        if (rpcError) {
+          if (import.meta.env.DEV) {
+            console.warn("touch_last_seen failed", rpcError);
+          }
+          return;
+        }
+
+        markLastSeenTouched(currentUserId);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn("touch_last_seen failed", error);
+        }
+      }
+    };
+
+    void touch();
+  }, [status, user?.id]);
 
   const value = useMemo<AccountGateContextValue>(() => ({
     gate,

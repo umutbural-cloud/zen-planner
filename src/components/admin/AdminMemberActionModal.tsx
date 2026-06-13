@@ -34,12 +34,17 @@ type AdminMemberActionModalProps = {
 };
 
 const reasonCodeOptions: { value: AdminMembershipReasonCode; label: string }[] = [
-  { value: "admin_correction", label: "admin_correction" },
-  { value: "support_request", label: "support_request" },
-  { value: "payment_confirmed", label: "payment_confirmed" },
-  { value: "plan_upgrade", label: "plan_upgrade" },
-  { value: "plan_downgrade", label: "plan_downgrade" },
+  { value: "admin_correction", label: "Yönetici düzeltmesi" },
+  { value: "support_request", label: "Destek talebi" },
+  { value: "payment_confirmed", label: "Ödeme onayı" },
+  { value: "plan_upgrade", label: "Plana yükseltme" },
+  { value: "plan_downgrade", label: "Planda düşürme" },
 ];
+
+const membershipLabels: Record<string, string> = {
+  beginner: "Başlangıç",
+  plus: "Plus",
+};
 
 export const AdminMemberActionModal = ({
   member,
@@ -72,7 +77,7 @@ export const AdminMemberActionModal = ({
       <DialogContent className="rounded-none sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base font-medium tracking-wide">Üyelik değişikliği onayı</DialogTitle>
-          <DialogDescription>Bu işlem audit log'a yazılır.</DialogDescription>
+          <DialogDescription>Bu işlem denetim kaydına işlenir.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -80,19 +85,25 @@ export const AdminMemberActionModal = ({
             <Alert variant="destructive" className="rounded-none">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Plan düşürme işlemi</AlertTitle>
-              <AlertDescription>Plus üyelik beginner plana düşürülecek.</AlertDescription>
+              <AlertDescription>Plus üyelik Başlangıç planına düşürülecek.</AlertDescription>
             </Alert>
           )}
 
           <dl className="grid gap-3 sm:grid-cols-2">
             <ModalField label="E-posta" value={member?.email ?? "-"} />
-            <ModalField label="Ad" value={member?.full_name ?? "-"} />
-            <ModalField label="Eski plan" value={currentMembership ?? "-"} />
-            <ModalField label="Yeni plan" value={targetMembership ?? "-"} />
+            <ModalField label="Ad soyad" value={member?.full_name ?? "-"} />
+            <ModalField
+              label="Eski plan"
+              value={currentMembership ? membershipLabels[currentMembership] ?? currentMembership : "-"}
+            />
+            <ModalField
+              label="Yeni plan"
+              value={targetMembership ? membershipLabels[targetMembership] ?? targetMembership : "-"}
+            />
           </dl>
 
           <div className="space-y-2">
-            <label className="text-xs uppercase tracking-wide text-muted-foreground">Reason code</label>
+            <label className="text-xs uppercase tracking-wide text-muted-foreground">İşlem nedeni</label>
             <Select
               value={reasonCode ?? undefined}
               onValueChange={(value) => onReasonCodeChange(value as AdminMembershipReasonCode)}
@@ -113,8 +124,8 @@ export const AdminMemberActionModal = ({
 
           <Alert className="rounded-none">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Audit log</AlertTitle>
-            <AlertDescription>Bu işlem audit log'a yazılır.</AlertDescription>
+            <AlertTitle>Denetim kaydı</AlertTitle>
+            <AlertDescription>Bu işlem denetim kaydına işlenir.</AlertDescription>
           </Alert>
 
           {errorMessage && (

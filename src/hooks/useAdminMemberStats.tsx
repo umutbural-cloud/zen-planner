@@ -8,6 +8,7 @@ type AdminMemberStats = {
   weeklyActiveCount: number;
   inactive7dCount: number;
   new30dCount: number;
+  new7dCount: number;
   unknownLastSeenCount: number;
 };
 
@@ -83,28 +84,41 @@ const parseDate = (value: string | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const isOlderThanDays = (date: Date, days: number, nowMs: number) =>
+  nowMs - date.getTime() > days * 24 * 60 * 60 * 1000;
+
+const isWithinDays = (date: Date, days: number, nowMs: number) =>
+  nowMs - date.getTime() <= days * 24 * 60 * 60 * 1000;
+
 const countStats = (members: AdminMember[]): AdminMemberStats => {
   const now = Date.now();
-  const oneDay = 24 * 60 * 60 * 1000;
-  const sevenDays = 7 * oneDay;
-  const thirtyDays = 30 * oneDay;
 
   return members.reduce<AdminMemberStats>(
     (acc, member) => {
       const lastSeen = parseDate(member.last_seen_at);
       const createdAt = parseDate(member.created_at);
 
-      if (!lastSeen) {
-        acc.unknownLastSeenCount += 1;
+      if (lastSeen) {
+        if (isWithinDays(lastSeen, 1, now)) {
+          acc.active24hCount += 1;
+        }
+        if (isWithinDays(lastSeen, 7, now)) {
+          acc.weeklyActiveCount += 1;
+        } else {
+          acc.inactive7dCount += 1;
+        }
+      } else if (createdAt && isOlderThanDays(createdAt, 7, now)) {
+        acc.inactive7dCount += 1;
       } else {
-        const diff = now - lastSeen.getTime();
-        if (diff <= oneDay) acc.active24hCount += 1;
-        if (diff <= sevenDays) acc.weeklyActiveCount += 1;
-        else acc.inactive7dCount += 1;
+        acc.unknownLastSeenCount += 1;
       }
 
-      if (createdAt && now - createdAt.getTime() <= thirtyDays) {
+      if (createdAt && !isOlderThanDays(createdAt, 30, now)) {
         acc.new30dCount += 1;
+      }
+
+      if (createdAt && !isOlderThanDays(createdAt, 7, now)) {
+        acc.new7dCount += 1;
       }
 
       return acc;
@@ -115,6 +129,7 @@ const countStats = (members: AdminMember[]): AdminMemberStats => {
       weeklyActiveCount: 0,
       inactive7dCount: 0,
       new30dCount: 0,
+      new7dCount: 0,
       unknownLastSeenCount: 0,
     },
   );
@@ -129,6 +144,7 @@ export const useAdminMemberStats = (enabled: boolean) => {
     weeklyActiveCount: 0,
     inactive7dCount: 0,
     new30dCount: 0,
+    new7dCount: 0,
     unknownLastSeenCount: 0,
   });
   const [loading, setLoading] = useState(false);
@@ -156,6 +172,7 @@ export const useAdminMemberStats = (enabled: boolean) => {
         weeklyActiveCount: 0,
         inactive7dCount: 0,
         new30dCount: 0,
+        new7dCount: 0,
         unknownLastSeenCount: 0,
       });
       setLoading(false);
@@ -222,6 +239,7 @@ export const useAdminMemberStats = (enabled: boolean) => {
         weeklyActiveCount: counts.weeklyActiveCount,
         inactive7dCount: counts.inactive7dCount,
         new30dCount: counts.new30dCount,
+        new7dCount: counts.new7dCount,
         unknownLastSeenCount: counts.unknownLastSeenCount,
       });
       setIsPartial(partial);
