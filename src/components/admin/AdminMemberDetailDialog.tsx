@@ -11,7 +11,10 @@ type AdminMemberDetailDialogProps = {
   onOpenChange: (open: boolean) => void;
   detail: AdminMemberDetailState;
   currentAdminUserId: string | null;
+  isSuperManager: boolean;
   onPrepareAccountStatusChange: (member: AdminMemberDetail, targetStatus: AdminAccountStatusTarget) => void;
+  onPrepareArchiveMember: (member: AdminMemberDetail) => void;
+  onPrepareRestoreMember: (member: AdminMemberDetail) => void;
   onPrepareMembershipChange: (member: AdminMemberDetail, targetMembership: AdminMembershipTarget) => void;
 };
 
@@ -20,7 +23,10 @@ export const AdminMemberDetailDialog = ({
   onOpenChange,
   detail,
   currentAdminUserId,
+  isSuperManager,
   onPrepareAccountStatusChange,
+  onPrepareArchiveMember,
+  onPrepareRestoreMember,
   onPrepareMembershipChange,
 }: AdminMemberDetailDialogProps) => {
   return (
@@ -34,8 +40,11 @@ export const AdminMemberDetailDialog = ({
           <AdminMemberDetailPanel
             detail={detail}
             currentAdminUserId={currentAdminUserId}
+            isSuperManager={isSuperManager}
             onClose={() => onOpenChange(false)}
             onPrepareAccountStatusChange={onPrepareAccountStatusChange}
+            onPrepareArchiveMember={onPrepareArchiveMember}
+            onPrepareRestoreMember={onPrepareRestoreMember}
             onPrepareMembershipChange={onPrepareMembershipChange}
             showHeader={false}
             showCloseButton={false}
