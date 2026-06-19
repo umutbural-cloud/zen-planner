@@ -21,12 +21,12 @@ export const SIDEBAR_ITEM_ORDER: SidebarItemKey[] = [
 ];
 
 const DEFAULT_PREFS: Record<SidebarItemKey, boolean> = {
-  backlog: true,
-  journal: true,
-  habits: true,
-  workHistory: true,
-  pomodoro: true,
-  retreat: true,
+  backlog: false,
+  journal: false,
+  habits: false,
+  workHistory: false,
+  pomodoro: false,
+  retreat: false,
 };
 
 export type CustomModuleTarget = "backlog" | "journal" | "habits" | "workHistory";
