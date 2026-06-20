@@ -36,7 +36,7 @@ const HomeQuickActions = ({ onOpenJournal, onOpenHabits, onOpenRetreat, onOpenQu
             type="button"
             onClick={action.onClick}
             disabled={action.disabled}
-            className="rounded-xl border border-border/60 bg-card/60 px-4 py-3 text-left transition-colors hover:bg-accent/30 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-card/60"
+            className="rounded-sm border border-border/60 bg-transparent px-4 py-3 text-left transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-transparent"
           >
             <div className="flex items-center gap-2">
               <Icon className="h-3.5 w-3.5 text-muted-foreground" />

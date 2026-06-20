@@ -21,10 +21,8 @@ const HomeHero = ({
   onSelectFocus,
 }: Props) => {
   return (
-    <section className="relative rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm shadow-[0_1px_0_0_hsl(var(--border)/0.4)_inset] overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-foreground/[0.03] via-transparent to-foreground/[0.02]" />
-
-      <div className="relative p-6 lg:p-8">
+    <section className="rounded-md border border-border/60 bg-transparent overflow-hidden">
+      <div className="p-6 lg:p-8">
         <div className="min-w-0">
           <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/75">
             {dateLabel}

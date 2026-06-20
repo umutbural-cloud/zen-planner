@@ -67,8 +67,8 @@ const TaskRow = ({
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`group flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-accent/30 transition-colors ${
-        isDragging ? "bg-accent/50 shadow-sm" : ""
+      className={`group flex items-start gap-3 px-3 py-2.5 rounded-sm hover:bg-accent/20 transition-colors ${
+        isDragging ? "bg-accent/30" : ""
       }`}
       {...attributes}
       {...listeners}
@@ -132,7 +132,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <section className="rounded-sm border border-border/60 bg-transparent overflow-hidden">
         <header className="flex items-center gap-1 px-2 pt-2 border-b border-border/60">
           {TABS.map((item) => {
             const Icon = item.icon;
@@ -159,7 +159,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
         </header>
 
         <div className="p-2">
-          {plan.status === "loading" && <div className="h-52 rounded-xl bg-muted/40 animate-pulse" />}
+          {plan.status === "loading" && <div className="h-52 rounded-sm border border-border/60 bg-transparent animate-pulse" />}
           {plan.status === "error" && <div className="px-4 py-10 text-center text-xs text-destructive">{plan.error || "Plan yüklenemedi."}</div>}
           {isPlanReady && activeTasks.length === 0 && (
             <div className="px-4 py-10 text-center text-xs text-muted-foreground tracking-wide">
@@ -191,7 +191,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <section className="rounded-sm border border-border/60 bg-transparent overflow-hidden">
         <header className="flex items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -203,7 +203,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
         </header>
 
         {study.status === "loading" ? (
-          <div className="mx-5 mb-5 h-28 rounded-xl bg-muted/40 animate-pulse" />
+          <div className="mx-5 mb-5 h-28 rounded-sm border border-border/60 bg-transparent animate-pulse" />
         ) : study.status === "error" ? (
           <div className="px-5 pb-5 text-xs text-destructive">{study.error || "Çalışma süresi yüklenemedi."}</div>
         ) : study.status === "empty" || study.data.length === 0 ? (
@@ -218,7 +218,7 @@ const HomePlanPreview = ({ plan, study }: Props) => {
                 </div>
                 <ul className="divide-y divide-border/40">
                   {study.data.map((row) => (
-                    <li key={row.id} className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent/30 transition-colors">
+                    <li key={row.id} className="flex items-center justify-between px-3 py-2 rounded-sm hover:bg-accent/20 transition-colors">
                       <span className="min-w-0 truncate">
                         <span className="block truncate text-sm tracking-wide text-foreground/90">{row.label}</span>
                         <span className="block truncate text-[10px] tracking-wide text-muted-foreground">

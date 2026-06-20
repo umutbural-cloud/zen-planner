@@ -47,19 +47,19 @@ const HomeHabitsPreview = ({ habits, defaultFilter, onToggleHabit }: Props) => {
   };
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+    <section className="rounded-sm border border-border/60 bg-transparent overflow-hidden">
       <header className="flex items-center justify-between px-5 pt-5 pb-3">
         <h3 className="text-sm font-light tracking-wide">Alışkanlıklar</h3>
         <span className="text-xs text-muted-foreground tabular-nums">
           {doneCount} / {habits.data.length}
         </span>
       </header>
-      <div className="mx-5 mb-2 flex items-center justify-between rounded-md border border-border/60 bg-background/30 px-2 py-1">
-        <button type="button" onClick={() => moveFilter(-1)} className="p-1 text-muted-foreground hover:text-foreground transition-colors" title="Önceki zaman dilimi">
+      <div className="mx-5 mb-2 flex items-center justify-between rounded-sm border border-border/60 bg-transparent px-2 py-1">
+        <button type="button" onClick={() => moveFilter(-1)} className="rounded-sm p-1 text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors" title="Önceki zaman dilimi">
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
         <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{activeFilter.label}</span>
-        <button type="button" onClick={() => moveFilter(1)} className="p-1 text-muted-foreground hover:text-foreground transition-colors" title="Sonraki zaman dilimi">
+        <button type="button" onClick={() => moveFilter(1)} className="rounded-sm p-1 text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors" title="Sonraki zaman dilimi">
           <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -82,7 +82,7 @@ const HomeHabitsPreview = ({ habits, defaultFilter, onToggleHabit }: Props) => {
                   onClick={() => toggleHabit(habit.id)}
                   disabled={updatingHabitId === habit.id}
                   title={habit.done ? "Bugünkü tamamlamayı geri al" : "Bugün tamamla"}
-                  className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-accent/30 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex w-full items-center gap-3 px-3 py-2 rounded-sm text-left hover:bg-accent/20 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                 >
                 <span className={`h-6 w-6 rounded-full flex items-center justify-center border ${habit.done ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400" : "border-border/70 text-muted-foreground/70"}`}>
                   <Icon className="h-3 w-3" />
