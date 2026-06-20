@@ -20,7 +20,6 @@ type AdvancedTaskTableProps = {
   groups: AdvancedTaskGroup[];
   columns: AdvancedTaskColumnId[];
   categories: PomodoroCategory[];
-  subtaskCountOf: (taskId: string) => number;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
   onOpen: (task: Task) => void;
@@ -31,7 +30,6 @@ const AdvancedTaskTable = ({
   groups,
   columns,
   categories,
-  subtaskCountOf,
   onUpdate,
   onDelete,
   onOpen,
@@ -109,7 +107,6 @@ const AdvancedTaskTable = ({
                     task={task}
                     columns={columns}
                     categories={categories}
-                    subtaskCount={subtaskCountOf(task.id)}
                     onUpdate={onUpdate}
                     onDelete={onDelete}
                     onOpen={onOpen}

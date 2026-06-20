@@ -7,7 +7,7 @@ import {
 import type { AdvancedTaskColumnId, CurrentTableConfig, TableFilter } from "./types";
 
 const STORAGE_VERSION = 2;
-const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category", "hidden", "kind", "color"];
+const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category"];
 
 export const getAdvancedTaskTableKey = (projectId: string) => `zen:advanced-task-table:v1:${projectId}`;
 

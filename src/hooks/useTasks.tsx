@@ -7,6 +7,8 @@ import type { Database } from "@/integrations/supabase/types";
 export type TaskStatus = Database["public"]["Enums"]["task_status"];
 export type TaskColor = "gray" | "yellow" | "red" | "blue" | "green";
 export type TaskKind = "task" | "timebox";
+export type TaskUrgency = "urgent" | "not_urgent";
+export type TaskImportance = "important" | "not_important";
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
@@ -30,6 +32,8 @@ export type Task = {
   completed_at: string | null;
   color: TaskColor;
   kind: TaskKind;
+  urgency: TaskUrgency;
+  importance: TaskImportance;
   parent_block_id: string | null;
   category_id: string | null;
 };
@@ -44,11 +48,19 @@ type CreateTaskInput = {
   end_time?: string;
   color?: TaskColor;
   kind?: TaskKind;
+  urgency?: TaskUrgency;
+  importance?: TaskImportance;
   parent_block_id?: string | null;
   category_id?: string | null;
 };
 
 type UpdateTaskInput = Partial<Omit<Task, "id" | "project_id" | "user_id" | "created_at">>;
+
+export const normalizeTaskUrgency = (value: unknown): TaskUrgency =>
+  value === "urgent" ? "urgent" : "not_urgent";
+
+export const normalizeTaskImportance = (value: unknown): TaskImportance =>
+  value === "important" ? "important" : "not_important";
 
 const normalizeTask = (row: TaskRow): Task => ({
   ...row,
@@ -56,6 +68,8 @@ const normalizeTask = (row: TaskRow): Task => ({
     ? row.color as TaskColor
     : "gray",
   kind: row.kind === "timebox" ? "timebox" : "task",
+  urgency: normalizeTaskUrgency(row.urgency),
+  importance: normalizeTaskImportance(row.importance),
 });
 
 export const useTasks = (projectId: string | null) => {

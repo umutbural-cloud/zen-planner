@@ -51,26 +51,14 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
 
   const topLevelTasks = useMemo(() => tasks.filter((task) => !task.parent_block_id), [tasks]);
 
-  const subtasksByParentId = useMemo(() => {
-    const map = new Map<string, Task[]>();
-    tasks.forEach((task) => {
-      if (!task.parent_block_id) return;
-      const current = map.get(task.parent_block_id) || [];
-      map.set(task.parent_block_id, [...current, task]);
-    });
-    return map;
-  }, [tasks]);
-
-  const subtaskCountOf = useCallback((taskId: string) => subtasksByParentId.get(taskId)?.length || 0, [subtasksByParentId]);
-
   const visibleColumns = useMemo(() => {
     const validIds = new Set(ADVANCED_TASK_COLUMNS.map((column) => column.id));
     return config.columnOrder.filter((columnId) => validIds.has(columnId) && !config.hiddenColumnIds.includes(columnId));
   }, [config.columnOrder, config.hiddenColumnIds]);
 
   const filteredTasks = useMemo(
-    () => applyTaskFilters(topLevelTasks, config.filters, categories, subtaskCountOf),
-    [categories, config.filters, subtaskCountOf, topLevelTasks],
+    () => applyTaskFilters(topLevelTasks, config.filters, categories),
+    [categories, config.filters, topLevelTasks],
   );
 
   const hasFilters = config.filters.length > 0;
@@ -86,8 +74,8 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   );
 
   const activeGroups = useMemo(
-    () => groupTasks(activeTasks, config.groupBy, categories, subtaskCountOf),
-    [activeTasks, categories, config.groupBy, subtaskCountOf],
+    () => groupTasks(activeTasks, config.groupBy, categories),
+    [activeTasks, categories, config.groupBy],
   );
 
   const doneTasks = useMemo(
@@ -108,8 +96,8 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   );
 
   const groups = useMemo(
-    () => groupTasks(filteredTasks, config.groupBy, categories, subtaskCountOf),
-    [categories, config.groupBy, filteredTasks, subtaskCountOf],
+    () => groupTasks(filteredTasks, config.groupBy, categories),
+    [categories, config.groupBy, filteredTasks],
   );
 
   const handleCreate = async () => {
@@ -169,17 +157,6 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     }));
   };
 
-  const handleSetHiddenFilter = (value: "visible" | "hidden" | "all") => {
-    updateConfig((current) => {
-      const withoutHidden = removeColumnFilter(current.filters, "hidden");
-      if (value === "all") return { ...current, filters: withoutHidden };
-      return {
-        ...current,
-        filters: [...withoutHidden, { columnId: "hidden", operator: "equals", value: value === "hidden" ? "true" : "false" }],
-      };
-    });
-  };
-
   const handleClearFilters = () => {
     updateConfig((current) => ({ ...current, filters: [] }));
   };
@@ -208,7 +185,6 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           groups={[{ key: "done", label: "Tamamlananlar", count: doneTasks.length, rows: visibleDone }]}
           columns={visibleColumns}
           categories={categories}
-          subtaskCountOf={subtaskCountOf}
           onUpdate={updateTask}
           onDelete={deleteTask}
           onOpen={setEditTask}
@@ -246,7 +222,6 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
             groups={[{ key: "hidden", label: "Gizlenenler", count: hiddenTasks.length, rows: hiddenTasks }]}
             columns={visibleColumns}
             categories={categories}
-            subtaskCountOf={subtaskCountOf}
             onUpdate={updateTask}
             onDelete={deleteTask}
             onOpen={setEditTask}
@@ -288,7 +263,6 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
         onSetTitleFilter={handleSetTitleFilter}
         onSetStatusFilter={handleSetStatusFilter}
         onSetCategoryFilter={handleSetCategoryFilter}
-        onSetHiddenFilter={handleSetHiddenFilter}
         onClearFilters={handleClearFilters}
         onResetView={handleResetView}
         groupLabel={activeGroupLabel}
@@ -325,7 +299,6 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               groups={[{ key: "active", label: "Görevler", count: activeTasks.length, rows: activeTasks }]}
               columns={visibleColumns}
               categories={categories}
-              subtaskCountOf={subtaskCountOf}
               onUpdate={updateTask}
               onDelete={deleteTask}
               onOpen={setEditTask}
@@ -343,7 +316,6 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               groups={activeGroups}
               columns={visibleColumns}
               categories={categories}
-              subtaskCountOf={subtaskCountOf}
               onUpdate={updateTask}
               onDelete={deleteTask}
               onOpen={setEditTask}

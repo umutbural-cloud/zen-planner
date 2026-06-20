@@ -1,4 +1,4 @@
-import type { Task } from "@/hooks/useTasks";
+import type { Task, TaskImportance, TaskUrgency } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import type { AdvancedTaskColumn, AdvancedTaskColumnId } from "./types";
 
@@ -8,11 +8,8 @@ export const ADVANCED_TASK_COLUMNS: AdvancedTaskColumn[] = [
   { id: "category", label: "Kategori", type: "category", defaultVisible: true },
   { id: "start", label: "Başlangıç", type: "date", defaultVisible: true },
   { id: "end", label: "Bitiş", type: "date", defaultVisible: true },
-  { id: "completed_at", label: "Tamamlandı", type: "date", defaultVisible: false },
-  { id: "hidden", label: "Gizli", type: "boolean", defaultVisible: false },
-  { id: "kind", label: "Tür", type: "kind", defaultVisible: false },
-  { id: "color", label: "Renk", type: "color", defaultVisible: false },
-  { id: "subtasks", label: "Alt görev", type: "count", defaultVisible: true },
+  { id: "urgency", label: "Aciliyet", type: "choice", defaultVisible: true },
+  { id: "importance", label: "Önem", type: "choice", defaultVisible: true },
 ];
 
 export const ADVANCED_TASK_COLUMN_IDS = ADVANCED_TASK_COLUMNS.map((column) => column.id);
@@ -38,11 +35,16 @@ export const formatDateTimeParts = (date: string | null, time: string | null) =>
   return "—";
 };
 
+export const formatTaskUrgency = (value: TaskUrgency) =>
+  value === "urgent" ? "Acil" : "Acil Değil";
+
+export const formatTaskImportance = (value: TaskImportance) =>
+  value === "important" ? "Önemli" : "Önemli Değil";
+
 export const getTaskColumnValue = (
   task: Task,
   columnId: AdvancedTaskColumnId,
   categories: PomodoroCategory[],
-  subtaskCount: number,
 ) => {
   switch (columnId) {
     case "title":
@@ -55,16 +57,10 @@ export const getTaskColumnValue = (
       return formatDateTimeParts(task.start_date, task.start_time);
     case "end":
       return formatDateTimeParts(task.end_date, task.end_time);
-    case "completed_at":
-      return task.completed_at || "";
-    case "hidden":
-      return String(task.hidden);
-    case "kind":
-      return task.kind;
-    case "color":
-      return task.color;
-    case "subtasks":
-      return String(subtaskCount);
+    case "urgency":
+      return task.urgency;
+    case "importance":
+      return task.importance;
     default:
       return "";
   }

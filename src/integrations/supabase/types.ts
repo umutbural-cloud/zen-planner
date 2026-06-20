@@ -769,6 +769,7 @@ export type Database = {
           end_time: string | null
           hidden: boolean
           id: string
+          importance: string | null
           kind: string
           parent_block_id: string | null
           position: number
@@ -779,6 +780,7 @@ export type Database = {
           start_time: string | null
           status: Database["public"]["Enums"]["task_status"]
           title: string
+          urgency: string | null
           user_id: string
         }
         Insert: {
@@ -792,6 +794,7 @@ export type Database = {
           end_time?: string | null
           hidden?: boolean
           id?: string
+          importance?: string | null
           kind?: string
           parent_block_id?: string | null
           position?: number
@@ -802,6 +805,7 @@ export type Database = {
           start_time?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           title: string
+          urgency?: string | null
           user_id: string
         }
         Update: {
@@ -815,6 +819,7 @@ export type Database = {
           end_time?: string | null
           hidden?: boolean
           id?: string
+          importance?: string | null
           kind?: string
           parent_block_id?: string | null
           position?: number
@@ -825,6 +830,7 @@ export type Database = {
           start_time?: string | null
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
+          urgency?: string | null
           user_id?: string
         }
         Relationships: [

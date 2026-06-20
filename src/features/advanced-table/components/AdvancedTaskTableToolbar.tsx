@@ -20,7 +20,6 @@ type AdvancedTaskTableToolbarProps = {
   onSetTitleFilter: (value: string) => void;
   onSetStatusFilter: (value: "all" | TaskStatus) => void;
   onSetCategoryFilter: (value: string | "all") => void;
-  onSetHiddenFilter: (value: "visible" | "hidden" | "all") => void;
   onClearFilters: () => void;
   onResetView: () => void;
 };
@@ -37,7 +36,6 @@ const AdvancedTaskTableToolbar = ({
   onSetTitleFilter,
   onSetStatusFilter,
   onSetCategoryFilter,
-  onSetHiddenFilter,
   onClearFilters,
   onResetView,
 }: AdvancedTaskTableToolbarProps) => {
@@ -64,7 +62,6 @@ const AdvancedTaskTableToolbar = ({
           onSetTitle={onSetTitleFilter}
           onSetStatus={onSetStatusFilter}
           onSetCategory={onSetCategoryFilter}
-          onSetHidden={onSetHiddenFilter}
           onClear={onClearFilters}
         />
         <GroupByMenu groupBy={config.groupBy} onChange={onGroupByChange} />

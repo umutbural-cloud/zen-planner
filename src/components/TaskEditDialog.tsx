@@ -6,7 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useTasks, Task, TaskColor, TaskKind } from "@/hooks/useTasks";
+import {
+  normalizeTaskImportance,
+  normalizeTaskUrgency,
+  useTasks,
+  Task,
+  TaskColor,
+  TaskImportance,
+  TaskKind,
+  TaskUrgency,
+} from "@/hooks/useTasks";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { colorHex } from "@/hooks/useHabitCategories";
 import { TASK_COLORS, colorClasses } from "@/lib/taskColors";
@@ -41,6 +50,45 @@ const TaskColorPicker = ({ value, onChange }: { value: TaskColor; onChange: (c: 
   </div>
 );
 
+const urgencyOptions: Array<{ value: TaskUrgency; label: string }> = [
+  { value: "urgent", label: "Acil" },
+  { value: "not_urgent", label: "Acil Değil" },
+];
+
+const importanceOptions: Array<{ value: TaskImportance; label: string }> = [
+  { value: "important", label: "Önemli" },
+  { value: "not_important", label: "Önemli Değil" },
+];
+
+const SegmentedChoice = <T extends string>({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+  ariaLabel: string;
+}) => (
+  <div className="flex overflow-hidden rounded-sm border border-border/60 text-xs" role="group" aria-label={ariaLabel}>
+    {options.map((option) => (
+      <button
+        key={option.value}
+        type="button"
+        onClick={() => onChange(option.value)}
+        className={`flex-1 px-2 py-1.5 transition-colors ${
+          value === option.value
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        }`}
+      >
+        {option.label}
+      </button>
+    ))}
+  </div>
+);
+
 const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, onUpdateTask, onDeleteTask, onCreateTask }: Props) => {
   const { tasks: hookTasks, updateTask: hookUpdateTask, deleteTask: hookDeleteTask, createTask: hookCreateTask } = useTasks(projectId);
   const tasks = tasksOverride || hookTasks;
@@ -58,6 +106,8 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [color, setColor] = useState<TaskColor>("gray");
   const [kind, setKind] = useState<TaskKind>("task");
+  const [urgency, setUrgency] = useState<TaskUrgency>("not_urgent");
+  const [importance, setImportance] = useState<TaskImportance>("not_important");
   const [newSubtitle, setNewSubtitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,6 +122,8 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
     setCategoryId(task.category_id || null);
     setColor((task.color || "gray") as TaskColor);
     setKind((task.kind || "task") as TaskKind);
+    setUrgency(normalizeTaskUrgency(task.urgency));
+    setImportance(normalizeTaskImportance(task.importance));
   }, [task]);
 
   if (!task) return null;
@@ -93,6 +145,8 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
         category_id: categoryId,
         color,
         kind,
+        urgency,
+        importance,
       });
       onOpenChange(false);
     } finally {
@@ -200,22 +254,51 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Başlangıç tarihi</div>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent" />
+          <div className="space-y-3 rounded-sm border border-border/60 p-3">
+            <div className="text-[10px] text-muted-foreground tracking-wide">Zaman ve Öncelik</div>
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[5rem_1fr_1fr] sm:items-end">
+                <div className="text-[10px] text-muted-foreground tracking-wide sm:pb-2.5">Başlangıç</div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Tarih</div>
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-transparent" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Saat</div>
+                  <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="bg-transparent" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[5rem_1fr_1fr] sm:items-end">
+                <div className="text-[10px] text-muted-foreground tracking-wide sm:pb-2.5">Bitiş</div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Tarih</div>
+                  <Input type="date" value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent" />
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Saat</div>
+                  <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="bg-transparent" />
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Bitiş tarihi</div>
-              <Input type="date" value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)} className="bg-transparent" />
-            </div>
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Başlangıç saati</div>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="bg-transparent" />
-            </div>
-            <div>
-              <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Bitiş saati</div>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="bg-transparent" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Aciliyet</div>
+                <SegmentedChoice
+                  value={urgency}
+                  options={urgencyOptions}
+                  onChange={setUrgency}
+                  ariaLabel="Aciliyet seçimi"
+                />
+              </div>
+              <div>
+                <div className="text-[10px] text-muted-foreground mb-1 tracking-wide">Önem</div>
+                <SegmentedChoice
+                  value={importance}
+                  options={importanceOptions}
+                  onChange={setImportance}
+                  ariaLabel="Önem seçimi"
+                />
+              </div>
             </div>
           </div>
 
