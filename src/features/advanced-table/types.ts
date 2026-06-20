@@ -4,22 +4,15 @@ export type AdvancedTaskColumnId =
   | "category"
   | "start"
   | "end"
-  | "completed_at"
-  | "hidden"
-  | "kind"
-  | "color"
-  | "subtasks";
+  | "urgency"
+  | "importance";
 
 export type AdvancedTaskColumnType =
   | "text"
   | "status"
   | "category"
   | "date"
-  | "time"
-  | "boolean"
-  | "kind"
-  | "color"
-  | "count";
+  | "choice";
 
 export type AdvancedTaskColumn = {
   id: AdvancedTaskColumnId;

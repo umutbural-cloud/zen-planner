@@ -14,7 +14,6 @@ type FilterMenuProps = {
   onSetTitle: (value: string) => void;
   onSetStatus: (value: "all" | TaskStatus) => void;
   onSetCategory: (value: string | "all") => void;
-  onSetHidden: (value: "visible" | "hidden" | "all") => void;
   onClear: () => void;
 };
 
@@ -30,17 +29,10 @@ const statusValueOf = (filters: TableFilter[]): "all" | TaskStatus => {
   return "all";
 };
 
-const hiddenValueOf = (filters: TableFilter[]): "visible" | "hidden" | "all" => {
-  const filter = getFilter(filters, "hidden");
-  if (!filter || filter.operator !== "equals") return "all";
-  return filter.value === "true" ? "hidden" : "visible";
-};
-
-const FilterMenu = ({ filters, categories, onSetTitle, onSetStatus, onSetCategory, onSetHidden, onClear }: FilterMenuProps) => {
+const FilterMenu = ({ filters, categories, onSetTitle, onSetStatus, onSetCategory, onClear }: FilterMenuProps) => {
   const titleFilter = getFilter(filters, "title");
   const categoryFilter = getFilter(filters, "category");
   const statusValue = statusValueOf(filters);
-  const hiddenValue = hiddenValueOf(filters);
   const active = filters.length > 0;
 
   return (
@@ -97,28 +89,6 @@ const FilterMenu = ({ filters, categories, onSetTitle, onSetStatus, onSetCategor
                   onClick={() => onSetStatus(item.value as "all" | TaskStatus)}
                   className={`rounded-sm px-2 py-1.5 text-xs transition-colors ${
                     statusValue === item.value ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <div className="px-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Gizli</div>
-            <div className="grid grid-cols-3 gap-1">
-              {[
-                { value: "visible", label: "Görünür" },
-                { value: "hidden", label: "Gizli" },
-                { value: "all", label: "Hepsi" },
-              ].map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => onSetHidden(item.value as "visible" | "hidden" | "all")}
-                  className={`rounded-sm px-2 py-1.5 text-xs transition-colors ${
-                    hiddenValue === item.value ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
                   }`}
                 >
                   {item.label}

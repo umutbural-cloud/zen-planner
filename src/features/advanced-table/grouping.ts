@@ -18,8 +18,6 @@ const emptyLabelOf = (columnId: AdvancedTaskColumnId) => (columnId === "category
 const labelOf = (key: string, groupBy: AdvancedTaskColumnId, categories: PomodoroCategory[]) => {
   if (key === "__empty__") return emptyLabelOf(groupBy);
   if (groupBy === "status") return formatTaskStatus(key);
-  if (groupBy === "hidden") return key === "true" ? "Gizli" : "Görünür";
-  if (groupBy === "kind") return key === "timebox" ? "Timebox" : "Görev";
   if (groupBy === "category") return categories.find((item) => item.name === key)?.name || key;
   return key;
 };
@@ -28,7 +26,6 @@ export const groupTasks = (
   rows: Task[],
   groupBy: AdvancedTaskColumnId | null,
   categories: PomodoroCategory[],
-  subtaskCountOf: (taskId: string) => number,
 ): AdvancedTaskGroup[] => {
   if (!groupBy) {
     return [{ key: "all", label: "Görevler", count: rows.length, rows }];
@@ -36,7 +33,7 @@ export const groupTasks = (
 
   const groups = new Map<string, Task[]>();
   rows.forEach((row) => {
-    const value = getTaskColumnValue(row, groupBy, categories, subtaskCountOf(row.id));
+    const value = getTaskColumnValue(row, groupBy, categories);
     const key = String(value || "__empty__");
     groups.set(key, [...(groups.get(key) || []), row]);
   });

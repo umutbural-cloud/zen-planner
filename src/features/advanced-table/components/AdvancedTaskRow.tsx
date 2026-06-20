@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { TableCell, TableRow } from "@/components/ui/table";
-import type { Task } from "@/hooks/useTasks";
+import type { Task, TaskImportance, TaskUrgency } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { colorHex } from "@/hooks/useHabitCategories";
+import { formatTaskImportance, formatTaskUrgency } from "../columns";
 import { formatTaskStatus } from "../statusLabels";
 import type { AdvancedTaskColumnId } from "../types";
 
@@ -16,15 +17,9 @@ type AdvancedTaskRowProps = {
   task: Task;
   columns: AdvancedTaskColumnId[];
   categories: PomodoroCategory[];
-  subtaskCount: number;
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
   onOpen: (task: Task) => void;
-};
-
-const formatDateTime = (value: string | null) => {
-  if (!value) return "—";
-  return value.slice(0, 16).replace("T", " ");
 };
 
 const cellControlClassName =
@@ -135,7 +130,7 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, onDelete, onOpen }: AdvancedTaskRowProps) => {
+const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen }: AdvancedTaskRowProps) => {
   const [title, setTitle] = useState(task.title);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [startTimeOpen, setStartTimeOpen] = useState(false);
@@ -183,12 +178,6 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
     const nextCategoryId = value === "none" ? null : value;
     if (nextCategoryId === task.category_id) return;
     onUpdate(task.id, { category_id: nextCategoryId });
-  };
-
-  const handleHiddenChange = (value: string) => {
-    const nextHidden = value === "hidden";
-    if (nextHidden === task.hidden) return;
-    onUpdate(task.id, { hidden: nextHidden });
   };
 
   const commitDateValue = (
@@ -588,27 +577,32 @@ const AdvancedTaskRow = ({ task, columns, categories, subtaskCount, onUpdate, on
             )}
           </div>
         );
-      case "completed_at":
-        return <span className="text-xs text-muted-foreground">{formatDateTime(task.completed_at)}</span>;
-      case "hidden":
+      case "urgency":
         return (
           <select
-            value={task.hidden ? "hidden" : "visible"}
-            onChange={(event) => handleHiddenChange(event.target.value)}
+            value={task.urgency}
+            onChange={(event) => onUpdate(task.id, { urgency: event.target.value as TaskUrgency })}
             onClick={(event) => event.stopPropagation()}
-            aria-label="Görünürlük değiştir"
+            aria-label="Aciliyet değiştir"
             className={cellControlClassName}
           >
-            <option value="visible">Görünür</option>
-            <option value="hidden">Gizli</option>
+            <option value="urgent">{formatTaskUrgency("urgent")}</option>
+            <option value="not_urgent">{formatTaskUrgency("not_urgent")}</option>
           </select>
         );
-      case "kind":
-        return <span className="text-xs text-muted-foreground">{task.kind === "timebox" ? "Timebox" : "Görev"}</span>;
-      case "color":
-        return <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: colorHex(task.color) }} />;
-      case "subtasks":
-        return <span className="text-xs text-muted-foreground">{subtaskCount}</span>;
+      case "importance":
+        return (
+          <select
+            value={task.importance}
+            onChange={(event) => onUpdate(task.id, { importance: event.target.value as TaskImportance })}
+            onClick={(event) => event.stopPropagation()}
+            aria-label="Önem değiştir"
+            className={cellControlClassName}
+          >
+            <option value="important">{formatTaskImportance("important")}</option>
+            <option value="not_important">{formatTaskImportance("not_important")}</option>
+          </select>
+        );
       default:
         return null;
     }

@@ -7,11 +7,10 @@ export const applyTaskFilters = (
   tasks: Task[],
   filters: TableFilter[],
   categories: PomodoroCategory[],
-  subtaskCountOf: (taskId: string) => number,
 ) =>
   tasks.filter((task) =>
     filters.every((filter) => {
-      const raw = getTaskColumnValue(task, filter.columnId, categories, subtaskCountOf(task.id));
+      const raw = getTaskColumnValue(task, filter.columnId, categories);
       const value = String(raw ?? "");
       const expected = String(filter.value ?? "");
 

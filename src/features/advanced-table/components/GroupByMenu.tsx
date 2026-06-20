@@ -10,7 +10,7 @@ import {
 import { ADVANCED_TASK_COLUMNS } from "../columns";
 import type { AdvancedTaskColumnId } from "../types";
 
-const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category", "hidden", "kind", "color"];
+const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category"];
 
 type GroupByMenuProps = {
   groupBy: AdvancedTaskColumnId | null;
