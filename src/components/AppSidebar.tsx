@@ -443,206 +443,208 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-border/60">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={onSelectHome}
-                  className={`text-sm font-light ${isHomeRoute && section === "home" ? "bg-accent text-accent-foreground" : ""}`}
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  <span className="tracking-wide">Ana Sayfa</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              {prefs.journal && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={onSelectJournal}
-                    className={`text-sm font-light ${isHomeRoute && section === "journal" ? "bg-accent text-accent-foreground" : ""}`}
-                  >
-                    <FileText className="h-3.5 w-3.5" />
-                    <span className="tracking-wide">{moduleLabel("journal")}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {prefs.habits && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={onSelectHabits}
-                    className={`text-sm font-light ${isHomeRoute && section === "habits" ? "bg-accent text-accent-foreground" : ""}`}
-                  >
-                    <Repeat className="h-3.5 w-3.5" />
-                    <span className="tracking-wide">{moduleLabel("habits")}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {prefs.workHistory && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => navigate("/work-history")}
-                    className={`text-sm font-light ${isWorkHistoryActive ? "bg-accent text-accent-foreground" : ""}`}
-                  >
-                    <Clock className="h-3.5 w-3.5" />
-                    <span className="tracking-wide">{moduleLabel("workHistory")}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {prefs.retreat && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={onSelectRetreat}
-                    className={`text-sm font-light ${isHomeRoute && section === "retreat" ? "bg-accent text-accent-foreground" : ""}`}
-                  >
-                    <Wind className="h-3.5 w-3.5" />
-                    <span className="tracking-wide">{moduleLabel("retreat")}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              <SidebarMenuItem>
-                <Popover open={newModuleOpen} onOpenChange={setNewModuleOpen}>
-                  <PopoverTrigger asChild>
-                    <SidebarMenuButton className="text-xs text-muted-foreground/70 font-light">
-                      <Plus className="h-3 w-3" />
-                      <span className="tracking-wide">Yeni Modül</span>
+      <SidebarContent className="overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <SidebarGroup>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={onSelectHome}
+                      className={`text-sm font-light ${isHomeRoute && section === "home" ? "bg-accent text-accent-foreground" : ""}`}
+                    >
+                      <Home className="h-3.5 w-3.5" />
+                      <span className="tracking-wide">Ana Sayfa</span>
                     </SidebarMenuButton>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-52 p-1" align="start">
-                    {hiddenModules.length === 0 ? (
-                      <div className="text-[11px] text-muted-foreground/70 font-light px-2 py-2 text-center">
-                        Tüm modüller eklendi
-                      </div>
-                    ) : (
-                      hiddenModules.map((m) => {
-                        const Icon = m.icon;
-                        return (
-                          <button
-                            key={m.key}
-                            onClick={() => { setItem(m.key, true); setNewModuleOpen(false); }}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded-sm transition-colors text-left"
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            <span className="tracking-wide">{m.label}</span>
-                          </button>
-                        );
-                      })
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">
-            Projeler
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {rootProjects.map((project) => (
-                <div key={project.id}>
-                  <ProjectItem
-                    project={project}
-                    children={getChildren(project.id)}
-                    selectedId={selectedId}
-                    selectedView={selectedView}
-                    section={isHomeRoute ? section : "home"}
-                    onSelect={onSelect}
-                    onDelete={onDelete}
-                    onUpdateProject={onUpdateProject}
-                    onAddSub={handleAddSub}
-                  />
-                  {addingParentId === project.id && (
+                  </SidebarMenuItem>
+                  {prefs.journal && (
                     <SidebarMenuItem>
-                      <div className="flex gap-1 px-2 py-1" style={{ paddingLeft: "32px" }}>
+                      <SidebarMenuButton
+                        onClick={onSelectJournal}
+                        className={`text-sm font-light ${isHomeRoute && section === "journal" ? "bg-accent text-accent-foreground" : ""}`}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="tracking-wide">{moduleLabel("journal")}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {prefs.habits && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={onSelectHabits}
+                        className={`text-sm font-light ${isHomeRoute && section === "habits" ? "bg-accent text-accent-foreground" : ""}`}
+                      >
+                        <Repeat className="h-3.5 w-3.5" />
+                        <span className="tracking-wide">{moduleLabel("habits")}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {prefs.workHistory && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => navigate("/work-history")}
+                        className={`text-sm font-light ${isWorkHistoryActive ? "bg-accent text-accent-foreground" : ""}`}
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                        <span className="tracking-wide">{moduleLabel("workHistory")}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {prefs.retreat && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={onSelectRetreat}
+                        className={`text-sm font-light ${isHomeRoute && section === "retreat" ? "bg-accent text-accent-foreground" : ""}`}
+                      >
+                        <Wind className="h-3.5 w-3.5" />
+                        <span className="tracking-wide">{moduleLabel("retreat")}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  <SidebarMenuItem>
+                    <Popover open={newModuleOpen} onOpenChange={setNewModuleOpen}>
+                      <PopoverTrigger asChild>
+                        <SidebarMenuButton className="text-xs text-muted-foreground/70 font-light">
+                          <Plus className="h-3 w-3" />
+                          <span className="tracking-wide">Yeni Modül</span>
+                        </SidebarMenuButton>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-1" align="start">
+                        {hiddenModules.length === 0 ? (
+                          <div className="text-[11px] text-muted-foreground/70 font-light px-2 py-2 text-center">
+                            Tüm modüller eklendi
+                          </div>
+                        ) : (
+                          hiddenModules.map((m) => {
+                            const Icon = m.icon;
+                            return (
+                              <button
+                                key={m.key}
+                                onClick={() => { setItem(m.key, true); setNewModuleOpen(false); }}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-accent rounded-sm transition-colors text-left"
+                              >
+                                <Icon className="h-3.5 w-3.5" />
+                                <span className="tracking-wide">{m.label}</span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">
+                Projeler
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {rootProjects.map((project) => (
+                    <div key={project.id}>
+                      <ProjectItem
+                        project={project}
+                        children={getChildren(project.id)}
+                        selectedId={selectedId}
+                        selectedView={selectedView}
+                        section={isHomeRoute ? section : "home"}
+                        onSelect={onSelect}
+                        onDelete={onDelete}
+                        onUpdateProject={onUpdateProject}
+                        onAddSub={handleAddSub}
+                      />
+                      {addingParentId === project.id && (
+                        <SidebarMenuItem>
+                          <div className="flex gap-1 px-2 py-1" style={{ paddingLeft: "32px" }}>
+                            <Input
+                              value={subName}
+                              onChange={(e) => setSubName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleCreateSub();
+                                if (e.key === "Escape") setAddingParentId(null);
+                              }}
+                              autoFocus
+                              placeholder="Alt proje adı..."
+                              className="h-7 text-xs bg-transparent"
+                            />
+                          </div>
+                        </SidebarMenuItem>
+                      )}
+                    </div>
+                  ))}
+
+                  {showInput ? (
+                    <SidebarMenuItem>
+                      <div className="flex gap-1 px-2 py-1">
                         <Input
-                          value={subName}
-                          onChange={(e) => setSubName(e.target.value)}
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") handleCreateSub();
-                            if (e.key === "Escape") setAddingParentId(null);
+                            if (e.key === "Enter") handleCreate();
+                            if (e.key === "Escape") setShowInput(false);
                           }}
                           autoFocus
-                          placeholder="Alt proje adı..."
+                          placeholder="Proje adı..."
                           className="h-7 text-xs bg-transparent"
                         />
                       </div>
                     </SidebarMenuItem>
+                  ) : (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setShowInput(true)} className="text-xs text-muted-foreground">
+                        <Plus className="h-3.5 w-3.5 mr-2" />
+                        Yeni Proje
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                   )}
-                </div>
-              ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-              {showInput ? (
+            <SidebarGroup>
+              <SidebarGroupLabel className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">
+                Bilgi Merkezi
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <NotebookSidebarTree
+                  selectedNotebookId={isHomeRoute && section === "notebook" ? selectedNotebookId : null}
+                  selectedKnowledgeNoteId={isHomeRoute && section === "notebook" ? selectedKnowledgeNoteId : null}
+                  onSelectNotebook={onSelectNotebook}
+                  onSelectKnowledgeNote={onSelectKnowledgeNote}
+                />
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </div>
+
+          <SidebarGroup className="shrink-0 border-t border-border/60 bg-sidebar">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {prefs.pomodoro && <PomodoroSidebarWidget />}
                 <SidebarMenuItem>
-                  <div className="flex gap-1 px-2 py-1">
-                    <Input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCreate();
-                        if (e.key === "Escape") setShowInput(false);
-                      }}
-                      autoFocus
-                      placeholder="Proje adı..."
-                      className="h-7 text-xs bg-transparent"
-                    />
-                  </div>
-                </SidebarMenuItem>
-              ) : (
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => setShowInput(true)} className="text-xs text-muted-foreground">
-                    <Plus className="h-3.5 w-3.5 mr-2" />
-                    Yeni Proje
+                  <SidebarMenuButton
+                    onClick={onSelectTrash}
+                    className={`text-xs font-light ${isHomeRoute && section === "trash" ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
+                  >
+                    <Trash className="h-3 w-3" />
+                    <span className="tracking-wide">Çöp Kutusu</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Bilgi Merkezi */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">
-            Bilgi Merkezi
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <NotebookSidebarTree
-              selectedNotebookId={isHomeRoute && section === "notebook" ? selectedNotebookId : null}
-              selectedKnowledgeNoteId={isHomeRoute && section === "notebook" ? selectedKnowledgeNoteId : null}
-              onSelectNotebook={onSelectNotebook}
-              onSelectKnowledgeNote={onSelectKnowledgeNote}
-            />
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Pomodoro + Çöp kutusu */}
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {prefs.pomodoro && <PomodoroSidebarWidget />}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={onSelectTrash}
-                  className={`text-xs font-light ${isHomeRoute && section === "trash" ? "bg-accent text-accent-foreground" : "text-muted-foreground"}`}
-                >
-                  <Trash className="h-3 w-3" />
-                  <span className="tracking-wide">Çöp Kutusu</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setSettingsOpen(true)}
-                  className="text-xs font-light text-muted-foreground"
-                >
-                  <Settings className="h-3 w-3" />
-                  <span className="tracking-wide">Ayarlar</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setSettingsOpen(true)}
+                    className="text-xs font-light text-muted-foreground"
+                  >
+                    <Settings className="h-3 w-3" />
+                    <span className="tracking-wide">Ayarlar</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </div>
       </SidebarContent>
 
       <SidebarFooter className="border-t border-border/60 p-3">

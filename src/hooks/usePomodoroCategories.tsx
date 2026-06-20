@@ -17,12 +17,6 @@ export type PomodoroCategory = {
   position: number;
 };
 
-const DEFAULTS: Array<{ name: string; color: string }> = [
-  { name: "İş", color: "blue" },
-  { name: "Hayat", color: "green" },
-  { name: "Dinlenme", color: "yellow" },
-];
-
 const isDuplicateLikeError = (error: { code?: string; message?: string } | null) =>
   error?.code === "23505" || /duplicate|unique/i.test(error?.message || "");
 
@@ -47,59 +41,7 @@ export const usePomodoroCategories = () => {
       return [];
     }
 
-    let cats = (data || []) as PomodoroCategoryRow[];
-    const existingNames = new Set(cats.map((category) => normalizeCategoryName(category.name)));
-    const missingDefaults = DEFAULTS.filter((category) => !existingNames.has(normalizeCategoryName(category.name)));
-
-    if (missingDefaults.length > 0) {
-      const nextPosition = cats.reduce((max, category) => Math.max(max, category.position), -1) + 1;
-      const inserts: PomodoroCategoryInsert[] = missingDefaults.map((category, index) => ({
-        ...category,
-        user_id: user.id,
-        position: nextPosition + index,
-      }));
-      const { error: insertError } = await supabase.from("pomodoro_categories").insert(inserts);
-
-      if (insertError) {
-        const { data: refetched, error: refetchError } = await supabase
-          .from("pomodoro_categories")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("position", { ascending: true });
-
-        if (!refetchError) {
-          cats = (refetched || []) as PomodoroCategoryRow[];
-          const allDefaultsPresent = DEFAULTS.every((category) =>
-            cats.some((existing) => normalizeCategoryName(existing.name) === normalizeCategoryName(category.name)));
-          if (allDefaultsPresent && isDuplicateLikeError(insertError)) {
-            setCategories(cats);
-            setLoading(false);
-            return cats;
-          }
-        }
-
-        setCategories(cats);
-        setLoading(false);
-        toast.error("Pomodoro kategorileri yüklenemedi.");
-        return cats;
-      }
-
-      const { data: refetched, error: refetchError } = await supabase
-        .from("pomodoro_categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("position", { ascending: true });
-
-      if (refetchError) {
-        setCategories(cats);
-        setLoading(false);
-        toast.error("Pomodoro kategorileri yüklenemedi.");
-        return cats;
-      }
-
-      cats = (refetched || []) as PomodoroCategoryRow[];
-    }
-
+    const cats = (data || []) as PomodoroCategoryRow[];
     setCategories(cats);
     setLoading(false);
     return cats;
