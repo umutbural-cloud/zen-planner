@@ -5,10 +5,10 @@ import HabitsStats from "./HabitsStats";
 
 type Tab = "today" | "master" | "stats";
 
-const TABS: { key: Tab; jp: string; label: string }[] = [
-  { key: "today", jp: "Bugün", label: "Bugün" },
-  { key: "master", jp: "Tümü", label: "Master" },
-  { key: "stats", jp: "İstatistik", label: "İstatistik" },
+const TABS: { key: Tab; label: string }[] = [
+  { key: "today", label: "Bugün" },
+  { key: "master", label: "Master" },
+  { key: "stats", label: "İstatistik" },
 ];
 
 const HabitsView = () => {
@@ -34,7 +34,6 @@ const HabitsView = () => {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="text-[10px] tracking-[0.2em] uppercase font-light">{t.jp}</span>
               <span className="text-sm font-light tracking-wide">{t.label}</span>
             </button>
           );

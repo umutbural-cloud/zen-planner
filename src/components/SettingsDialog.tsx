@@ -358,9 +358,6 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                           )}
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground/70 text-xs w-4 text-center shrink-0">
-                              {DEFAULT_TIME_OF_DAY_LABELS[k].jp}
-                            </span>
                             <Input
                               value={todLabels[k]}
                               onChange={(e) => renameTod(k, e.target.value)}
@@ -387,7 +384,7 @@ const SettingsDialog = ({ open, onOpenChange }: Props) => {
                               </button>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 pl-6">
+                          <div className="flex items-center gap-2">
                             <Input
                               type="time"
                               value={todAuto && opt ? opt.range.split("–")[0] : todStarts[k]}
