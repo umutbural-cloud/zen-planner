@@ -1,10 +1,5 @@
-import { useEffect, useState } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
-import StarterKit from "@tiptap/starter-kit";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import Placeholder from "@tiptap/extension-placeholder";
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon,
 } from "lucide-react";
@@ -18,42 +13,52 @@ import { cn } from "@/lib/utils";
 import JournalCompletedTasks from "./JournalCompletedTasks";
 import JournalWorkSessions from "./JournalWorkSessions";
 import JournalHabits from "./JournalHabits";
-import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
-import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
+import { RichEditorSurface } from "@/components/editor/RichEditorSurface";
+import { EMPTY_RICH_DOC, ensureSafeRichDoc } from "@/features/knowledge/lib/noteContent";
 
-function safeParse(s: string): JSONContent | string {
-  try { return JSON.parse(s); } catch { return s; }
-}
+const textToDoc = (text: string): JSONContent => ({
+  type: "doc",
+  content: text
+    ? text.split("\n").map((line) => ({
+        type: "paragraph",
+        content: line ? [{ type: "text", text: line }] : undefined,
+      }))
+    : [{ type: "paragraph" }],
+});
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const journalContentToDoc = (content: string | null | undefined): JSONContent => {
+  if (!content) return EMPTY_RICH_DOC;
+
+  try {
+    const parsed = JSON.parse(content);
+    if (typeof parsed === "string") return textToDoc(parsed);
+    if (isRecord(parsed) && parsed.type === "doc") return ensureSafeRichDoc(parsed as JSONContent);
+    return textToDoc(content);
+  } catch {
+    return textToDoc(content);
+  }
+};
 
 const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: string) => void }) => {
   const { user } = useAuth();
   const [entryId, setEntryId] = useState<string | null>(null);
+  const [entryDoc, setEntryDoc] = useState<JSONContent>(EMPTY_RICH_DOC);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const currentDate = parseISO(date);
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      FontSize,
-      LineHeight,
-      Placeholder.configure({ placeholder: "Bugün için yaz..." }),
-    ],
-    content: "",
-    editorProps: {
-      attributes: { class: "focus:outline-none min-h-[60vh] text-[12px] font-light leading-relaxed" },
-    },
-  });
 
   useEffect(() => {
     let active = true;
     const load = async () => {
-      if (!user || !editor) return;
+      if (!user) return;
       setLoading(true);
+      setEntryId(null);
       const { data: existing } = await supabase
         .from("journal_entries")
         .select("*")
@@ -73,28 +78,33 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
       }
       if (!active || !n) return;
       setEntryId(n.id);
-      editor.commands.setContent(n.content ? safeParse(n.content) : "");
+      setEntryDoc(journalContentToDoc(n.content));
       setLoading(false);
     };
     load();
     return () => { active = false; };
-  }, [date, user, editor]);
+  }, [date, user]);
 
   useEffect(() => {
-    if (!editor || !entryId || !user) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const handler = () => {
-      clearTimeout(timer);
-      timer = setTimeout(async () => {
-        setSaving(true);
-        const json = JSON.stringify(editor.getJSON());
-        await supabase.from("journal_entries").update({ content: json }).eq("id", entryId).eq("user_id", user.id);
-        setSaving(false);
-      }, 600);
+    return () => {
+      Object.values(saveTimersRef.current).forEach(clearTimeout);
+      saveTimersRef.current = {};
     };
-    editor.on("update", handler);
-    return () => { editor.off("update", handler); clearTimeout(timer); };
-  }, [editor, entryId, user]);
+  }, []);
+
+  const handleEditorChange = useCallback((doc: JSONContent) => {
+    setEntryDoc(doc);
+    if (!entryId || !user) return;
+
+    if (saveTimersRef.current[entryId]) clearTimeout(saveTimersRef.current[entryId]);
+    saveTimersRef.current[entryId] = setTimeout(async () => {
+      setSaving(true);
+      const json = JSON.stringify(doc);
+      await supabase.from("journal_entries").update({ content: json }).eq("id", entryId).eq("user_id", user.id);
+      delete saveTimersRef.current[entryId];
+      setSaving(false);
+    }, 600);
+  }, [entryId, user]);
 
   const shift = (n: number) => onDateChange(format(addDays(currentDate, n), "yyyy-MM-dd"));
 
@@ -148,8 +158,13 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
         <div className="text-center text-muted-foreground text-sm py-12">Yükleniyor...</div>
       ) : (
         <>
-          <RichTextToolbar editor={editor} sticky />
-          <EditorContent editor={editor} />
+          <RichEditorSurface
+            key={entryId ?? date}
+            value={entryDoc}
+            onChange={handleEditorChange}
+            placeholder="Bugün için yaz..."
+            resetKey={entryId ?? date}
+          />
           <div className="text-[10px] text-muted-foreground mt-6 tracking-wide">
             {saving ? "Kaydediliyor..." : "Kaydedildi"}
           </div>
