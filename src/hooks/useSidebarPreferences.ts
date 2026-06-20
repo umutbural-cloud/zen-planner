@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 export type SidebarItemKey = "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" | "retreat";
 
 export const SIDEBAR_ITEM_LABELS: Record<SidebarItemKey, string> = {
-  backlog: "Heybe",
+  backlog: "Backlog",
   journal: "Günlük",
   habits: "Alışkanlıklar",
   workHistory: "Çalışma Geçmişi",
@@ -12,7 +12,6 @@ export const SIDEBAR_ITEM_LABELS: Record<SidebarItemKey, string> = {
 };
 
 export const SIDEBAR_ITEM_ORDER: SidebarItemKey[] = [
-  "backlog",
   "journal",
   "habits",
   "workHistory",
@@ -29,10 +28,9 @@ const DEFAULT_PREFS: Record<SidebarItemKey, boolean> = {
   retreat: false,
 };
 
-export type CustomModuleTarget = "backlog" | "journal" | "habits" | "workHistory";
+export type CustomModuleTarget = "journal" | "habits" | "workHistory";
 
 export const CUSTOM_MODULE_TARGET_LABELS: Record<CustomModuleTarget, string> = {
-  backlog: "Heybe",
   journal: "Günlük",
   habits: "Alışkanlıklar",
   workHistory: "Çalışma Geçmişi",
@@ -54,7 +52,7 @@ const read = (): Record<SidebarItemKey, boolean> => {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_PREFS };
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_PREFS, ...parsed };
+    return { ...DEFAULT_PREFS, ...parsed, backlog: false };
   } catch {
     return { ...DEFAULT_PREFS };
   }
@@ -66,7 +64,9 @@ const readCustom = (): CustomModule[] => {
     const raw = window.localStorage.getItem(CUSTOM_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((entry) => entry && typeof entry === "object" && (entry as { target?: string }).target !== "backlog")
+      : [];
   } catch {
     return [];
   }
@@ -91,7 +91,7 @@ export const useSidebarPreferences = () => {
 
   const setItem = (key: SidebarItemKey, value: boolean) => {
     setPrefs((prev) => {
-      const next = { ...prev, [key]: value };
+      const next = key === "backlog" ? { ...prev, backlog: false } : { ...prev, [key]: value };
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
         window.dispatchEvent(new Event(EVENT));

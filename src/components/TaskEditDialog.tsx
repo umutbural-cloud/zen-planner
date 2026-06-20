@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Package, Plus, Check, X, Timer } from "lucide-react";
+import { Trash2, Plus, Check, X, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,10 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTasks, Task, TaskColor, TaskKind } from "@/hooks/useTasks";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
-import { useBacklog } from "@/hooks/useBacklog";
 import { colorHex } from "@/hooks/useHabitCategories";
 import { TASK_COLORS, colorClasses } from "@/lib/taskColors";
-import { toast } from "sonner";
 
 type Props = {
   task: Task | null;
@@ -50,7 +48,6 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
   const deleteTask = onDeleteTask || hookDeleteTask;
   const createTask = onCreateTask || hookCreateTask;
   const { categories } = usePomodoroCategories();
-  const { createItem: createBacklog } = useBacklog();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -105,13 +102,6 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
 
   const handleDelete = async () => {
     await deleteTask(task.id);
-    onOpenChange(false);
-  };
-
-  const handleSendToBacklog = async () => {
-    await createBacklog({ title: task.title });
-    await deleteTask(task.id);
-    toast.success("Heybeye gönderildi");
     onOpenChange(false);
   };
 
@@ -289,17 +279,6 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
 
         <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 pt-2 border-t border-border/40">
           <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleSendToBacklog}
-              className="text-muted-foreground hover:text-foreground"
-              title="Görevi heybeye geri gönder"
-            >
-              <Package className="h-3.5 w-3.5 mr-1.5" />
-              <span className="text-xs tracking-wide">Heybeye gönder</span>
-            </Button>
             <Button
               type="button"
               variant="ghost"

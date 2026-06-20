@@ -54,7 +54,7 @@ const AppShell = () => {
       setView(projectViews[0]);
     } else {
       setSelectedProjectId(null);
-      setSection("backlog");
+      setSection("home");
     }
     navigate("/");
   };
@@ -80,7 +80,6 @@ const AppShell = () => {
           onCreate={createAndSelectProject}
           onDelete={deleteAndSelectFallback}
           onUpdateProject={updateProject}
-          onSelectBacklog={() => selectHomeSection("backlog")}
           onSelectTrash={() => selectHomeSection("trash")}
           onSelectJournal={() => selectHomeSection("journal")}
           onSelectHabits={() => selectHomeSection("habits")}
