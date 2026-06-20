@@ -6,15 +6,15 @@ type Props = {
 
 const HomeMetrics = ({ metrics }: Props) => {
   if (metrics.status === "loading") {
-    return <section className="grid grid-cols-2 md:grid-cols-4 gap-3">{[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-xl border border-border/60 bg-card/40 animate-pulse" />)}</section>;
+    return <section className="grid grid-cols-2 md:grid-cols-4 gap-3">{[1, 2, 3, 4].map((i) => <div key={i} className="h-24 rounded-sm border border-border/60 bg-transparent animate-pulse" />)}</section>;
   }
 
   if (metrics.status === "error") {
-    return <section className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-xs text-destructive">{metrics.error || "Metrikler yüklenemedi."}</section>;
+    return <section className="rounded-sm border border-destructive/30 bg-transparent px-4 py-3 text-xs text-destructive">{metrics.error || "Metrikler yüklenemedi."}</section>;
   }
 
   if (metrics.status === "empty" || metrics.data.length === 0) {
-    return <section className="rounded-xl border border-border/60 bg-card/60 px-4 py-3 text-xs text-muted-foreground">Bugün için metrik yok.</section>;
+    return <section className="rounded-sm border border-border/60 bg-transparent px-4 py-3 text-xs text-muted-foreground">Bugün için metrik yok.</section>;
   }
 
   return (
@@ -25,7 +25,7 @@ const HomeMetrics = ({ metrics }: Props) => {
         return (
           <div
             key={metric.id}
-            className="rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm px-4 py-3.5 hover:bg-accent/30 transition-colors"
+            className="rounded-sm border border-border/60 bg-transparent px-4 py-3.5 hover:bg-accent/20 transition-colors"
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">

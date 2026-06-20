@@ -34,7 +34,7 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
   const showSecondary = kind === "break" || phase !== "idle";
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm overflow-hidden">
+    <section className="rounded-sm border border-border/60 bg-transparent overflow-hidden">
       <header className="flex items-center justify-between px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
           <Timer className="h-3.5 w-3.5 text-muted-foreground" />
@@ -42,7 +42,7 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
         </div>
       </header>
 
-      {pomodoro.status === "loading" && <div className="mx-5 mb-5 h-24 rounded-xl bg-muted/40 animate-pulse" />}
+      {pomodoro.status === "loading" && <div className="mx-5 mb-5 h-24 rounded-sm border border-border/60 bg-transparent animate-pulse" />}
       {pomodoro.status === "error" && <div className="px-5 pb-5 text-xs text-destructive">{pomodoro.error || "Pomodoro özeti yüklenemedi."}</div>}
       {(pomodoro.status === "empty" || !pomodoro.data) && <div className="px-5 pb-5 text-xs text-muted-foreground">Bugün pomodoro oturumu yok.</div>}
       {pomodoro.status === "ready" && pomodoro.data && (
@@ -71,21 +71,21 @@ const HomePomodoroPreview = ({ pomodoro }: Props) => {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               {isLoading ? (
-                <button type="button" disabled className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground/60 cursor-not-allowed">
+                <button type="button" disabled className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border/70 text-xs text-muted-foreground/60 cursor-not-allowed">
                   Yükleniyor...
                 </button>
               ) : showPrimary && (
-                <button type="button" onClick={primaryAction.onClick} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-foreground/90 hover:bg-accent/40 transition-colors">
+                <button type="button" onClick={primaryAction.onClick} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border/70 text-xs text-foreground/90 hover:bg-accent/20 transition-colors">
                   <PrimaryIcon className="h-3 w-3" /> {primaryAction.label}
                 </button>
               )}
               {!isLoading && showPause && (
-                <button type="button" onClick={pause} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-foreground/90 hover:bg-accent/40 transition-colors">
+                <button type="button" onClick={pause} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border/70 text-xs text-foreground/90 hover:bg-accent/20 transition-colors">
                   <Pause className="h-3 w-3" /> Duraklat
                 </button>
               )}
               {!isLoading && showSecondary && (
-                <button type="button" onClick={secondaryAction.onClick} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/70 text-xs text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors">
+                <button type="button" onClick={secondaryAction.onClick} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-border/70 text-xs text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors">
                   <SecondaryIcon className="h-3 w-3" /> {secondaryAction.label}
                 </button>
               )}
