@@ -16,13 +16,9 @@ export type DailyFocusOption = {
 };
 
 export const DEFAULT_HOME_FOCUS_OPTIONS: DailyFocusOption[] = [
+  { id: "rest", label: "Dinlenme", color: "green" },
   { id: "deep-work", label: "Derin Çalışma", color: "blue" },
-  { id: "publishing", label: "Yayın Yönetimi", color: "purple" },
-  { id: "content", label: "İçerik Üretimi", color: "orange" },
-  { id: "community", label: "Topluluk", color: "green" },
-  { id: "sessions", label: "Seanslar", color: "rose" },
-  { id: "personal", label: "Kişisel İşler", color: "teal" },
-  { id: "other", label: "Diğer", color: "stone", allowsCustomText: true },
+  { id: "reading", label: "Okuma", color: "orange" },
 ];
 
 export type HomeMetric = {
