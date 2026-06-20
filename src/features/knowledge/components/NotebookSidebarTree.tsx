@@ -1,10 +1,5 @@
 import { useState } from "react";
 import { ChevronRight, FileText, Plus, StickyNote, Trash2 } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useKnowledgeNotes } from "../hooks/useNotebookNotes";
 import { useNotebooks } from "../hooks/useNotebooks";
@@ -39,7 +34,6 @@ const NotebookSidebarTree = ({
 }: Props) => {
   const { notebooks, loading: notebooksLoading, createNotebook } = useNotebooks();
   const { notes, loading: notesLoading, createNote, deleteNote } = useKnowledgeNotes();
-  const [createOpen, setCreateOpen] = useState(false);
   const [creatingType, setCreatingType] = useState<NoteType | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const rootNotebooks = notebooks.filter((notebook) => notebook.icon !== QUICK_NOTEBOOK_ICON);
@@ -69,7 +63,6 @@ const NotebookSidebarTree = ({
     if (type === "quick") {
       onSelectNotebook(QUICK_NOTES_ROOT_ID);
       onSelectKnowledgeNote(null);
-      setCreateOpen(false);
       setCreatingType(null);
       return;
     }
@@ -92,7 +85,6 @@ const NotebookSidebarTree = ({
     if (created) {
       if (parentId) setCollapsed((prev) => ({ ...prev, [parentId]: false }));
       onSelectKnowledgeNote(created.id);
-      setCreateOpen(false);
     }
     setCreatingType(null);
   };
@@ -212,32 +204,14 @@ const NotebookSidebarTree = ({
       )}
 
       <SidebarMenuItem>
-        <Popover open={createOpen} onOpenChange={setCreateOpen}>
-          <PopoverTrigger asChild>
-            <SidebarMenuButton className="text-xs text-muted-foreground">
-              <Plus className="h-3.5 w-3.5 mr-2" />
-              Yeni ekle
-            </SidebarMenuButton>
-          </PopoverTrigger>
-          <PopoverContent className="w-52 p-1" align="start">
-            <button
-              onClick={() => handleCreate("quick")}
-              disabled={creatingType !== null}
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-sm hover:bg-accent transition-colors text-left disabled:opacity-50"
-            >
-              <StickyNote className="h-3.5 w-3.5" />
-              <span className="tracking-wide">Anlık notlar</span>
-            </button>
-            <button
-              onClick={() => handleCreate("rich")}
-              disabled={creatingType !== null}
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-sm hover:bg-accent transition-colors text-left disabled:opacity-50"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              <span className="tracking-wide">Zengin doküman</span>
-            </button>
-          </PopoverContent>
-        </Popover>
+        <SidebarMenuButton
+          onClick={() => void handleCreate("rich")}
+          disabled={creatingType !== null}
+          className="text-xs text-muted-foreground"
+        >
+          <Plus className="h-3.5 w-3.5 mr-2" />
+          Yeni ekle
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   );
