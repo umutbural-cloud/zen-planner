@@ -8,7 +8,6 @@ import GanttView from "@/components/GanttView";
 import KanbanView from "@/components/KanbanView";
 import WeeklyCalendarView from "@/components/WeeklyCalendarView";
 import JournalView from "@/components/JournalView";
-import BacklogView from "@/components/BacklogView";
 import TrashView from "@/components/TrashView";
 import HabitsView from "@/components/HabitsView";
 import InzivaView from "@/components/InzivaView";
@@ -70,7 +69,7 @@ const Index = () => {
       }
       if (startup.value === "workHistory") { navigate("/work-history"); return; }
       if (startup.value === "pomodoro") { navigate("/pomodoro"); return; }
-      if (startup.value === "backlog" || startup.value === "journal" || startup.value === "habits") {
+      if (startup.value === "journal" || startup.value === "habits") {
         setSection(startup.value);
         return;
       }
@@ -283,7 +282,6 @@ const Index = () => {
 
           <main className="flex-1 p-3 sm:p-6 overflow-auto">
             {section === "home" && <HomeView />}
-            {section === "backlog" && <BacklogView />}
             {section === "trash" && <TrashView />}
             {section === "journal" && (
               <JournalView key={journalDate} date={journalDate} onDateChange={setJournalDate} />

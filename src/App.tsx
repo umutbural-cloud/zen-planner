@@ -80,7 +80,7 @@ const AuthStartupRedirect = () => {
 
   useEffect(() => {
     if (loading || startup.type !== "module") return;
-    if (startup.value === "backlog" || startup.value === "journal" || startup.value === "habits") {
+    if (startup.value === "journal" || startup.value === "habits") {
       setSelectedProjectId(null);
       setSection(startup.value);
     }

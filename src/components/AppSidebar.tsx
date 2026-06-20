@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Package, Trash, Settings, Repeat, Check, Clock, Wind, Home, type LucideIcon } from "lucide-react";
+import { Plus, Trash2, LogOut, ChevronRight, ChevronUp, ChevronDown, Pencil, FileText, Table as TableIcon, GanttChart, Kanban, Calendar, X, Trash, Settings, Repeat, Check, Clock, Wind, Home, type LucideIcon } from "lucide-react";
 import { useSidebarPreferences } from "@/hooks/useSidebarPreferences";
 import { useModuleLabels } from "@/hooks/useModuleLabels";
 import { HABIT_ICON_GROUPS, getHabitIcon } from "@/lib/habitIcons";
@@ -54,7 +54,6 @@ type Props = {
   onCreate: (name: string, parentId?: string) => void;
   onDelete: (id: string) => void;
   onUpdateProject: (id: string, updates: { name?: string; emoji?: string; icon?: string | null; icon_color?: string | null; enabled_views?: ViewKey[] }) => void;
-  onSelectBacklog: () => void;
   onSelectTrash: () => void;
   onSelectJournal: () => void;
   onSelectHabits: () => void;
@@ -395,7 +394,7 @@ const ProjectItem = ({
   );
 };
 
-const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, selectedKnowledgeNoteId, onSelect, onSelectHome, onCreate, onDelete, onUpdateProject, onSelectBacklog, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook, onSelectKnowledgeNote }: Props) => {
+const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNotebookId, selectedKnowledgeNoteId, onSelect, onSelectHome, onCreate, onDelete, onUpdateProject, onSelectTrash, onSelectJournal, onSelectHabits, onSelectRetreat, onSelectNotebook, onSelectKnowledgeNote }: Props) => {
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -408,8 +407,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [newModuleOpen, setNewModuleOpen] = useState(false);
 
-  const MODULE_OPTIONS: { key: "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" | "retreat"; label: string; icon: LucideIcon }[] = [
-    { key: "backlog", label: moduleLabel("backlog"), icon: Package },
+  const MODULE_OPTIONS: { key: "journal" | "habits" | "workHistory" | "pomodoro" | "retreat"; label: string; icon: LucideIcon }[] = [
     { key: "journal", label: moduleLabel("journal"), icon: FileText },
     { key: "habits", label: moduleLabel("habits"), icon: Repeat },
     { key: "workHistory", label: moduleLabel("workHistory"), icon: Clock },
@@ -446,7 +444,6 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-border/60">
       <SidebarContent>
-        {/* Heybe */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -459,17 +456,6 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                   <span className="tracking-wide">Ana Sayfa</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {prefs.backlog && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={onSelectBacklog}
-                    className={`text-sm font-light ${isHomeRoute && section === "backlog" ? "bg-accent text-accent-foreground" : ""}`}
-                  >
-                    <Package className="h-3.5 w-3.5" />
-                    <span className="tracking-wide">{moduleLabel("backlog")}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
               {prefs.journal && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
