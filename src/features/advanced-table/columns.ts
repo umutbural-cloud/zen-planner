@@ -36,10 +36,10 @@ export const formatDateTimeParts = (date: string | null, time: string | null) =>
 };
 
 export const formatTaskUrgency = (value: TaskUrgency) =>
-  value === "urgent" ? "Acil" : "Acil Değil";
+  value === "urgent" ? "Acil" : value === "not_urgent" ? "Acil Değil" : "-";
 
 export const formatTaskImportance = (value: TaskImportance) =>
-  value === "important" ? "Önemli" : "Önemli Değil";
+  value === "important" ? "Önemli" : value === "not_important" ? "Önemli Değil" : "-";
 
 export const getTaskColumnValue = (
   task: Task,

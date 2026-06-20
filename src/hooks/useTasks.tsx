@@ -7,8 +7,8 @@ import type { Database } from "@/integrations/supabase/types";
 export type TaskStatus = Database["public"]["Enums"]["task_status"];
 export type TaskColor = "gray" | "yellow" | "red" | "blue" | "green";
 export type TaskKind = "task" | "timebox";
-export type TaskUrgency = "urgent" | "not_urgent";
-export type TaskImportance = "important" | "not_important";
+export type TaskUrgency = "urgent" | "not_urgent" | null;
+export type TaskImportance = "important" | "not_important" | null;
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
@@ -57,10 +57,10 @@ type CreateTaskInput = {
 type UpdateTaskInput = Partial<Omit<Task, "id" | "project_id" | "user_id" | "created_at">>;
 
 export const normalizeTaskUrgency = (value: unknown): TaskUrgency =>
-  value === "urgent" ? "urgent" : "not_urgent";
+  value === "urgent" || value === "not_urgent" ? value : null;
 
 export const normalizeTaskImportance = (value: unknown): TaskImportance =>
-  value === "important" ? "important" : "not_important";
+  value === "important" || value === "not_important" ? value : null;
 
 const normalizeTask = (row: TaskRow): Task => ({
   ...row,

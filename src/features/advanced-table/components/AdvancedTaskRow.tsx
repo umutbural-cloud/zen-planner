@@ -580,12 +580,13 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
       case "urgency":
         return (
           <select
-            value={task.urgency}
-            onChange={(event) => onUpdate(task.id, { urgency: event.target.value as TaskUrgency })}
+            value={task.urgency ?? ""}
+            onChange={(event) => onUpdate(task.id, { urgency: event.target.value ? event.target.value as Exclude<TaskUrgency, null> : null })}
             onClick={(event) => event.stopPropagation()}
             aria-label="Aciliyet değiştir"
             className={cellControlClassName}
           >
+            <option value="">-</option>
             <option value="urgent">{formatTaskUrgency("urgent")}</option>
             <option value="not_urgent">{formatTaskUrgency("not_urgent")}</option>
           </select>
@@ -593,12 +594,13 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
       case "importance":
         return (
           <select
-            value={task.importance}
-            onChange={(event) => onUpdate(task.id, { importance: event.target.value as TaskImportance })}
+            value={task.importance ?? ""}
+            onChange={(event) => onUpdate(task.id, { importance: event.target.value ? event.target.value as Exclude<TaskImportance, null> : null })}
             onClick={(event) => event.stopPropagation()}
             aria-label="Önem değiştir"
             className={cellControlClassName}
           >
+            <option value="">-</option>
             <option value="important">{formatTaskImportance("important")}</option>
             <option value="not_important">{formatTaskImportance("not_important")}</option>
           </select>

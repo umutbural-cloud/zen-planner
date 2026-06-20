@@ -51,16 +51,18 @@ const TaskColorPicker = ({ value, onChange }: { value: TaskColor; onChange: (c: 
 );
 
 const urgencyOptions: Array<{ value: TaskUrgency; label: string }> = [
+  { value: null, label: "-" },
   { value: "urgent", label: "Acil" },
   { value: "not_urgent", label: "Acil Değil" },
 ];
 
 const importanceOptions: Array<{ value: TaskImportance; label: string }> = [
+  { value: null, label: "-" },
   { value: "important", label: "Önemli" },
   { value: "not_important", label: "Önemli Değil" },
 ];
 
-const SegmentedChoice = <T extends string>({
+const SegmentedChoice = <T extends string | null>({
   value,
   options,
   onChange,
@@ -74,7 +76,7 @@ const SegmentedChoice = <T extends string>({
   <div className="flex overflow-hidden rounded-sm border border-border/60 text-xs" role="group" aria-label={ariaLabel}>
     {options.map((option) => (
       <button
-        key={option.value}
+        key={option.value ?? "none"}
         type="button"
         onClick={() => onChange(option.value)}
         className={`flex-1 px-2 py-1.5 transition-colors ${
@@ -106,8 +108,8 @@ const TaskEditDialog = ({ task, projectId, open, onOpenChange, tasksOverride, on
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [color, setColor] = useState<TaskColor>("gray");
   const [kind, setKind] = useState<TaskKind>("task");
-  const [urgency, setUrgency] = useState<TaskUrgency>("not_urgent");
-  const [importance, setImportance] = useState<TaskImportance>("not_important");
+  const [urgency, setUrgency] = useState<TaskUrgency>(null);
+  const [importance, setImportance] = useState<TaskImportance>(null);
   const [newSubtitle, setNewSubtitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
