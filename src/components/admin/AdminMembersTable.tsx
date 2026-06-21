@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { AdminAccountStatus, AdminMember, useAdminMembers } from "@/hooks/useAdminMembers";
+import { formatLastSeenWindow } from "./adminDateDisplay";
 
 type AdminMembersState = ReturnType<typeof useAdminMembers>;
 
@@ -137,7 +138,7 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
                 <TableHead>Ad soyad</TableHead>
                 <TableHead>E-posta</TableHead>
                 <TableHead>Plan</TableHead>
-                <TableHead>Son görülme</TableHead>
+                <TableHead>Son görülme aralığı</TableHead>
                 <TableHead>Oluşturulma</TableHead>
                 <TableHead className="text-right">Detay</TableHead>
               </TableRow>
@@ -173,7 +174,7 @@ const MemberRow = ({ member, onSelectMember }: { member: AdminMember; onSelectMe
     <TableCell className="font-medium">{member.full_name ?? "-"}</TableCell>
     <TableCell>{member.email ?? "-"}</TableCell>
     <TableCell>{displayPlan(member.membership)}</TableCell>
-    <TableCell>{formatDate(member.last_seen_at)}</TableCell>
+    <TableCell>{formatLastSeenWindow(member.last_seen_at)}</TableCell>
     <TableCell>{formatDate(member.created_at)}</TableCell>
     <TableCell className="text-right">
       <Button type="button" variant="outline" size="sm" onClick={() => onSelectMember(member.user_id)}>

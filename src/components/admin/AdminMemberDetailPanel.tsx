@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AdminMemberDetail, useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import type { AdminAccountStatusTarget } from "./AdminAccountStatusActionModal";
 import type { AdminMembershipTarget } from "./AdminMemberActionModal";
+import { formatLastSeenWindow } from "./adminDateDisplay";
 
 type AdminMemberDetailState = ReturnType<typeof useAdminMemberDetail>;
 
@@ -326,7 +327,7 @@ const DetailFields = ({ member }: { member: AdminMemberDetail }) => (
     <DetailItem label="Plan" value={displayValue(member.membership, membershipLabels)} />
     <DetailItem label="Plan durumu" value={displayValue(member.membership_status, membershipStatusLabels)} />
     <DetailItem label="Hesap durumu" value={displayValue(member.account_status, accountStatusLabels)} />
-    <DetailItem label="Son görülme" value={formatDate(member.last_seen_at)} />
+    <DetailItem label="Son görülme aralığı" value={formatLastSeenWindow(member.last_seen_at)} />
     <DetailItem label="Oluşturulma" value={formatDate(member.created_at)} />
     <DetailItem label="Güncellenme" value={formatDate(member.updated_at)} />
     <DetailItem label="Kullanabilir" value={booleanLabel(member.can_use_app)} />

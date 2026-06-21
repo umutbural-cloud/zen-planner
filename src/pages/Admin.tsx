@@ -23,6 +23,7 @@ import {
 } from "@/components/admin/AdminMemberSoftDeleteActionModal";
 import { AdminDeletedMembersSection } from "@/components/admin/AdminDeletedMembersSection";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
+import { formatLastSeenWindow } from "@/components/admin/adminDateDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminAccountStatusActions } from "@/hooks/useAdminAccountStatusActions";
@@ -755,7 +756,7 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => {
                 <tr className="border-b border-border/70">
                   <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">AD SOYAD</th>
                   <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-POSTA</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">SON GÖRÜLME</th>
+                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">SON GÖRÜLME ARALIĞI</th>
                 </tr>
               </thead>
               <tbody>
@@ -763,7 +764,7 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => {
                   <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
                     <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
                     <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>
-                    <td className="px-3 py-3 text-sm text-foreground">{formatDateTime(member.last_seen_at)}</td>
+                    <td className="px-3 py-3 text-sm text-foreground">{formatLastSeenWindow(member.last_seen_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -907,18 +908,6 @@ const AdminDataNote = () => (
     </CardContent>
   </Card>
 );
-
-const formatDateTime = (value: string | null) => {
-  if (!value) return "Bilinmiyor";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Bilinmiyor";
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-};
 
 type AdminPlaceholderCardProps = {
   title: string;
