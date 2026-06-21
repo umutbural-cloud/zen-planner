@@ -1,7 +1,7 @@
 import type { Task } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { colorHex } from "@/hooks/useHabitCategories";
-import { getColumn, getTaskColumnValue } from "./columns";
+import { formatTaskImportance, formatTaskUrgency, getColumn, getTaskColumnValue } from "./columns";
 import { formatTaskStatus } from "./statusLabels";
 import type { AdvancedTaskColumnId } from "./types";
 
@@ -13,12 +13,20 @@ export type AdvancedTaskGroup = {
   rows: Task[];
 };
 
-const emptyLabelOf = (columnId: AdvancedTaskColumnId) => (columnId === "category" ? "Kategorisiz" : "Boş");
+const emptyLabelOf = (columnId: AdvancedTaskColumnId) => {
+  if (columnId === "category") return "Kategorisiz";
+  if (columnId === "urgency" || columnId === "importance") return "-";
+  return "Boş";
+};
 
 const labelOf = (key: string, groupBy: AdvancedTaskColumnId, categories: PomodoroCategory[]) => {
   if (key === "__empty__") return emptyLabelOf(groupBy);
   if (groupBy === "status") return formatTaskStatus(key);
   if (groupBy === "category") return categories.find((item) => item.name === key)?.name || key;
+  if (groupBy === "urgency") return key === "urgent" || key === "not_urgent" ? formatTaskUrgency(key) : key;
+  if (groupBy === "importance") {
+    return key === "important" || key === "not_important" ? formatTaskImportance(key) : key;
+  }
   return key;
 };
 

@@ -1,13 +1,13 @@
 import {
   DEFAULT_COLUMN_ORDER,
   DEFAULT_HIDDEN_COLUMN_IDS,
+  GROUPABLE_COLUMN_IDS,
   isAdvancedTaskColumnId,
   REQUIRED_COLUMN_IDS,
 } from "./columns";
-import type { AdvancedTaskColumnId, CurrentTableConfig, TableFilter } from "./types";
+import type { AdvancedTaskColumnId, CurrentTableConfig, TableFilter, TableSort } from "./types";
 
 const STORAGE_VERSION = 2;
-const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category"];
 
 export const getAdvancedTaskTableKey = (projectId: string) => `zen:advanced-task-table:v1:${projectId}`;
 
@@ -17,6 +17,7 @@ export const createDefaultTableConfig = (): CurrentTableConfig => ({
   hiddenColumnIds: [...DEFAULT_HIDDEN_COLUMN_IDS],
   groupBy: null,
   filters: [],
+  sort: null,
 });
 
 const normalizeColumnOrder = (value: unknown): AdvancedTaskColumnId[] => {
@@ -45,6 +46,14 @@ const normalizeFilters = (value: unknown): TableFilter[] => {
   });
 };
 
+const normalizeSort = (value: unknown): TableSort | null => {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<TableSort>;
+  if (!isAdvancedTaskColumnId(candidate.columnId)) return null;
+  if (candidate.direction !== "asc" && candidate.direction !== "desc") return null;
+  return { columnId: candidate.columnId, direction: candidate.direction };
+};
+
 export const normalizeTableConfig = (value: unknown): CurrentTableConfig => {
   if (!value || typeof value !== "object") return createDefaultTableConfig();
   const candidate = value as Partial<CurrentTableConfig>;
@@ -55,6 +64,7 @@ export const normalizeTableConfig = (value: unknown): CurrentTableConfig => {
     hiddenColumnIds: normalizeHiddenColumns(candidate.hiddenColumnIds),
     groupBy: isAdvancedTaskColumnId(candidate.groupBy) && GROUPABLE_COLUMN_IDS.includes(candidate.groupBy) ? candidate.groupBy : null,
     filters: normalizeFilters(candidate.filters),
+    sort: normalizeSort(candidate.sort),
   };
 };
 

@@ -7,10 +7,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ADVANCED_TASK_COLUMNS } from "../columns";
+import { ADVANCED_TASK_COLUMNS, GROUPABLE_COLUMN_IDS } from "../columns";
 import type { AdvancedTaskColumnId } from "../types";
-
-const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category"];
 
 type GroupByMenuProps = {
   groupBy: AdvancedTaskColumnId | null;

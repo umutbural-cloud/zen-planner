@@ -29,10 +29,22 @@ export type TableFilter = {
   value?: string;
 };
 
+export type TableSort = {
+  columnId: AdvancedTaskColumnId;
+  direction: "asc" | "desc";
+};
+
+export type ColumnFilterOption = {
+  label: string;
+  value?: string;
+  operator: "equals" | "isEmpty";
+};
+
 export type CurrentTableConfig = {
   version: 2;
   columnOrder: AdvancedTaskColumnId[];
   hiddenColumnIds: AdvancedTaskColumnId[];
   groupBy: AdvancedTaskColumnId | null;
   filters: TableFilter[];
+  sort: TableSort | null;
 };

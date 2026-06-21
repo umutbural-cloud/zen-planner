@@ -13,6 +13,7 @@ type AdvancedTaskTableToolbarProps = {
   config: CurrentTableConfig;
   categories: PomodoroCategory[];
   groupLabel: string | null;
+  sortLabel: string | null;
   onNewTitleChange: (value: string) => void;
   onCreate: () => void;
   onToggleColumn: (columnId: AdvancedTaskColumnId) => void;
@@ -20,8 +21,8 @@ type AdvancedTaskTableToolbarProps = {
   onSetTitleFilter: (value: string) => void;
   onSetStatusFilter: (value: "all" | TaskStatus) => void;
   onSetCategoryFilter: (value: string | "all") => void;
-  onClearFilters: () => void;
-  onResetView: () => void;
+  onClearTableControls: () => void;
+  onResetColumns: () => void;
 };
 
 const AdvancedTaskTableToolbar = ({
@@ -29,6 +30,7 @@ const AdvancedTaskTableToolbar = ({
   config,
   categories,
   groupLabel,
+  sortLabel,
   onNewTitleChange,
   onCreate,
   onToggleColumn,
@@ -36,8 +38,8 @@ const AdvancedTaskTableToolbar = ({
   onSetTitleFilter,
   onSetStatusFilter,
   onSetCategoryFilter,
-  onClearFilters,
-  onResetView,
+  onClearTableControls,
+  onResetColumns,
 }: AdvancedTaskTableToolbarProps) => {
   const activeFilters: TableFilter[] = config.filters;
   const activeFilterCount = activeFilters.length;
@@ -62,27 +64,32 @@ const AdvancedTaskTableToolbar = ({
           onSetTitle={onSetTitleFilter}
           onSetStatus={onSetStatusFilter}
           onSetCategory={onSetCategoryFilter}
-          onClear={onClearFilters}
+          onClear={onClearTableControls}
         />
         <GroupByMenu groupBy={config.groupBy} onChange={onGroupByChange} />
         <ColumnVisibilityMenu
           hiddenColumnIds={config.hiddenColumnIds}
           onToggle={onToggleColumn}
-          onReset={onResetView}
+          onReset={onResetColumns}
         />
         <Button
           variant="ghost"
           size="sm"
           className="h-9 shrink-0 px-2 text-muted-foreground"
-          onClick={onResetView}
+          onClick={onClearTableControls}
           title="Görünüm ayarlarını sıfırla"
           aria-label="Görünüm ayarlarını sıfırla"
         >
           <RotateCcw className="h-3.5 w-3.5" />
         </Button>
       </div>
-      {(activeFilterCount > 0 || config.groupBy) && (
+      {(activeFilterCount > 0 || config.groupBy || config.sort) && (
         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+          {config.sort && (
+            <span className="rounded-sm bg-accent/50 px-1.5 py-0.5">
+              Sıralama: {sortLabel || "Yok"}
+            </span>
+          )}
           {config.groupBy && (
             <span className="rounded-sm bg-accent/50 px-1.5 py-0.5">
               Gruplama: {groupLabel || "Yok"}
@@ -93,12 +100,12 @@ const AdvancedTaskTableToolbar = ({
               Filtre: {activeFilterCount} aktif
             </span>
           )}
-          {(activeFilterCount > 0 || config.groupBy) && (
+          {(activeFilterCount > 0 || config.groupBy || config.sort) && (
             <button
               type="button"
-              onClick={onResetView}
+              onClick={onClearTableControls}
               className="rounded-sm px-1.5 py-0.5 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              title="Görünüm ayarlarını sıfırla"
+              title="Filtre, sıralama ve gruplamayı temizle"
             >
               Sıfırla
             </button>

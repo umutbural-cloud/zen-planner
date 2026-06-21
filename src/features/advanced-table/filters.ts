@@ -3,6 +3,8 @@ import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { getTaskColumnValue } from "./columns";
 import type { TableFilter } from "./types";
 
+const isEmptyValue = (value: string) => value.trim() === "" || value === "—";
+
 export const applyTaskFilters = (
   tasks: Task[],
   filters: TableFilter[],
@@ -22,9 +24,9 @@ export const applyTaskFilters = (
         case "contains":
           return value.toLocaleLowerCase("tr").includes(expected.toLocaleLowerCase("tr"));
         case "isEmpty":
-          return value.trim() === "";
+          return isEmptyValue(value);
         case "isNotEmpty":
-          return value.trim() !== "";
+          return !isEmptyValue(value);
         default:
           return true;
       }
