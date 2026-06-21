@@ -3,15 +3,17 @@ import type { TaskStatus } from "@/hooks/useTasks";
 import TaskEditDialog from "@/components/TaskEditDialog";
 import { DelayedLoading, LoadingBlock } from "@/components/ui/delayed-loading";
 import { useTasks, type Task } from "@/hooks/useTasks";
-import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
-import { ADVANCED_TASK_COLUMNS, DEFAULT_HIDDEN_COLUMN_IDS, REQUIRED_COLUMN_IDS } from "./columns";
+import { usePomodoroCategories, type PomodoroCategory } from "@/hooks/usePomodoroCategories";
+import { ADVANCED_TASK_COLUMNS, DEFAULT_HIDDEN_COLUMN_IDS, getColumnLabel, formatDateTimeParts, formatTaskImportance, formatTaskUrgency, REQUIRED_COLUMN_IDS } from "./columns";
 import { applyTaskFilters } from "./filters";
 import { groupTasks } from "./grouping";
-import { createDefaultTableConfig, loadTableConfig, resetTableConfig, saveTableConfig } from "./storage";
-import type { AdvancedTaskColumnId, CurrentTableConfig, TableFilter } from "./types";
+import { applyTaskSort } from "./sorting";
+import { loadTableConfig, saveTableConfig } from "./storage";
+import type { AdvancedTaskColumnId, ColumnFilterOption, CurrentTableConfig, TableFilter, TableSort } from "./types";
 import AdvancedTaskTable from "./components/AdvancedTaskTable";
 import AdvancedTaskTableToolbar from "./components/AdvancedTaskTableToolbar";
 import { arrayMove } from "@dnd-kit/sortable";
+import { formatTaskStatus } from "./statusLabels";
 
 type AdvancedTaskTableViewProps = {
   projectId: string;
@@ -21,8 +23,60 @@ const removeColumnFilter = (filters: TableFilter[], columnId: AdvancedTaskColumn
   filters.filter((filter) => filter.columnId !== columnId);
 
 const setColumnFilter = (filters: TableFilter[], nextFilter: TableFilter | null) => {
-  if (!nextFilter) return removeColumnFilter(filters, "title");
+  if (!nextFilter) return filters;
   return [...removeColumnFilter(filters, nextFilter.columnId), nextFilter];
+};
+
+const createEmptyOption = (): ColumnFilterOption => ({ label: "-", operator: "isEmpty" });
+
+const getTaskFilterOption = (
+  task: Task,
+  columnId: AdvancedTaskColumnId,
+  categories: PomodoroCategory[],
+): ColumnFilterOption | null => {
+  switch (columnId) {
+    case "title":
+      return null;
+    case "status":
+      return { label: formatTaskStatus(task.status), operator: "equals", value: task.status };
+    case "category": {
+      const categoryName = categories.find((category) => category.id === task.category_id)?.name || "";
+      return categoryName ? { label: categoryName, operator: "equals", value: categoryName } : createEmptyOption();
+    }
+    case "start": {
+      const value = formatDateTimeParts(task.start_date, task.start_time);
+      return value === "—" ? createEmptyOption() : { label: value, operator: "equals", value };
+    }
+    case "end": {
+      const value = formatDateTimeParts(task.end_date, task.end_time);
+      return value === "—" ? createEmptyOption() : { label: value, operator: "equals", value };
+    }
+    case "urgency":
+      return task.urgency ? { label: formatTaskUrgency(task.urgency), operator: "equals", value: task.urgency } : createEmptyOption();
+    case "importance":
+      return task.importance ? { label: formatTaskImportance(task.importance), operator: "equals", value: task.importance } : createEmptyOption();
+    default:
+      return null;
+  }
+};
+
+const buildFilterOptions = (
+  rows: Task[],
+  columnId: AdvancedTaskColumnId,
+  categories: PomodoroCategory[],
+) => {
+  const options = new Map<string, ColumnFilterOption>();
+  rows.forEach((task) => {
+    const option = getTaskFilterOption(task, columnId, categories);
+    if (!option) return;
+    options.set(`${option.operator}:${option.value || "__empty__"}`, option);
+  });
+
+  return [...options.values()].sort((a, b) => {
+    if (a.operator === "isEmpty" && b.operator !== "isEmpty") return -1;
+    if (b.operator === "isEmpty" && a.operator !== "isEmpty") return 1;
+    return a.label.localeCompare(b.label, "tr");
+  });
 };
 
 const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
@@ -61,16 +115,30 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     [categories, config.filters, topLevelTasks],
   );
 
+  const sortedFilteredTasks = useMemo(
+    () => applyTaskSort(filteredTasks, config.sort, categories),
+    [categories, config.sort, filteredTasks],
+  );
+
+  const filterOptionsByColumn = useMemo(() => {
+    return ADVANCED_TASK_COLUMNS.reduce((acc, column) => {
+      const rows = applyTaskFilters(topLevelTasks, removeColumnFilter(config.filters, column.id), categories);
+      acc[column.id] = buildFilterOptions(rows, column.id, categories);
+      return acc;
+    }, {} as Record<AdvancedTaskColumnId, ColumnFilterOption[]>);
+  }, [categories, config.filters, topLevelTasks]);
+
   const hasFilters = config.filters.length > 0;
   const hasTasks = topLevelTasks.length > 0;
   const filteredOutByFilters = hasFilters && hasTasks && filteredTasks.length === 0;
   const activeGroupLabel = config.groupBy
-    ? ADVANCED_TASK_COLUMNS.find((column) => column.id === config.groupBy)?.label || config.groupBy
+    ? getColumnLabel(config.groupBy)
     : null;
+  const activeSortLabel = config.sort ? getColumnLabel(config.sort.columnId) : null;
 
   const activeTasks = useMemo(
-    () => filteredTasks.filter((task) => !task.hidden && task.status !== "done"),
-    [filteredTasks],
+    () => sortedFilteredTasks.filter((task) => !task.hidden && task.status !== "done"),
+    [sortedFilteredTasks],
   );
 
   const activeGroups = useMemo(
@@ -79,25 +147,21 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   );
 
   const doneTasks = useMemo(
-    () =>
-      filteredTasks
-        .filter((task) => !task.hidden && task.status === "done")
-        .sort((a, b) => {
-          const aTime = new Date(a.completed_at || a.created_at).getTime();
-          const bTime = new Date(b.completed_at || b.created_at).getTime();
-          return bTime - aTime;
-        }),
-    [filteredTasks],
+    () => {
+      const done = sortedFilteredTasks.filter((task) => !task.hidden && task.status === "done");
+      if (config.sort) return done;
+      return done.sort((a, b) => {
+        const aTime = new Date(a.completed_at || a.created_at).getTime();
+        const bTime = new Date(b.completed_at || b.created_at).getTime();
+        return bTime - aTime;
+      });
+    },
+    [config.sort, sortedFilteredTasks],
   );
 
   const hiddenTasks = useMemo(
-    () => filteredTasks.filter((task) => task.hidden),
-    [filteredTasks],
-  );
-
-  const groups = useMemo(
-    () => groupTasks(filteredTasks, config.groupBy, categories),
-    [categories, config.groupBy, filteredTasks],
+    () => sortedFilteredTasks.filter((task) => task.hidden),
+    [sortedFilteredTasks],
   );
 
   const handleCreate = async () => {
@@ -131,6 +195,10 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     updateConfig((current) => ({ ...current, groupBy: columnId }));
   };
 
+  const handleSortChange = (sort: TableSort | null) => {
+    updateConfig((current) => ({ ...current, sort }));
+  };
+
   const handleSetTitleFilter = (value: string) => {
     updateConfig((current) => ({
       ...current,
@@ -157,20 +225,25 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     }));
   };
 
-  const handleClearFilters = () => {
-    updateConfig((current) => ({ ...current, filters: [] }));
+  const handleSetColumnFilter = (filter: TableFilter) => {
+    updateConfig((current) => ({ ...current, filters: setColumnFilter(current.filters, filter) }));
+  };
+
+  const handleClearColumnFilter = (columnId: AdvancedTaskColumnId) => {
+    updateConfig((current) => ({ ...current, filters: removeColumnFilter(current.filters, columnId) }));
+  };
+
+  const handleClearTableControls = () => {
+    updateConfig((current) => ({
+      ...current,
+      sort: null,
+      groupBy: null,
+      filters: [],
+    }));
   };
 
   const handleResetColumns = () => {
     updateConfig((current) => ({ ...current, hiddenColumnIds: [...DEFAULT_HIDDEN_COLUMN_IDS] }));
-  };
-
-  const handleResetView = () => {
-    const next = createDefaultTableConfig();
-    setShowDone(false);
-    setShowHidden(false);
-    setConfig(next);
-    resetTableConfig(projectId);
   };
 
   const renderDoneSection = () => {
@@ -189,6 +262,14 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           onDelete={deleteTask}
           onOpen={setEditTask}
           onReorderColumns={handleReorderColumns}
+          sort={config.sort}
+          groupBy={config.groupBy}
+          filters={config.filters}
+          filterOptionsByColumn={filterOptionsByColumn}
+          onSortChange={handleSortChange}
+          onGroupByChange={handleGroupByChange}
+          onSetColumnFilter={handleSetColumnFilter}
+          onClearColumnFilter={handleClearColumnFilter}
         />
         {hiddenDoneCount > 0 && (
           <button
@@ -226,6 +307,14 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
             onDelete={deleteTask}
             onOpen={setEditTask}
             onReorderColumns={handleReorderColumns}
+            sort={config.sort}
+            groupBy={config.groupBy}
+            filters={config.filters}
+            filterOptionsByColumn={filterOptionsByColumn}
+            onSortChange={handleSortChange}
+            onGroupByChange={handleGroupByChange}
+            onSetColumnFilter={handleSetColumnFilter}
+            onClearColumnFilter={handleClearColumnFilter}
           />
         )}
       </div>
@@ -263,9 +352,10 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
         onSetTitleFilter={handleSetTitleFilter}
         onSetStatusFilter={handleSetStatusFilter}
         onSetCategoryFilter={handleSetCategoryFilter}
-        onClearFilters={handleClearFilters}
-        onResetView={handleResetView}
+        onClearTableControls={handleClearTableControls}
+        onResetColumns={handleResetColumns}
         groupLabel={activeGroupLabel}
+        sortLabel={activeSortLabel}
       />
 
       {visibleColumns.length === 0 ? (
@@ -281,7 +371,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           <p className="text-xs">Filtreleri temizle</p>
           <button
             type="button"
-            onClick={handleClearFilters}
+            onClick={handleClearTableControls}
             className="mt-3 rounded-sm border border-border/60 px-3 py-1.5 text-xs text-foreground hover:bg-accent/50"
           >
             Filtreleri temizle
@@ -303,6 +393,14 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onDelete={deleteTask}
               onOpen={setEditTask}
               onReorderColumns={handleReorderColumns}
+              sort={config.sort}
+              groupBy={config.groupBy}
+              filters={config.filters}
+              filterOptionsByColumn={filterOptionsByColumn}
+              onSortChange={handleSortChange}
+              onGroupByChange={handleGroupByChange}
+              onSetColumnFilter={handleSetColumnFilter}
+              onClearColumnFilter={handleClearColumnFilter}
             />
           )}
 
@@ -320,6 +418,14 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onDelete={deleteTask}
               onOpen={setEditTask}
               onReorderColumns={handleReorderColumns}
+              sort={config.sort}
+              groupBy={config.groupBy}
+              filters={config.filters}
+              filterOptionsByColumn={filterOptionsByColumn}
+              onSortChange={handleSortChange}
+              onGroupByChange={handleGroupByChange}
+              onSetColumnFilter={handleSetColumnFilter}
+              onClearColumnFilter={handleClearColumnFilter}
             />
           )}
           {renderDoneSection()}

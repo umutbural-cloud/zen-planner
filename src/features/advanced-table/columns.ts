@@ -18,6 +18,8 @@ export const DEFAULT_COLUMN_ORDER = ADVANCED_TASK_COLUMN_IDS;
 
 export const REQUIRED_COLUMN_IDS: AdvancedTaskColumnId[] = ["title"];
 
+export const GROUPABLE_COLUMN_IDS: AdvancedTaskColumnId[] = ["status", "category", "urgency", "importance"];
+
 export const DEFAULT_HIDDEN_COLUMN_IDS = ADVANCED_TASK_COLUMNS
   .filter((column) => !column.defaultVisible)
   .map((column) => column.id);
@@ -25,8 +27,14 @@ export const DEFAULT_HIDDEN_COLUMN_IDS = ADVANCED_TASK_COLUMNS
 export const getColumn = (columnId: AdvancedTaskColumnId) =>
   ADVANCED_TASK_COLUMNS.find((column) => column.id === columnId);
 
+export const getColumnLabel = (columnId: AdvancedTaskColumnId) =>
+  getColumn(columnId)?.label || columnId;
+
 export const isAdvancedTaskColumnId = (value: unknown): value is AdvancedTaskColumnId =>
   typeof value === "string" && ADVANCED_TASK_COLUMN_IDS.includes(value as AdvancedTaskColumnId);
+
+export const isGroupableColumnId = (value: AdvancedTaskColumnId) =>
+  GROUPABLE_COLUMN_IDS.includes(value);
 
 export const formatDateTimeParts = (date: string | null, time: string | null) => {
   if (date && time) return `${date} ${time}`;

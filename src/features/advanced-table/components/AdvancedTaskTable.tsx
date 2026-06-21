@@ -12,8 +12,9 @@ import type { Task } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { getColumn } from "../columns";
 import type { AdvancedTaskGroup } from "../grouping";
-import type { AdvancedTaskColumnId } from "../types";
+import type { AdvancedTaskColumnId, ColumnFilterOption, TableFilter, TableSort } from "../types";
 import AdvancedTaskRow from "./AdvancedTaskRow";
+import ColumnHeaderMenu from "./ColumnHeaderMenu";
 import SortableColumnHeader from "./SortableColumnHeader";
 
 type AdvancedTaskTableProps = {
@@ -24,6 +25,14 @@ type AdvancedTaskTableProps = {
   onDelete: (id: string) => void;
   onOpen: (task: Task) => void;
   onReorderColumns?: (activeColumnId: AdvancedTaskColumnId, overColumnId: AdvancedTaskColumnId) => void;
+  sort: TableSort | null;
+  groupBy: AdvancedTaskColumnId | null;
+  filters: TableFilter[];
+  filterOptionsByColumn: Record<AdvancedTaskColumnId, ColumnFilterOption[]>;
+  onSortChange: (sort: TableSort | null) => void;
+  onGroupByChange: (columnId: AdvancedTaskColumnId | null) => void;
+  onSetColumnFilter: (filter: TableFilter) => void;
+  onClearColumnFilter: (columnId: AdvancedTaskColumnId) => void;
 };
 
 const AdvancedTaskTable = ({
@@ -34,6 +43,14 @@ const AdvancedTaskTable = ({
   onDelete,
   onOpen,
   onReorderColumns,
+  sort,
+  groupBy,
+  filters,
+  filterOptionsByColumn,
+  onSortChange,
+  onGroupByChange,
+  onSetColumnFilter,
+  onClearColumnFilter,
 }: AdvancedTaskTableProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const columnDragEnabled = Boolean(onReorderColumns) && columns.length > 1;
@@ -87,13 +104,40 @@ const AdvancedTaskTable = ({
                           key={columnId}
                           columnId={columnId}
                           sortableId={getColumnSortableId(group.key, columnId)}
+                          sort={sort}
+                          groupBy={groupBy}
+                          filters={filters}
+                          filterOptions={filterOptionsByColumn[columnId]}
+                          onSortChange={onSortChange}
+                          onGroupByChange={onGroupByChange}
+                          onSetColumnFilter={onSetColumnFilter}
+                          onClearColumnFilter={onClearColumnFilter}
                         />
                       ))}
                     </SortableContext>
                   ) : (
                     columns.map((columnId) => (
                       <TableHead key={columnId} className="h-9 whitespace-nowrap px-2 text-xs font-light tracking-wide">
-                        {getColumn(columnId)?.label || columnId}
+                        <ColumnHeaderMenu
+                          columnId={columnId}
+                          sort={sort}
+                          groupBy={groupBy}
+                          filters={filters}
+                          filterOptions={filterOptionsByColumn[columnId]}
+                          onSortChange={onSortChange}
+                          onGroupByChange={onGroupByChange}
+                          onSetColumnFilter={onSetColumnFilter}
+                          onClearColumnFilter={onClearColumnFilter}
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex items-center rounded-sm px-1 py-0.5 text-muted-foreground transition-colors hover:bg-card/40 hover:text-foreground"
+                            title={`${getColumn(columnId)?.label || columnId} menüsünü aç`}
+                            aria-label={`${getColumn(columnId)?.label || columnId} menüsünü aç`}
+                          >
+                            {getColumn(columnId)?.label || columnId}
+                          </button>
+                        </ColumnHeaderMenu>
                       </TableHead>
                     ))
                   )}
