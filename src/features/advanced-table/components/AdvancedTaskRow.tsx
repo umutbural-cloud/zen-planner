@@ -354,7 +354,7 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
                   placeholder="gg.aa.yyyy"
                   inputMode="numeric"
                   maxLength={10}
-                  className="h-7 w-[7.25rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                  className="h-7 w-[5.25rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
                 />
                 <PopoverTrigger asChild>
                   <button
@@ -406,7 +406,7 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
                   placeholder="ss:dd"
                   inputMode="numeric"
                   maxLength={5}
-                  className="h-7 w-[4.75rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                  className="h-7 w-[3.75rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
                 />
                 <PopoverTrigger asChild>
                   <button
@@ -478,7 +478,7 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
                   placeholder="gg.aa.yyyy"
                   inputMode="numeric"
                   maxLength={10}
-                  className="h-7 w-[7.25rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                  className="h-7 w-[5.25rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
                 />
                 <PopoverTrigger asChild>
                   <button
@@ -530,7 +530,7 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
                   placeholder="ss:dd"
                   inputMode="numeric"
                   maxLength={5}
-                  className="h-7 w-[4.75rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
+                  className="h-7 w-[3.75rem] border-none bg-transparent px-1.5 text-xs text-muted-foreground focus-visible:ring-0"
                 />
                 <PopoverTrigger asChild>
                   <button
