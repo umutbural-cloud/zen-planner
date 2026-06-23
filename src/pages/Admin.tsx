@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Activity, AlertTriangle, BarChart3, Home, Settings, ShieldCheck, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/components/admin/AdminMemberSoftDeleteActionModal";
 import { AdminDeletedMembersSection } from "@/components/admin/AdminDeletedMembersSection";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
+import { AdminSortableHeader } from "@/components/admin/AdminSortableHeader";
 import { formatLastSeenWindow } from "@/components/admin/adminDateDisplay";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +32,7 @@ import { useAdminGate } from "@/hooks/useAdminGate";
 import { useAdminFeatureAccessMatrix } from "@/hooks/useAdminFeatureAccessMatrix";
 import type { AdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
-import { useAdminMembers } from "@/hooks/useAdminMembers";
+import { type AdminMember, useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
 import { useAdminMemberSoftDeleteActions } from "@/hooks/useAdminMemberSoftDeleteActions";
 import { useAdminMemberStats } from "@/hooks/useAdminMemberStats";
@@ -722,8 +723,81 @@ type AdminHomeMemberListProps = {
   members: ReturnType<typeof useAdminMembers>;
 };
 
+type AdminHomeMemberSortColumn = "full_name" | "email" | "last_seen_at";
+
+type AdminHomeMemberSortState = {
+  column: AdminHomeMemberSortColumn | null;
+  direction: "asc" | "desc" | null;
+};
+
+const ADMIN_HOME_DATE_SORT_COLUMNS = new Set<AdminHomeMemberSortColumn>(["last_seen_at"]);
+
+const compareNullableText = (left: string | null, right: string | null, direction: "asc" | "desc") => {
+  const leftText = left?.trim() ?? "";
+  const rightText = right?.trim() ?? "";
+
+  if (!leftText && !rightText) return 0;
+  if (!leftText) return 1;
+  if (!rightText) return -1;
+
+  const multiplier = direction === "asc" ? 1 : -1;
+  return leftText.localeCompare(rightText, "tr") * multiplier;
+};
+
+const getSortableTime = (value: string | null) => {
+  if (!value) return null;
+
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? null : time;
+};
+
+const compareNullableTime = (left: string | null, right: string | null, direction: "asc" | "desc") => {
+  const leftTime = getSortableTime(left);
+  const rightTime = getSortableTime(right);
+
+  if (leftTime === null && rightTime === null) return 0;
+  if (leftTime === null) return 1;
+  if (rightTime === null) return -1;
+
+  const multiplier = direction === "asc" ? 1 : -1;
+  return (leftTime - rightTime) * multiplier;
+};
+
+const sortAdminHomeMembers = (members: AdminMember[], sort: AdminHomeMemberSortState) => {
+  if (!sort.column || !sort.direction) return members;
+
+  return [...members].sort((left, right) => {
+    if (sort.column === "last_seen_at") {
+      return compareNullableTime(left.last_seen_at, right.last_seen_at, sort.direction);
+    }
+
+    return compareNullableText(left[sort.column], right[sort.column], sort.direction);
+  });
+};
+
 const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => {
-  const visibleMembers = members.items.filter((member) => member.account_status !== "deleted");
+  const [sort, setSort] = useState<AdminHomeMemberSortState>({ column: null, direction: null });
+  const visibleMembers = useMemo(
+    () => members.items.filter((member) => member.account_status !== "deleted"),
+    [members.items],
+  );
+  const sortedMembers = useMemo(() => sortAdminHomeMembers(visibleMembers, sort), [sort, visibleMembers]);
+  const handleSort = useCallback((column: AdminHomeMemberSortColumn) => {
+    setSort((current) => {
+      const firstDirection = ADMIN_HOME_DATE_SORT_COLUMNS.has(column) ? "desc" : "asc";
+      const secondDirection = firstDirection === "asc" ? "desc" : "asc";
+
+      if (current.column !== column) {
+        return { column, direction: firstDirection };
+      }
+
+      if (current.direction === firstDirection) {
+        return { column, direction: secondDirection };
+      }
+
+      return { column: null, direction: null };
+    });
+  }, []);
 
   return (
     <Card className="rounded-none border-border/70 shadow-none">
@@ -754,13 +828,34 @@ const AdminHomeMemberList = ({ members }: AdminHomeMemberListProps) => {
             <table className="w-full min-w-[520px] border-collapse">
               <thead>
                 <tr className="border-b border-border/70">
-                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">AD SOYAD</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">E-POSTA</th>
-                  <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">SON GÖRÜLME ARALIĞI</th>
+                  <th className="px-3 py-3 text-left">
+                    <AdminSortableHeader
+                      label="Ad soyad"
+                      active={sort.column === "full_name"}
+                      direction={sort.column === "full_name" ? sort.direction : null}
+                      onClick={() => handleSort("full_name")}
+                    />
+                  </th>
+                  <th className="px-3 py-3 text-left">
+                    <AdminSortableHeader
+                      label="E-posta"
+                      active={sort.column === "email"}
+                      direction={sort.column === "email" ? sort.direction : null}
+                      onClick={() => handleSort("email")}
+                    />
+                  </th>
+                  <th className="px-3 py-3 text-left">
+                    <AdminSortableHeader
+                      label="Son görülme aralığı"
+                      active={sort.column === "last_seen_at"}
+                      direction={sort.column === "last_seen_at" ? sort.direction : null}
+                      onClick={() => handleSort("last_seen_at")}
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {visibleMembers.map((member) => (
+                {sortedMembers.map((member) => (
                   <tr key={member.user_id} className="border-b border-border/50 last:border-b-0">
                     <td className="px-3 py-3 text-sm text-foreground">{member.full_name ?? "-"}</td>
                     <td className="px-3 py-3 text-sm text-foreground">{member.email ?? "-"}</td>

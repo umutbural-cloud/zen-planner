@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { AdminAccountStatus, AdminMember, useAdminMembers } from "@/hooks/useAdminMembers";
+import type { AdminAccountStatus, AdminMember, AdminMemberSortColumn, useAdminMembers } from "@/hooks/useAdminMembers";
+import { AdminSortableHeader } from "./AdminSortableHeader";
 import { formatLastSeenWindow } from "./adminDateDisplay";
 
 type AdminMembersState = ReturnType<typeof useAdminMembers>;
@@ -41,6 +42,9 @@ const displayPlan = (value: string | null) => {
   if (value === "plus") return "Plus";
   return value;
 };
+
+const getSortDirection = (members: AdminMembersState, column: AdminMemberSortColumn) =>
+  members.sortColumn === column ? members.sortDirection : null;
 
 export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTableProps) => {
   const visibleMembers = members.items.filter((member) => member.account_status !== "deleted");
@@ -135,11 +139,46 @@ export const AdminMembersTable = ({ members, onSelectMember }: AdminMembersTable
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Ad soyad</TableHead>
-                <TableHead>E-posta</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Son görülme aralığı</TableHead>
-                <TableHead>Oluşturulma</TableHead>
+                <TableHead>
+                  <AdminSortableHeader
+                    label="Ad soyad"
+                    active={members.sortColumn === "full_name"}
+                    direction={getSortDirection(members, "full_name")}
+                    onClick={() => members.setSort("full_name")}
+                  />
+                </TableHead>
+                <TableHead>
+                  <AdminSortableHeader
+                    label="E-posta"
+                    active={members.sortColumn === "email"}
+                    direction={getSortDirection(members, "email")}
+                    onClick={() => members.setSort("email")}
+                  />
+                </TableHead>
+                <TableHead>
+                  <AdminSortableHeader
+                    label="Plan"
+                    active={members.sortColumn === "membership"}
+                    direction={getSortDirection(members, "membership")}
+                    onClick={() => members.setSort("membership")}
+                  />
+                </TableHead>
+                <TableHead>
+                  <AdminSortableHeader
+                    label="Son görülme aralığı"
+                    active={members.sortColumn === "last_seen_at"}
+                    direction={getSortDirection(members, "last_seen_at")}
+                    onClick={() => members.setSort("last_seen_at")}
+                  />
+                </TableHead>
+                <TableHead>
+                  <AdminSortableHeader
+                    label="Oluşturulma"
+                    active={members.sortColumn === "created_at"}
+                    direction={getSortDirection(members, "created_at")}
+                    onClick={() => members.setSort("created_at")}
+                  />
+                </TableHead>
                 <TableHead className="text-right">Detay</TableHead>
               </TableRow>
             </TableHeader>

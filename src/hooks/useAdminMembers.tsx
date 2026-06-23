@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type AdminAccountStatus = "active" | "suspended" | "security_blocked" | "deleted" | "anonymized";
 
+export type AdminMemberSortColumn = "full_name" | "email" | "membership" | "last_seen_at" | "created_at";
+
+export type AdminMemberSortDirection = "asc" | "desc";
+
 export type AdminMember = {
   user_id: string;
   email: string | null;
@@ -29,22 +33,37 @@ type UseAdminMembersOptions = {
   initialAccountStatus?: AdminAccountStatus | null;
 };
 
+type AdminMemberSortState = {
+  column: AdminMemberSortColumn | null;
+  direction: AdminMemberSortDirection | null;
+};
+
+type AdminMembersRpcBaseArgs = {
+  query: string | null;
+  membership: string | null;
+  membership_status: string | null;
+  account_status: string | null;
+  limit_count: number;
+  offset_count: number;
+};
+
+type AdminMembersRpcSortedArgs = AdminMembersRpcBaseArgs & {
+  sort_column: AdminMemberSortColumn;
+  sort_direction: AdminMemberSortDirection;
+};
+
+type AdminMembersRpcArgs = AdminMembersRpcBaseArgs | AdminMembersRpcSortedArgs;
+
 type SupabaseRpcClient = typeof supabase & {
   rpc(
     fn: "admin_search_members",
-    args: {
-      query: string | null;
-      membership: string | null;
-      membership_status: string | null;
-      account_status: string | null;
-      limit_count: number;
-      offset_count: number;
-    },
+    args: AdminMembersRpcArgs,
   ): Promise<{ data: unknown; error: Error | null }>;
 };
 
 const DEFAULT_LIMIT = 20;
 const QUERY_DEBOUNCE_MS = 350;
+const DATE_SORT_COLUMNS = new Set<AdminMemberSortColumn>(["last_seen_at", "created_at"]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -106,6 +125,7 @@ export const useAdminMembers = (enabled: boolean, options: UseAdminMembersOption
   const [membership, setMembershipValue] = useState<string | null>(null);
   const [membershipStatus, setMembershipStatusValue] = useState<string | null>(null);
   const [accountStatus, setAccountStatusValue] = useState<AdminAccountStatus | null>(options.initialAccountStatus ?? null);
+  const [sort, setSortState] = useState<AdminMemberSortState>({ column: null, direction: null });
   const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
@@ -134,6 +154,24 @@ export const useAdminMembers = (enabled: boolean, options: UseAdminMembersOption
   const setAccountStatus = useCallback((value: AdminAccountStatus | null) => {
     setAccountStatusValue(value);
     setOffset(0);
+  }, []);
+
+  const setSort = useCallback((column: AdminMemberSortColumn) => {
+    setOffset(0);
+    setSortState((current) => {
+      const firstDirection: AdminMemberSortDirection = DATE_SORT_COLUMNS.has(column) ? "desc" : "asc";
+      const secondDirection: AdminMemberSortDirection = firstDirection === "asc" ? "desc" : "asc";
+
+      if (current.column !== column) {
+        return { column, direction: firstDirection };
+      }
+
+      if (current.direction === firstDirection) {
+        return { column, direction: secondDirection };
+      }
+
+      return { column: null, direction: null };
+    });
   }, []);
 
   const refresh = useCallback(() => {
@@ -168,14 +206,23 @@ export const useAdminMembers = (enabled: boolean, options: UseAdminMembersOption
       setError(null);
 
       const normalizedQuery = query.trim() || null;
-      const { data, error: rpcError } = await (supabase as SupabaseRpcClient).rpc("admin_search_members", {
+      const baseArgs: AdminMembersRpcBaseArgs = {
         query: normalizedQuery,
         membership,
         membership_status: membershipStatus,
         account_status: accountStatus,
         limit_count: DEFAULT_LIMIT,
         offset_count: offset,
-      });
+      };
+      const rpcArgs: AdminMembersRpcArgs =
+        sort.column && sort.direction
+          ? {
+              ...baseArgs,
+              sort_column: sort.column,
+              sort_direction: sort.direction,
+            }
+          : baseArgs;
+      const { data, error: rpcError } = await (supabase as SupabaseRpcClient).rpc("admin_search_members", rpcArgs);
 
       if (!mountedRef.current || requestIdRef.current !== requestId) return;
 
@@ -208,7 +255,7 @@ export const useAdminMembers = (enabled: boolean, options: UseAdminMembersOption
     return () => {
       window.clearTimeout(timer);
     };
-  }, [accountStatus, enabled, membership, membershipStatus, offset, query, refreshTick]);
+  }, [accountStatus, enabled, membership, membershipStatus, offset, query, refreshTick, sort.column, sort.direction]);
 
   return {
     items,
@@ -221,10 +268,13 @@ export const useAdminMembers = (enabled: boolean, options: UseAdminMembersOption
     membership,
     membershipStatus,
     accountStatus,
+    sortColumn: sort.column,
+    sortDirection: sort.direction,
     setQuery,
     setMembership,
     setMembershipStatus,
     setAccountStatus,
+    setSort,
     refresh,
     nextPage,
     previousPage,
