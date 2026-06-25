@@ -47,6 +47,7 @@ type ChartTooltipPayload = {
     sec?: number;
   };
 };
+type OffDaysSaveStatus = "idle" | "saved" | "error";
 
 const formatDur = (sec: number) => {
   const h = Math.floor(sec / 3600);
@@ -73,7 +74,24 @@ const weekOfMonth = (d: Date) => {
 
 const todayKey = () => format(startOfDay(new Date()), "yyyy-MM-dd");
 const dateKey = (d: Date) => format(startOfDay(d), "yyyy-MM-dd");
-const OFF_DAYS_WEEK_STARTS_ON = 0;
+const OFF_DAYS_WEEK_STARTS_ON = 1;
+const OFF_DAYS_WEEKDAY_LABELS: Record<number, string> = {
+  0: "paz",
+  1: "pzt",
+  2: "sal",
+  3: "çar",
+  4: "per",
+  5: "cum",
+  6: "cmt",
+};
+
+const sameStringSet = (left: Set<string>, right: Set<string>) => {
+  if (left.size !== right.size) return false;
+  for (const value of left) {
+    if (!right.has(value)) return false;
+  }
+  return true;
+};
 
 const WorkHistory = () => {
   const navigate = useNavigate();
@@ -100,6 +118,8 @@ const WorkHistory = () => {
   const offDaysStorageKey = user ? `keikaku:work-stats:off-days:${user.id}` : null;
   const [includedCats, setIncludedCats] = useState<Set<string> | null>(null);
   const [offDays, setOffDays] = useState<Set<string>>(new Set());
+  const [draftOffDays, setDraftOffDays] = useState<Set<string>>(new Set());
+  const [offDaysSaveStatus, setOffDaysSaveStatus] = useState<OffDaysSaveStatus>("idle");
   const [statsSettingsOpen, setStatsSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -121,16 +141,21 @@ const WorkHistory = () => {
       const raw = localStorage.getItem(offDaysStorageKey);
       if (!raw) {
         setOffDays(new Set());
+        setDraftOffDays(new Set());
         return;
       }
       const arr = JSON.parse(raw) as string[];
       if (Array.isArray(arr)) {
-        setOffDays(new Set(arr.filter((value): value is string => typeof value === "string" && value.length > 0)));
+        const saved = new Set(arr.filter((value): value is string => typeof value === "string" && value.length > 0));
+        setOffDays(saved);
+        setDraftOffDays(new Set(saved));
       } else {
         setOffDays(new Set());
+        setDraftOffDays(new Set());
       }
     } catch {
       setOffDays(new Set());
+      setDraftOffDays(new Set());
     }
   }, [offDaysStorageKey]);
 
@@ -144,12 +169,19 @@ const WorkHistory = () => {
   };
 
   const persistOffDays = (next: Set<string>) => {
-    setOffDays(next);
-    if (!offDaysStorageKey) return;
+    const saved = new Set(next);
+    if (!offDaysStorageKey) {
+      setOffDays(saved);
+      return true;
+    }
     try {
-      if (next.size === 0) localStorage.removeItem(offDaysStorageKey);
-      else localStorage.setItem(offDaysStorageKey, JSON.stringify(Array.from(next).sort()));
-    } catch { /* ignore */ }
+      if (saved.size === 0) localStorage.removeItem(offDaysStorageKey);
+      else localStorage.setItem(offDaysStorageKey, JSON.stringify(Array.from(saved).sort()));
+      setOffDays(saved);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const isCatIncluded = useCallback((catId: string | null) => {
@@ -179,23 +211,23 @@ const WorkHistory = () => {
     [sessions, isCatIncluded],
   );
 
-  const offDaysSelected = useMemo(
-    () => Array.from(offDays).sort().map((value) => new Date(`${value}T00:00:00`)),
-    [offDays],
+  const draftOffDaysSelected = useMemo(
+    () => Array.from(draftOffDays).sort().map((value) => new Date(`${value}T00:00:00`)),
+    [draftOffDays],
   );
 
-  const offDaySegments = useMemo(() => {
+  const draftOffDaySegments = useMemo(() => {
     const single: Date[] = [];
     const start: Date[] = [];
     const middle: Date[] = [];
     const end: Date[] = [];
 
-    offDaysSelected.forEach((day) => {
+    draftOffDaysSelected.forEach((day) => {
       const dayColumn = (day.getDay() - OFF_DAYS_WEEK_STARTS_ON + 7) % 7;
       const prevKey = dateKey(new Date(day.getTime() - 24 * 60 * 60 * 1000));
       const nextKey = dateKey(new Date(day.getTime() + 24 * 60 * 60 * 1000));
-      const hasPrev = dayColumn > 0 && offDays.has(prevKey);
-      const hasNext = dayColumn < 6 && offDays.has(nextKey);
+      const hasPrev = dayColumn > 0 && draftOffDays.has(prevKey);
+      const hasNext = dayColumn < 6 && draftOffDays.has(nextKey);
 
       if (hasPrev && hasNext) middle.push(day);
       else if (hasPrev) end.push(day);
@@ -204,7 +236,9 @@ const WorkHistory = () => {
     });
 
     return { single, start, middle, end };
-  }, [offDays, offDaysSelected]);
+  }, [draftOffDays, draftOffDaysSelected]);
+
+  const offDaysDraftDirty = useMemo(() => !sameStringSet(offDays, draftOffDays), [offDays, draftOffDays]);
 
   const sessionCountByDay = useMemo(() => {
     const map = new Map<string, number>();
@@ -258,28 +292,23 @@ const WorkHistory = () => {
     if (filteredStatsSessions.length === 0) {
       return { last7: 0, last30: 0, avgDaily: 0, hasData: false, excludedOffDays: 0 };
     }
-    const now = Date.now();
-    const day = 24 * 60 * 60 * 1000;
-    const cutoff7 = now - 7 * day;
-    const cutoff30 = now - 30 * day;
-    let last7 = 0, last30 = 0, total = 0;
-    let firstTs = Infinity;
-    filteredStatsSessions.forEach((s) => {
-      const t = parseISO(s.started_at).getTime();
-      total += s.duration_seconds;
-      if (t >= cutoff7) last7 += s.duration_seconds;
-      if (t >= cutoff30) last30 += s.duration_seconds;
-      if (t < firstTs) firstTs = t;
-    });
-    const firstDay = startOfDay(new Date(firstTs));
+    const dayMs = 24 * 60 * 60 * 1000;
     const today = startOfDay(new Date());
-    const daySpan = Math.max(1, differenceInCalendarDays(today, firstDay) + 1);
+    const todayKeyValue = dateKey(today);
+    const day7Key = dateKey(new Date(today.getTime() - 6 * dayMs));
+    const day30Key = dateKey(new Date(today.getTime() - 29 * dayMs));
+    let last7 = 0, last30 = 0;
+    filteredStatsSessions.forEach((s) => {
+      const sessionDayKey = dateKey(parseISO(s.started_at));
+      if (sessionDayKey >= day7Key && sessionDayKey <= todayKeyValue) last7 += s.duration_seconds;
+      if (sessionDayKey >= day30Key && sessionDayKey <= todayKeyValue) last30 += s.duration_seconds;
+    });
     let excludedOffDays = 0;
     offDays.forEach((key) => {
-      if (key >= dateKey(firstDay) && key <= dateKey(today)) excludedOffDays += 1;
+      if (key >= day30Key && key <= todayKeyValue) excludedOffDays += 1;
     });
-    const days = Math.max(1, daySpan - excludedOffDays);
-    return { last7, last30, avgDaily: Math.round(total / days), hasData: true, excludedOffDays };
+    const activeDays = Math.max(1, 30 - excludedOffDays);
+    return { last7, last30, avgDaily: Math.round(last30 / activeDays), hasData: true, excludedOffDays };
   }, [filteredStatsSessions, offDays]);
 
   // -------- Category breakdowns --------
@@ -348,15 +377,43 @@ const WorkHistory = () => {
     return out;
   }, [sessionsByDayCat, offDays]);
 
-  const updateOffDaysFromDates = (dates: Date[] | undefined) => {
-    const next = new Set((dates || []).filter(Boolean).map((d) => dateKey(d)));
-    persistOffDays(next);
+  const handleStatsSettingsOpenChange = (open: boolean) => {
+    setStatsSettingsOpen(open);
+    setDraftOffDays(new Set(offDays));
+    setOffDaysSaveStatus("idle");
   };
 
-  const removeOffDay = (key: string) => {
-    const next = new Set(offDays);
+  const updateDraftOffDaysFromDates = (dates: Date[] | undefined) => {
+    const next = new Set((dates || []).filter(Boolean).map((d) => dateKey(d)));
+    setDraftOffDays(next);
+    setOffDaysSaveStatus("idle");
+  };
+
+  const clearDraftOffDays = () => {
+    setDraftOffDays(new Set());
+    setOffDaysSaveStatus("idle");
+  };
+
+  const resetDraftOffDays = () => {
+    setDraftOffDays(new Set(offDays));
+    setOffDaysSaveStatus("idle");
+  };
+
+  const saveDraftOffDays = () => {
+    const saved = persistOffDays(draftOffDays);
+    if (!saved) {
+      setOffDaysSaveStatus("error");
+      return;
+    }
+    setDraftOffDays(new Set(draftOffDays));
+    setOffDaysSaveStatus("saved");
+  };
+
+  const removeDraftOffDay = (key: string) => {
+    const next = new Set(draftOffDays);
     next.delete(key);
-    persistOffDays(next);
+    setDraftOffDays(next);
+    setOffDaysSaveStatus("idle");
   };
 
   // -------- Group: month -> week -> day --------
@@ -497,7 +554,7 @@ const WorkHistory = () => {
                       <h2 className="text-xs uppercase tracking-widest text-muted-foreground/70">
                         İstatistikler
                       </h2>
-                      <Popover open={statsSettingsOpen} onOpenChange={setStatsSettingsOpen}>
+                      <Popover open={statsSettingsOpen} onOpenChange={handleStatsSettingsOpenChange}>
                         <PopoverTrigger asChild>
                           <button
                             className="p-1 -m-1 text-muted-foreground/70 hover:text-foreground transition-colors rounded-sm hover:bg-accent/40"
@@ -567,8 +624,12 @@ const WorkHistory = () => {
                             <Calendar
                               mode="multiple"
                               weekStartsOn={OFF_DAYS_WEEK_STARTS_ON}
-                              selected={offDaysSelected}
-                              onSelect={updateOffDaysFromDates}
+                              locale={tr}
+                              formatters={{
+                                formatWeekdayName: (day) => OFF_DAYS_WEEKDAY_LABELS[day.getDay()],
+                              }}
+                              selected={draftOffDaysSelected}
+                              onSelect={updateDraftOffDaysFromDates}
                               disabled={(d) => d > new Date()}
                               classNames={{
                                 cell: "h-9 w-9 p-0 text-center text-sm relative [&:has([aria-selected])]:bg-primary/15 focus-within:relative focus-within:z-20",
@@ -576,10 +637,10 @@ const WorkHistory = () => {
                                 day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-none",
                               }}
                               modifiers={{
-                                offSingle: offDaySegments.single,
-                                offStart: offDaySegments.start,
-                                offMiddle: offDaySegments.middle,
-                                offEnd: offDaySegments.end,
+                                offSingle: draftOffDaySegments.single,
+                                offStart: draftOffDaySegments.start,
+                                offMiddle: draftOffDaySegments.middle,
+                                offEnd: draftOffDaySegments.end,
                               }}
                               modifiersClassNames={{
                                 offSingle: "rounded-md",
@@ -594,22 +655,22 @@ const WorkHistory = () => {
                               <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
                                 Seçili günler
                               </span>
-                              {offDays.size > 0 ? (
+                              {draftOffDays.size > 0 ? (
                                 <button
-                                  onClick={() => persistOffDays(new Set())}
+                                  onClick={clearDraftOffDays}
                                   className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                   Temizle
                                 </button>
                               ) : null}
                             </div>
-                            {offDays.size === 0 ? (
+                            {draftOffDays.size === 0 ? (
                               <div className="text-[11px] text-muted-foreground/50 italic py-1">
                                 Henüz off gün seçilmedi.
                               </div>
                             ) : (
                               <div className="max-h-32 overflow-auto space-y-1">
-                                {Array.from(offDays).sort((a, b) => b.localeCompare(a)).map((key) => {
+                                {Array.from(draftOffDays).sort((a, b) => b.localeCompare(a)).map((key) => {
                                   const sessionCount = sessionCountByDay.get(key) || 0;
                                   return (
                                     <div key={key} className="flex items-center justify-between gap-2 text-[11px]">
@@ -624,7 +685,7 @@ const WorkHistory = () => {
                                         ) : null}
                                       </div>
                                       <button
-                                        onClick={() => removeOffDay(key)}
+                                        onClick={() => removeDraftOffDay(key)}
                                         className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
                                         title="Off günü kaldır"
                                       >
@@ -635,6 +696,43 @@ const WorkHistory = () => {
                                 })}
                               </div>
                             )}
+                            <div className="mt-2 flex items-center justify-between gap-2 border-t border-border/50 pt-2">
+                              <span
+                                className={`text-[11px] ${
+                                  offDaysSaveStatus === "error"
+                                    ? "text-destructive"
+                                    : offDaysDraftDirty
+                                      ? "text-muted-foreground"
+                                      : offDaysSaveStatus === "saved"
+                                        ? "text-muted-foreground"
+                                        : "text-muted-foreground/60"
+                                }`}
+                              >
+                                {offDaysSaveStatus === "error"
+                                  ? "Kaydedilemedi"
+                                  : offDaysDraftDirty
+                                    ? "Kaydedilmemiş değişiklikler var"
+                                    : offDaysSaveStatus === "saved"
+                                      ? "Kaydedildi"
+                                      : "Kayıtlı seçimler gösteriliyor"}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={resetDraftOffDays}
+                                  disabled={!offDaysDraftDirty}
+                                  className="text-[11px] text-muted-foreground transition-colors px-2 py-1 rounded-sm hover:bg-accent/40 hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                                >
+                                  Geri al
+                                </button>
+                                <button
+                                  onClick={saveDraftOffDays}
+                                  disabled={!offDaysDraftDirty}
+                                  className="text-[11px] text-foreground transition-colors px-2 py-1 rounded-sm border border-border/60 hover:bg-accent/40 disabled:opacity-40 disabled:hover:bg-transparent"
+                                >
+                                  Kaydet
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -646,7 +744,7 @@ const WorkHistory = () => {
                       <StatCard
                         label="Günlük ortalama"
                         value={formatDur(stats.avgDaily)}
-                        hint={stats.excludedOffDays > 0 ? `${stats.excludedOffDays} off gün hariç` : undefined}
+                        hint={stats.excludedOffDays > 0 ? `Son 30 gün · ${stats.excludedOffDays} off gün hariç` : "Son 30 gün"}
                       />
                     </div>
 
