@@ -24,6 +24,9 @@ type AdvancedTaskTableProps = {
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
   onOpen: (task: Task) => void;
+  subtasksByParentId: Map<string, Task[]>;
+  expandedTaskIds: Set<string>;
+  onToggleExpanded: (taskId: string) => void;
   onReorderColumns?: (activeColumnId: AdvancedTaskColumnId, overColumnId: AdvancedTaskColumnId) => void;
   sort: TableSort | null;
   groupBy: AdvancedTaskColumnId | null;
@@ -42,6 +45,9 @@ const AdvancedTaskTable = ({
   onUpdate,
   onDelete,
   onOpen,
+  subtasksByParentId,
+  expandedTaskIds,
+  onToggleExpanded,
   onReorderColumns,
   sort,
   groupBy,
@@ -154,6 +160,9 @@ const AdvancedTaskTable = ({
                     onUpdate={onUpdate}
                     onDelete={onDelete}
                     onOpen={onOpen}
+                    subtasks={subtasksByParentId.get(task.id) ?? []}
+                    expanded={expandedTaskIds.has(task.id)}
+                    onToggleExpanded={onToggleExpanded}
                   />
                 ))}
               </TableBody>
