@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, Clock3, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, ChevronRight, Clock3, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ type AdvancedTaskRowProps = {
   onUpdate: (id: string, updates: Partial<Task>) => void;
   onDelete: (id: string) => void;
   onOpen: (task: Task) => void;
+  subtasks: Task[];
+  expanded: boolean;
+  onToggleExpanded: (taskId: string) => void;
 };
 
 const cellControlClassName =
@@ -130,7 +133,17 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions();
 
-const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen }: AdvancedTaskRowProps) => {
+const AdvancedTaskRow = ({
+  task,
+  columns,
+  categories,
+  onUpdate,
+  onDelete,
+  onOpen,
+  subtasks,
+  expanded,
+  onToggleExpanded,
+}: AdvancedTaskRowProps) => {
   const [title, setTitle] = useState(task.title);
   const [startDateOpen, setStartDateOpen] = useState(false);
   const [startTimeOpen, setStartTimeOpen] = useState(false);
@@ -141,6 +154,7 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
   const [endDateInput, setEndDateInput] = useState(formatDateForDisplay(task.end_date));
   const [endTimeInput, setEndTimeInput] = useState(formatTimeForDisplay(task.end_time));
   const category = categories.find((item) => item.id === task.category_id);
+  const doneSubtaskCount = subtasks.filter((subtask) => subtask.status === "done").length;
 
   useEffect(() => {
     setTitle(task.title);
@@ -279,21 +293,42 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
     switch (columnId) {
       case "title":
         return (
-          <Input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            onBlur={flushTitle}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              }
-              if (event.key === "Escape") {
-                setTitle(task.title);
-                event.currentTarget.blur();
-              }
-            }}
-            className="h-7 min-w-[12rem] border border-transparent bg-transparent px-1.5 text-sm font-light text-foreground transition-colors hover:border-border/60 hover:bg-card/40 focus-visible:ring-1 focus-visible:ring-ring/40"
-          />
+          <div className="flex min-w-[12rem] items-center gap-1.5">
+            {subtasks.length > 0 && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleExpanded(task.id);
+                }}
+                className="shrink-0 rounded-sm p-0.5 text-muted-foreground/60 transition-colors hover:bg-card/40 hover:text-foreground"
+                aria-label={expanded ? "Alt görevleri kapat" : "Alt görevleri aç"}
+                title={expanded ? "Alt görevleri kapat" : "Alt görevleri aç"}
+              >
+                {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </button>
+            )}
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              onBlur={flushTitle}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+                if (event.key === "Escape") {
+                  setTitle(task.title);
+                  event.currentTarget.blur();
+                }
+              }}
+              className="h-7 min-w-[12rem] border border-transparent bg-transparent px-1.5 text-sm font-light text-foreground transition-colors hover:border-border/60 hover:bg-card/40 focus-visible:ring-1 focus-visible:ring-ring/40"
+            />
+            {subtasks.length > 0 && (
+              <span className="shrink-0 text-[10px] text-muted-foreground/60">
+                {doneSubtaskCount}/{subtasks.length}
+              </span>
+            )}
+          </div>
         );
       case "status":
         return (
@@ -611,46 +646,91 @@ const AdvancedTaskRow = ({ task, columns, categories, onUpdate, onDelete, onOpen
   };
 
   return (
-    <TableRow className="group">
-      <TableCell className="w-9 px-2 py-1" onClick={(event) => event.stopPropagation()}>
-        <Checkbox
-          checked={task.status === "done"}
-          onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
-        />
-      </TableCell>
-      {columns.map((columnId) => (
-        <TableCell key={columnId} className="px-2 py-1 align-middle">
-          {renderCell(columnId)}
+    <>
+      <TableRow className="group">
+        <TableCell className="w-9 px-2 py-1" onClick={(event) => event.stopPropagation()}>
+          <Checkbox
+            checked={task.status === "done"}
+            onCheckedChange={(checked) => onUpdate(task.id, { status: checked === true ? "done" : "todo" })}
+          />
         </TableCell>
-      ))}
-      <TableCell className="w-28 px-2 py-1 text-right">
-        <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={() => {
-              flushTitle();
-              blurActiveElement();
-              onOpen(task);
-            }}
-            className="p-1 text-muted-foreground hover:text-foreground"
-            title="Düzenle"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onUpdate(task.id, { hidden: !task.hidden })}
-            className="p-1 text-muted-foreground hover:text-foreground"
-            title={task.hidden ? "Göster" : "Gizle"}
-          >
-            {task.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-          </button>
-          <button type="button" onClick={() => onDelete(task.id)} className="p-1 text-muted-foreground hover:text-destructive" title="Sil">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </TableCell>
-    </TableRow>
+        {columns.map((columnId) => (
+          <TableCell key={columnId} className="px-2 py-1 align-middle">
+            {renderCell(columnId)}
+          </TableCell>
+        ))}
+        <TableCell className="w-28 px-2 py-1 text-right">
+          <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+            <button
+              type="button"
+              onClick={() => {
+                flushTitle();
+                blurActiveElement();
+                onOpen(task);
+              }}
+              className="p-1 text-muted-foreground hover:text-foreground"
+              title="Düzenle"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdate(task.id, { hidden: !task.hidden })}
+              className="p-1 text-muted-foreground hover:text-foreground"
+              title={task.hidden ? "Göster" : "Gizle"}
+            >
+              {task.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            </button>
+            <button type="button" onClick={() => onDelete(task.id)} className="p-1 text-muted-foreground hover:text-destructive" title="Sil">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </TableCell>
+      </TableRow>
+      {expanded && subtasks.length > 0 && (
+        <TableRow className="bg-card/10 hover:bg-card/10">
+          <TableCell colSpan={columns.length + 2} className="px-0 py-0">
+            <div className="ml-9 mr-2 border-l border-border/70 pl-2">
+              <div className="space-y-0.5 py-1">
+                {subtasks.map((subtask) => (
+                  <div
+                    key={subtask.id}
+                    className="group/subtask flex min-h-7 cursor-pointer items-center gap-2 rounded-sm px-1.5 py-0.5 text-sm transition-colors hover:bg-accent/40"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpen(subtask);
+                    }}
+                  >
+                    <span className="h-px w-2.5 shrink-0 bg-border/80" aria-hidden="true" />
+                    <Checkbox
+                      checked={subtask.status === "done"}
+                      onClick={(event) => event.stopPropagation()}
+                      onCheckedChange={(checked) => onUpdate(subtask.id, { status: checked === true ? "done" : "todo" })}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className={`min-w-0 flex-1 truncate text-xs font-light ${subtask.status === "done" ? "text-muted-foreground line-through" : ""}`}>
+                      {subtask.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onDelete(subtask.id);
+                      }}
+                      className="p-1 text-muted-foreground opacity-100 transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover/subtask:opacity-100"
+                      title="Sil"
+                      aria-label="Alt görevi sil"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 };
 

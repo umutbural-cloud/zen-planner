@@ -86,6 +86,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
   const [config, setConfig] = useState<CurrentTableConfig>(() => loadTableConfig(projectId));
 
   useEffect(() => {
@@ -93,6 +94,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     setShowDone(false);
     setShowHidden(false);
     setEditTask(null);
+    setExpandedTaskIds(new Set());
   }, [projectId]);
 
   const updateConfig = useCallback((updater: (current: CurrentTableConfig) => CurrentTableConfig) => {
@@ -104,6 +106,18 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   }, [projectId]);
 
   const topLevelTasks = useMemo(() => tasks.filter((task) => !task.parent_block_id), [tasks]);
+
+  const subtasksByParentId = useMemo(() => {
+    const map = new Map<string, Task[]>();
+    tasks.forEach((task) => {
+      if (!task.parent_block_id) return;
+      const list = map.get(task.parent_block_id) ?? [];
+      list.push(task);
+      map.set(task.parent_block_id, list);
+    });
+    map.forEach((list) => list.sort((a, b) => a.position - b.position));
+    return map;
+  }, [tasks]);
 
   const visibleColumns = useMemo(() => {
     const validIds = new Set(ADVANCED_TASK_COLUMNS.map((column) => column.id));
@@ -246,6 +260,15 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     updateConfig((current) => ({ ...current, hiddenColumnIds: [...DEFAULT_HIDDEN_COLUMN_IDS] }));
   };
 
+  const handleToggleExpandedTask = (taskId: string) => {
+    setExpandedTaskIds((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
   const renderDoneSection = () => {
     if (doneTasks.length === 0) return null;
 
@@ -261,6 +284,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           onUpdate={updateTask}
           onDelete={deleteTask}
           onOpen={setEditTask}
+          subtasksByParentId={subtasksByParentId}
+          expandedTaskIds={expandedTaskIds}
+          onToggleExpanded={handleToggleExpandedTask}
           onReorderColumns={handleReorderColumns}
           sort={config.sort}
           groupBy={config.groupBy}
@@ -306,6 +332,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
             onUpdate={updateTask}
             onDelete={deleteTask}
             onOpen={setEditTask}
+            subtasksByParentId={subtasksByParentId}
+            expandedTaskIds={expandedTaskIds}
+            onToggleExpanded={handleToggleExpandedTask}
             onReorderColumns={handleReorderColumns}
             sort={config.sort}
             groupBy={config.groupBy}
@@ -392,6 +421,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onUpdate={updateTask}
               onDelete={deleteTask}
               onOpen={setEditTask}
+              subtasksByParentId={subtasksByParentId}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpanded={handleToggleExpandedTask}
               onReorderColumns={handleReorderColumns}
               sort={config.sort}
               groupBy={config.groupBy}
@@ -417,6 +449,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onUpdate={updateTask}
               onDelete={deleteTask}
               onOpen={setEditTask}
+              subtasksByParentId={subtasksByParentId}
+              expandedTaskIds={expandedTaskIds}
+              onToggleExpanded={handleToggleExpandedTask}
               onReorderColumns={handleReorderColumns}
               sort={config.sort}
               groupBy={config.groupBy}
