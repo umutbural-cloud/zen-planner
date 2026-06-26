@@ -35,9 +35,17 @@ export const QuickNoteCard = ({
   const [title, setTitle] = useState(note.title || "");
   const debounceRef = useRef<number | null>(null);
   const focusedRef = useRef(false);
+  const pendingTitleRef = useRef<string | null>(null);
+  const latestNoteRef = useRef(note);
+  const onUpdateRef = useRef(onUpdate);
   const tone = tokenFor(note.color);
   const noteText = quickTextFromJson(note.content);
   const noteDoc = quickDocFromJson(note.content);
+
+  useEffect(() => {
+    latestNoteRef.current = note;
+    onUpdateRef.current = onUpdate;
+  }, [note, onUpdate]);
 
   useEffect(() => {
     if (!focusedRef.current) {
@@ -47,17 +55,26 @@ export const QuickNoteCard = ({
 
   useEffect(() => () => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    const pendingTitle = pendingTitleRef.current;
+    if (pendingTitle === null) return;
+    pendingTitleRef.current = null;
+    if (pendingTitle !== (latestNoteRef.current.title || "")) {
+      onUpdateRef.current(latestNoteRef.current.id, { title: pendingTitle });
+    }
   }, []);
 
   const flushTitle = (nextTitle = title) => {
+    pendingTitleRef.current = null;
     const updates: NoteUpdate = {};
-    if (nextTitle !== (note.title || "")) updates.title = nextTitle;
-    if (Object.keys(updates).length) onUpdate(note.id, updates);
+    const currentNote = latestNoteRef.current;
+    if (nextTitle !== (currentNote.title || "")) updates.title = nextTitle;
+    if (Object.keys(updates).length) onUpdateRef.current(currentNote.id, updates);
   };
 
   const queueTitleFlush = (nextTitle: string) => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => flushTitle(nextTitle), 600);
+    pendingTitleRef.current = nextTitle;
+    flushTitle(nextTitle);
   };
 
   return (
@@ -72,6 +89,7 @@ export const QuickNoteCard = ({
       className={`group relative rounded-sm border ${tone.bg} ${tone.ring} p-3 transition-colors hover:border-foreground/15`}
     >
       <button
+        type="button"
         {...attributes}
         {...listeners}
         className="absolute left-1.5 top-2 rounded-sm p-1 text-muted-foreground/35 opacity-0 transition hover:bg-accent/40 hover:text-muted-foreground group-hover:opacity-100 focus:opacity-100 cursor-grab active:cursor-grabbing"
@@ -108,6 +126,7 @@ export const QuickNoteCard = ({
 
       <div className="mt-2 flex items-center justify-end gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
         <button
+          type="button"
           onClick={() => onUpdate(note.id, { pinned: !note.pinned })}
           className="rounded-sm p-1.5 text-muted-foreground transition hover:bg-accent/40 hover:text-foreground"
           title={note.pinned ? "Sabitlemeyi kaldır" : "Sabitle"}
@@ -116,7 +135,7 @@ export const QuickNoteCard = ({
         </button>
         <Popover>
           <PopoverTrigger asChild>
-            <button className="rounded-sm p-1.5 text-muted-foreground transition hover:bg-accent/40 hover:text-foreground" title="Renk">
+            <button type="button" className="rounded-sm p-1.5 text-muted-foreground transition hover:bg-accent/40 hover:text-foreground" title="Renk">
               <Palette className="h-3.5 w-3.5" />
             </button>
           </PopoverTrigger>
@@ -124,6 +143,7 @@ export const QuickNoteCard = ({
             <div className="grid grid-cols-7 gap-1">
               {COLOR_TOKENS.map((token) => (
                 <button
+                  type="button"
                   key={token.key}
                   onClick={() => onUpdate(note.id, { color: token.key })}
                   title={token.label}
@@ -136,6 +156,7 @@ export const QuickNoteCard = ({
           </PopoverContent>
         </Popover>
         <button
+          type="button"
           onClick={() => onDelete(note.id)}
           className="rounded-sm p-1.5 text-muted-foreground transition hover:bg-accent/40 hover:text-destructive"
           title="Sil"

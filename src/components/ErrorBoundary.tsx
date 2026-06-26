@@ -1,13 +1,26 @@
 import { Component, ReactNode } from "react";
 
 type Props = { children: ReactNode };
-type State = { hasError: boolean; message?: string };
+type State = { hasError: boolean; message?: string; isChunkLoadError: boolean };
+
+const CHUNK_ERROR_PATTERNS = [
+  /ChunkLoadError/i,
+  /Failed to fetch dynamically imported module/i,
+  /Importing a module script failed/i,
+  /Loading chunk/i,
+];
+
+const isChunkLoadError = (error: Error) => {
+  const name = error?.name ?? "";
+  const message = error?.message ?? "";
+  return CHUNK_ERROR_PATTERNS.some((pattern) => pattern.test(name) || pattern.test(message));
+};
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, isChunkLoadError: false };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, message: error?.message };
+    return { hasError: true, message: error?.message, isChunkLoadError: isChunkLoadError(error) };
   }
 
   componentDidCatch(error: Error, info: unknown) {
@@ -15,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, message: undefined });
+    this.setState({ hasError: false, message: undefined, isChunkLoadError: false });
   };
 
   handleReload = () => {
@@ -30,8 +43,9 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground">Hata</div>
           <h1 className="text-xl font-light tracking-wide">Bir şeyler ters gitti</h1>
           <p className="text-sm text-muted-foreground font-light leading-relaxed">
-            Beklenmeyen bir durum oluştu. Tarayıcı çevirisi açıksa kapatmayı deneyin,
-            ardından sayfayı yenileyin.
+            {this.state.isChunkLoadError
+              ? "Uygulama güncellendi. Devam etmek için sayfayı yenileyin."
+              : "Beklenmeyen bir durum oluştu. Tarayıcı çevirisi açıksa kapatmayı deneyin, ardından sayfayı yenileyin."}
           </p>
           {this.state.message && (
             <p className="text-[11px] text-muted-foreground/70 font-mono break-words">

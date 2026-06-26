@@ -16,6 +16,9 @@ import { useAccountGate } from "@/hooks/useAccountGate";
 import { UserSettingsProvider, useUserSettings } from "@/hooks/useUserSettings";
 import { usePageState } from "@/hooks/usePageState";
 import AppShell from "@/components/AppShell";
+import { ChunkLoadHandler } from "@/components/pwa/ChunkLoadHandler";
+import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
+import { PwaUpdatePrompt } from "@/components/pwa/PwaUpdatePrompt";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -109,6 +112,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <PwaUpdatePrompt />
+      <PwaInstallPrompt />
+      <ChunkLoadHandler />
       <BrowserRouter
         future={{
           v7_startTransition: true,

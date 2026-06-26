@@ -19,6 +19,7 @@ import { QuickNoteCard } from "./QuickNoteCard";
 
 const NewNoteCard = ({ onCreate }: { onCreate: () => void }) => (
   <button
+    type="button"
     onClick={onCreate}
     className="mx-auto flex min-h-44 w-full max-w-xs flex-col items-center justify-center gap-4 rounded-sm border border-dashed border-border/80 bg-background/80 p-8 text-muted-foreground transition hover:border-foreground/20 hover:bg-card hover:text-foreground"
   >
@@ -127,6 +128,7 @@ const QuickNotesPanel = ({ notebookId }: { notebookId: string | null }) => {
           <div className="space-y-4">
             <div className="flex justify-end">
               <button
+                type="button"
                 onClick={() => { void handleCreateNote(); }}
                 className="inline-flex h-8 items-center gap-2 rounded-sm border border-border/70 bg-background/80 px-2.5 text-xs font-light text-muted-foreground transition hover:border-foreground/15 hover:text-foreground"
               >

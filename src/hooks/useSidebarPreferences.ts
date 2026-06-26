@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 export type SidebarItemKey = "backlog" | "journal" | "habits" | "workHistory" | "pomodoro" | "retreat";
 
@@ -19,13 +20,22 @@ export const SIDEBAR_ITEM_ORDER: SidebarItemKey[] = [
   "retreat",
 ];
 
-const DEFAULT_PREFS: Record<SidebarItemKey, boolean> = {
+const NEW_USER_DEFAULT_PREFS: Record<SidebarItemKey, boolean> = {
   backlog: false,
   journal: false,
   habits: false,
   workHistory: false,
   pomodoro: false,
   retreat: false,
+};
+
+const LEGACY_DEFAULT_PREFS: Record<SidebarItemKey, boolean> = {
+  backlog: false,
+  journal: true,
+  habits: true,
+  workHistory: true,
+  pomodoro: true,
+  retreat: true,
 };
 
 export type CustomModuleTarget = "journal" | "habits" | "workHistory";
@@ -45,16 +55,24 @@ export type CustomModule = {
 const STORAGE_KEY = "keikaku.sidebarPreferences.v1";
 const CUSTOM_KEY = "keikaku.sidebarCustomModules.v1";
 const EVENT = "keikaku:sidebarPreferences";
+const NEW_USER_DEFAULTS_CUTOFF_MS = Date.parse("2026-06-19T15:35:37.000Z");
 
-const read = (): Record<SidebarItemKey, boolean> => {
-  if (typeof window === "undefined") return { ...DEFAULT_PREFS };
+const defaultPrefsForUser = (createdAt?: string) => {
+  if (!createdAt) return LEGACY_DEFAULT_PREFS;
+  const createdAtMs = Date.parse(createdAt);
+  if (!Number.isFinite(createdAtMs)) return LEGACY_DEFAULT_PREFS;
+  return createdAtMs >= NEW_USER_DEFAULTS_CUTOFF_MS ? NEW_USER_DEFAULT_PREFS : LEGACY_DEFAULT_PREFS;
+};
+
+const read = (createdAt?: string): Record<SidebarItemKey, boolean> => {
+  if (typeof window === "undefined") return { ...defaultPrefsForUser(createdAt) };
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_PREFS };
+    if (!raw) return { ...defaultPrefsForUser(createdAt) };
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_PREFS, ...parsed, backlog: false };
+    return { ...NEW_USER_DEFAULT_PREFS, ...parsed, backlog: false };
   } catch {
-    return { ...DEFAULT_PREFS };
+    return { ...defaultPrefsForUser(createdAt) };
   }
 };
 
@@ -73,21 +91,24 @@ const readCustom = (): CustomModule[] => {
 };
 
 export const useSidebarPreferences = () => {
-  const [prefs, setPrefs] = useState<Record<SidebarItemKey, boolean>>(read);
+  const { user } = useAuth();
+  const userCreatedAt = user?.created_at;
+  const [prefs, setPrefs] = useState<Record<SidebarItemKey, boolean>>(() => read(userCreatedAt));
   const [customModules, setCustomModules] = useState<CustomModule[]>(readCustom);
 
   useEffect(() => {
     const handler = () => {
-      setPrefs(read());
+      setPrefs(read(userCreatedAt));
       setCustomModules(readCustom());
     };
+    setPrefs(read(userCreatedAt));
     window.addEventListener(EVENT, handler);
     window.addEventListener("storage", handler);
     return () => {
       window.removeEventListener(EVENT, handler);
       window.removeEventListener("storage", handler);
     };
-  }, []);
+  }, [userCreatedAt]);
 
   const setItem = (key: SidebarItemKey, value: boolean) => {
     setPrefs((prev) => {
