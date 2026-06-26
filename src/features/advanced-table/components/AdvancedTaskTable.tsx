@@ -7,7 +7,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
+import { horizontalListSortingStrategy, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Task } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { getColumn } from "../columns";
@@ -28,6 +28,8 @@ type AdvancedTaskTableProps = {
   expandedTaskIds: Set<string>;
   onToggleExpanded: (taskId: string) => void;
   onReorderColumns?: (activeColumnId: AdvancedTaskColumnId, overColumnId: AdvancedTaskColumnId) => void;
+  rowReorderEnabled?: boolean;
+  onReorderRows?: (activeTaskId: string, overTaskId: string) => void;
   sort: TableSort | null;
   groupBy: AdvancedTaskColumnId | null;
   filters: TableFilter[];
@@ -49,6 +51,8 @@ const AdvancedTaskTable = ({
   expandedTaskIds,
   onToggleExpanded,
   onReorderColumns,
+  rowReorderEnabled,
+  onReorderRows,
   sort,
   groupBy,
   filters,
@@ -60,23 +64,45 @@ const AdvancedTaskTable = ({
 }: AdvancedTaskTableProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const columnDragEnabled = Boolean(onReorderColumns) && columns.length > 1;
+  const rowDragEnabled = Boolean(rowReorderEnabled && onReorderRows);
   const getColumnSortableId = (groupKey: string, columnId: AdvancedTaskColumnId) => `column:${groupKey}:${columnId}`;
+  const getRowSortableId = (groupKey: string, taskId: string) => `row:${groupKey}:${taskId}`;
   const getColumnIdFromSortableId = (id: unknown): AdvancedTaskColumnId | null => {
     const value = String(id);
+    if (!value.startsWith("column:")) return null;
     const columnId = value.split(":").pop();
     return columns.includes(columnId as AdvancedTaskColumnId) ? (columnId as AdvancedTaskColumnId) : null;
   };
+  const getTaskIdFromRowSortableId = (id: unknown): string | null => {
+    const value = String(id);
+    if (!value.startsWith("row:")) return null;
+    const parts = value.split(":");
+    return parts.length >= 3 ? parts.slice(2).join(":") : null;
+  };
 
-  const handleColumnDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || !onReorderColumns) return;
+    if (!over || active.id === over.id) return;
 
-    const activeColumnId = getColumnIdFromSortableId(active.id);
-    const overColumnId = getColumnIdFromSortableId(over.id);
+    if (String(active.id).startsWith("column:")) {
+      if (!onReorderColumns) return;
+      const activeColumnId = getColumnIdFromSortableId(active.id);
+      const overColumnId = getColumnIdFromSortableId(over.id);
 
-    if (!activeColumnId || !overColumnId || activeColumnId === overColumnId) return;
+      if (!activeColumnId || !overColumnId || activeColumnId === overColumnId) return;
 
-    onReorderColumns(activeColumnId, overColumnId);
+      onReorderColumns(activeColumnId, overColumnId);
+      return;
+    }
+
+    if (String(active.id).startsWith("row:")) {
+      if (!rowDragEnabled || !onReorderRows) return;
+      const activeTaskId = getTaskIdFromRowSortableId(active.id);
+      const overTaskId = getTaskIdFromRowSortableId(over.id);
+      if (!activeTaskId || !overTaskId || activeTaskId === overTaskId) return;
+
+      onReorderRows(activeTaskId, overTaskId);
+    }
   };
 
   if (groups.every((group) => group.rows.length === 0)) {
@@ -151,7 +177,26 @@ const AdvancedTaskTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {group.rows.map((task) => (
+                {rowDragEnabled && group.key === "active" ? (
+                  <SortableContext items={group.rows.map((task) => getRowSortableId(group.key, task.id))} strategy={verticalListSortingStrategy}>
+                    {group.rows.map((task) => (
+                      <AdvancedTaskRow
+                        key={task.id}
+                        task={task}
+                        columns={columns}
+                        categories={categories}
+                        onUpdate={onUpdate}
+                        onDelete={onDelete}
+                        onOpen={onOpen}
+                        subtasks={subtasksByParentId.get(task.id) ?? []}
+                        expanded={expandedTaskIds.has(task.id)}
+                        onToggleExpanded={onToggleExpanded}
+                        rowDragEnabled
+                        sortableId={getRowSortableId(group.key, task.id)}
+                      />
+                    ))}
+                  </SortableContext>
+                ) : group.rows.map((task) => (
                   <AdvancedTaskRow
                     key={task.id}
                     task={task}
@@ -173,10 +218,10 @@ const AdvancedTaskTable = ({
     </div>
   );
 
-  if (!columnDragEnabled) return content;
+  if (!columnDragEnabled && !rowDragEnabled) return content;
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       {content}
     </DndContext>
   );

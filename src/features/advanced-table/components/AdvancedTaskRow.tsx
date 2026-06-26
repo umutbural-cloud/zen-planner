@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { CalendarIcon, ChevronDown, ChevronRight, Clock3, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, ChevronRight, Clock3, Eye, EyeOff, GripVertical, Pencil, Trash2, X } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,8 @@ type AdvancedTaskRowProps = {
   subtasks: Task[];
   expanded: boolean;
   onToggleExpanded: (taskId: string) => void;
+  rowDragEnabled?: boolean;
+  sortableId?: string;
 };
 
 const cellControlClassName =
@@ -143,6 +147,8 @@ const AdvancedTaskRow = ({
   subtasks,
   expanded,
   onToggleExpanded,
+  rowDragEnabled = false,
+  sortableId,
 }: AdvancedTaskRowProps) => {
   const [title, setTitle] = useState(task.title);
   const [startDateOpen, setStartDateOpen] = useState(false);
@@ -155,6 +161,24 @@ const AdvancedTaskRow = ({
   const [endTimeInput, setEndTimeInput] = useState(formatTimeForDisplay(task.end_time));
   const category = categories.find((item) => item.id === task.category_id);
   const doneSubtaskCount = subtasks.filter((subtask) => subtask.status === "done").length;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: sortableId ?? `row-disabled:${task.id}`,
+    disabled: !rowDragEnabled || !sortableId,
+  });
+  const rowStyle = rowDragEnabled
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : undefined,
+      }
+    : undefined;
 
   useEffect(() => {
     setTitle(task.title);
@@ -647,12 +671,30 @@ const AdvancedTaskRow = ({
 
   return (
     <>
-      <TableRow className="group">
-        <TableCell className="w-9 px-2 py-1" onClick={(event) => event.stopPropagation()}>
-          <Checkbox
-            checked={task.status === "done"}
-            onCheckedChange={(checked) => onUpdate(task.id, { status: checked === true ? "done" : "todo" })}
-          />
+      <TableRow
+        ref={rowDragEnabled ? setNodeRef : undefined}
+        style={rowStyle}
+        className={`group ${isDragging ? "relative z-10 bg-card/40" : ""}`}
+      >
+        <TableCell className="w-12 px-2 py-1" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center gap-1">
+            {rowDragEnabled && (
+              <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                className="inline-flex h-6 w-4 touch-none cursor-grab items-center justify-center rounded-sm text-muted-foreground/40 transition-colors hover:bg-card/40 hover:text-muted-foreground active:cursor-grabbing"
+                aria-label="Görevi sırala"
+                title="Sürükle"
+              >
+                <GripVertical className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <Checkbox
+              checked={task.status === "done"}
+              onCheckedChange={(checked) => onUpdate(task.id, { status: checked === true ? "done" : "todo" })}
+            />
+          </div>
         </TableCell>
         {columns.map((columnId) => (
           <TableCell key={columnId} className="px-2 py-1 align-middle">
