@@ -27,7 +27,20 @@ export const QuickNoteEditor = ({
 }) => {
   const debounceRef = useRef<number | null>(null);
   const lastContentRef = useRef<string>("");
+  const pendingContentRef = useRef<{ doc: JSONContent; text: string } | null>(null);
+  const onChangeRef = useRef(onChange);
   const initialContent = doc && Object.keys(doc).length ? doc : textToDoc(text);
+
+  const flushPendingContent = () => {
+    if (!pendingContentRef.current) return;
+    const pending = pendingContentRef.current;
+    pendingContentRef.current = null;
+    onChangeRef.current(pending.doc, pending.text);
+  };
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const editor = useEditor({
     extensions: [
@@ -50,14 +63,17 @@ export const QuickNoteEditor = ({
     },
     onUpdate: ({ editor }) => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
-      debounceRef.current = window.setTimeout(() => {
-        onChange(editor.getJSON(), editor.getText());
-      }, 550);
+      pendingContentRef.current = { doc: editor.getJSON(), text: editor.getText() };
+      flushPendingContent();
     },
   });
 
   useEffect(() => () => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    const pending = pendingContentRef.current;
+    if (!pending) return;
+    pendingContentRef.current = null;
+    onChangeRef.current(pending.doc, pending.text);
   }, []);
 
   useEffect(() => {

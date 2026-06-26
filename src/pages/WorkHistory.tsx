@@ -171,12 +171,14 @@ const WorkHistory = () => {
   const persistOffDays = (next: Set<string>) => {
     const saved = new Set(next);
     if (!offDaysStorageKey) {
-      setOffDays(saved);
-      return true;
+      return false;
     }
     try {
+      const serialized = JSON.stringify(Array.from(saved).sort());
       if (saved.size === 0) localStorage.removeItem(offDaysStorageKey);
-      else localStorage.setItem(offDaysStorageKey, JSON.stringify(Array.from(saved).sort()));
+      else localStorage.setItem(offDaysStorageKey, serialized);
+      const persistedRaw = localStorage.getItem(offDaysStorageKey);
+      if (saved.size === 0 ? persistedRaw !== null : persistedRaw !== serialized) return false;
       setOffDays(saved);
       return true;
     } catch {
@@ -379,8 +381,10 @@ const WorkHistory = () => {
 
   const handleStatsSettingsOpenChange = (open: boolean) => {
     setStatsSettingsOpen(open);
-    setDraftOffDays(new Set(offDays));
-    setOffDaysSaveStatus("idle");
+    if (open) {
+      setDraftOffDays(new Set(offDays));
+      setOffDaysSaveStatus("idle");
+    }
   };
 
   const updateDraftOffDaysFromDates = (dates: Date[] | undefined) => {
@@ -657,6 +661,7 @@ const WorkHistory = () => {
                               </span>
                               {draftOffDays.size > 0 ? (
                                 <button
+                                  type="button"
                                   onClick={clearDraftOffDays}
                                   className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                                 >
@@ -685,6 +690,7 @@ const WorkHistory = () => {
                                         ) : null}
                                       </div>
                                       <button
+                                        type="button"
                                         onClick={() => removeDraftOffDay(key)}
                                         className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
                                         title="Off günü kaldır"
@@ -718,6 +724,7 @@ const WorkHistory = () => {
                               </span>
                               <div className="flex items-center gap-1.5">
                                 <button
+                                  type="button"
                                   onClick={resetDraftOffDays}
                                   disabled={!offDaysDraftDirty}
                                   className="text-[11px] text-muted-foreground transition-colors px-2 py-1 rounded-sm hover:bg-accent/40 hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
@@ -725,8 +732,9 @@ const WorkHistory = () => {
                                   Geri al
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={saveDraftOffDays}
-                                  disabled={!offDaysDraftDirty}
+                                  disabled={!offDaysStorageKey || !offDaysDraftDirty}
                                   className="text-[11px] text-foreground transition-colors px-2 py-1 rounded-sm border border-border/60 hover:bg-accent/40 disabled:opacity-40 disabled:hover:bg-transparent"
                                 >
                                   Kaydet
