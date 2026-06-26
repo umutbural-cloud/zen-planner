@@ -1,4 +1,5 @@
-import { Outlet, useNavigate, useOutletContext } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import AppSidebar from "@/components/AppSidebar";
 import { PrayerTimesSync } from "@/components/PrayerTimesSync";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -10,6 +11,7 @@ type ProjectContext = ReturnType<typeof useProjects>;
 
 const AppShell = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const projectContext = useProjects();
   const { projects, createProject, updateProject, deleteProject } = projectContext;
   const {
@@ -24,6 +26,18 @@ const AppShell = () => {
     setSelectedNotebookId,
     setSelectedKnowledgeNoteId,
   } = usePageState();
+
+  useEffect(() => {
+    const routeSection = location.pathname === "/habits"
+      ? "habits"
+      : location.pathname === "/journal"
+        ? "journal"
+        : null;
+
+    if (!routeSection) return;
+    if (section !== routeSection) setSection(routeSection);
+    if (selectedProjectId !== null) setSelectedProjectId(null);
+  }, [location.pathname, section, selectedProjectId, setSection, setSelectedProjectId]);
 
   const selectProject = (id: string, nextView?: ViewKey) => {
     setSection("project");
