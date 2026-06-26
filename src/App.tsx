@@ -125,6 +125,8 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route element={<ProtectedRoute><UserSettingsProvider><AppShell /></UserSettingsProvider></ProtectedRoute>}>
                   <Route path="/" element={<Index />} />
+                  <Route path="/habits" element={<Index />} />
+                  <Route path="/journal" element={<Index />} />
                   <Route path="/pomodoro" element={<Pomodoro />} />
                   <Route path="/work-history" element={<WorkHistory />} />
                 </Route>
