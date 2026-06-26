@@ -80,7 +80,7 @@ const buildFilterOptions = (
 };
 
 const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
-  const { tasks, loading, createTask, updateTask, deleteTask } = useTasks(projectId);
+  const { tasks, loading, createTask, updateTask, deleteTask, reorderTasks } = useTasks(projectId);
   const { categories } = usePomodoroCategories();
   const [newTitle, setNewTitle] = useState("");
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -149,6 +149,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     ? getColumnLabel(config.groupBy)
     : null;
   const activeSortLabel = config.sort ? getColumnLabel(config.sort.columnId) : null;
+  const rowReorderEnabled = config.groupBy === null && config.sort === null && config.filters.length === 0;
 
   const activeTasks = useMemo(
     () => sortedFilteredTasks.filter((task) => !task.hidden && task.status !== "done"),
@@ -203,6 +204,22 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
       if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return current;
       return { ...current, columnOrder: arrayMove(current.columnOrder, oldIndex, newIndex) };
     });
+  };
+
+  const handleReorderRows = (activeTaskId: string, overTaskId: string) => {
+    if (activeTaskId === overTaskId) return;
+    const oldIndex = activeTasks.findIndex((task) => task.id === activeTaskId);
+    const newIndex = activeTasks.findIndex((task) => task.id === overTaskId);
+    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+
+    const reorderedActiveTasks = arrayMove(activeTasks, oldIndex, newIndex);
+    const reorderedIds = new Set(reorderedActiveTasks.map((task) => task.id));
+    const finalOrder = [
+      ...reorderedActiveTasks,
+      ...tasks.filter((task) => !reorderedIds.has(task.id)),
+    ];
+
+    void reorderTasks(finalOrder.map((task) => task.id));
   };
 
   const handleGroupByChange = (columnId: AdvancedTaskColumnId | null) => {
@@ -425,6 +442,8 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               expandedTaskIds={expandedTaskIds}
               onToggleExpanded={handleToggleExpandedTask}
               onReorderColumns={handleReorderColumns}
+              rowReorderEnabled={rowReorderEnabled}
+              onReorderRows={handleReorderRows}
               sort={config.sort}
               groupBy={config.groupBy}
               filters={config.filters}
