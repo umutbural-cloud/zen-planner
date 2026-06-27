@@ -2,6 +2,9 @@ import { BookOpen, Home, ListChecks, Repeat, Timer, type LucideIcon } from "luci
 import { useLocation, useNavigate } from "react-router-dom";
 import { getPrimaryNavigationKey, type PrimaryNavigationKey } from "@/lib/urlState";
 import { usePageState } from "@/hooks/usePageState";
+import { useUserSettings } from "@/hooks/useUserSettings";
+import type { Project } from "@/hooks/useProjects";
+import type { ViewKey } from "@/hooks/useProjectViews";
 import { cn } from "@/lib/utils";
 
 type MobileNavItem = {
@@ -12,21 +15,33 @@ type MobileNavItem = {
   onSelect: () => void;
 };
 
-export const MobileBottomNav = () => {
+export const MobileBottomNav = ({ projects }: { projects: Project[] }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { section, setSection, setSelectedProjectId } = usePageState();
+  const { settings } = useUserSettings();
+  const { section, setSection, setSelectedProjectId, setView } = usePageState();
   const activeKey = getPrimaryNavigationKey(location.pathname, section);
+  const workspaceProjects = projects.filter((project) => project.kind === "project");
+  const defaultTasksProject = settings.default_pomodoro_project_id
+    ? workspaceProjects.find((project) => project.id === settings.default_pomodoro_project_id)
+    : workspaceProjects.find((project) => project.is_default);
+
+  const selectDefaultTasksProject = () => {
+    setSection("project");
+    if (defaultTasksProject) {
+      const projectViews = (defaultTasksProject.enabled_views?.length ? defaultTasksProject.enabled_views : ["table", "notes"]) as ViewKey[];
+      setSelectedProjectId(defaultTasksProject.id);
+      setView(projectViews.includes("table") ? "table" : projectViews[0] || "table");
+    }
+    navigate("/");
+  };
 
   const items: MobileNavItem[] = [
     {
       key: "project",
       label: "Görevler",
       icon: ListChecks,
-      onSelect: () => {
-        setSection("project");
-        navigate("/");
-      },
+      onSelect: selectDefaultTasksProject,
     },
     {
       key: "pomodoro",
