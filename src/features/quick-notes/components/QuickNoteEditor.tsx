@@ -6,6 +6,8 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { RichTextToolbar } from "@/components/editor/RichTextToolbar";
 import { FontSize, LineHeight } from "@/components/editor/richTextExtensions";
 
+const AUTOSAVE_DELAY_MS = 1800;
+
 const textToDoc = (text: string): JSONContent => ({
   type: "doc",
   content: text
@@ -28,19 +30,40 @@ export const QuickNoteEditor = ({
   const debounceRef = useRef<number | null>(null);
   const lastContentRef = useRef<string>("");
   const pendingContentRef = useRef<{ doc: JSONContent; text: string } | null>(null);
+  const hasPendingContentRef = useRef(false);
   const onChangeRef = useRef(onChange);
   const initialContent = doc && Object.keys(doc).length ? doc : textToDoc(text);
 
   const flushPendingContent = () => {
+    if (debounceRef.current) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     if (!pendingContentRef.current) return;
     const pending = pendingContentRef.current;
     pendingContentRef.current = null;
+    hasPendingContentRef.current = false;
     onChangeRef.current(pending.doc, pending.text);
+  };
+
+  const schedulePendingContentSave = () => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(flushPendingContent, AUTOSAVE_DELAY_MS);
   };
 
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    const flushBeforePageLeaves = () => flushPendingContent();
+    window.addEventListener("pagehide", flushBeforePageLeaves);
+    window.addEventListener("beforeunload", flushBeforePageLeaves);
+    return () => {
+      window.removeEventListener("pagehide", flushBeforePageLeaves);
+      window.removeEventListener("beforeunload", flushBeforePageLeaves);
+    };
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -62,9 +85,9 @@ export const QuickNoteEditor = ({
       },
     },
     onUpdate: ({ editor }) => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current);
       pendingContentRef.current = { doc: editor.getJSON(), text: editor.getText() };
-      flushPendingContent();
+      hasPendingContentRef.current = true;
+      schedulePendingContentSave();
     },
   });
 
@@ -80,6 +103,7 @@ export const QuickNoteEditor = ({
     if (!editor) return;
     const next = JSON.stringify(doc && Object.keys(doc).length ? doc : textToDoc(text));
     if (lastContentRef.current === next) return;
+    if (hasPendingContentRef.current) return;
     const current = JSON.stringify(editor.getJSON());
     if (current !== next) editor.commands.setContent(JSON.parse(next), { emitUpdate: false });
     lastContentRef.current = next;
@@ -88,7 +112,7 @@ export const QuickNoteEditor = ({
   if (!editor) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" onBlurCapture={flushPendingContent}>
       <RichTextToolbar
         editor={editor}
         compact

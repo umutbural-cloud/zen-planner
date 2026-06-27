@@ -42,6 +42,7 @@ type Session = {
 };
 
 type PomodoroSessionRow = Database["public"]["Tables"]["pomodoro_sessions"]["Row"];
+type UserOffDayRow = Database["public"]["Tables"]["user_off_days"]["Row"];
 type ChartTooltipPayload = {
   payload?: {
     sec?: number;
@@ -93,6 +94,45 @@ const sameStringSet = (left: Set<string>, right: Set<string>) => {
   return true;
 };
 
+const parseStoredOffDays = (raw: string | null) => {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((value): value is string =>
+      typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    );
+  } catch {
+    return [];
+  }
+};
+
+const offDaysErrorMessage = (error: unknown) => {
+  if (typeof error !== "object" || error === null) return "Kaydedilemedi";
+  const maybeError = error as { code?: string; message?: string };
+  const message = maybeError.message ?? "";
+
+  if (
+    maybeError.code === "42P01" ||
+    maybeError.code === "PGRST205" ||
+    message.includes("user_off_days") ||
+    message.includes("schema cache") ||
+    message.includes("does not exist")
+  ) {
+    return "Off günler için veritabanı migration'ı uygulanmalı.";
+  }
+
+  if (maybeError.code === "42501" || message.toLowerCase().includes("permission denied")) {
+    return "Yetki nedeniyle kaydedilemedi.";
+  }
+
+  if (message.toLowerCase().includes("failed to fetch") || message.toLowerCase().includes("network")) {
+    return "Ağ bağlantısı nedeniyle kaydedilemedi.";
+  }
+
+  return "Kaydedilemedi";
+};
+
 const WorkHistory = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -116,10 +156,13 @@ const WorkHistory = () => {
   // null = include all (default). Otherwise an explicit Set of included keys.
   const storageKey = user ? `keikaku:work-stats:included-cats:${user.id}` : null;
   const offDaysStorageKey = user ? `keikaku:work-stats:off-days:${user.id}` : null;
+  const offDaysImportMarkerKey = user ? `keikaku:work-stats:off-days-imported:${user.id}` : null;
   const [includedCats, setIncludedCats] = useState<Set<string> | null>(null);
   const [offDays, setOffDays] = useState<Set<string>>(new Set());
   const [draftOffDays, setDraftOffDays] = useState<Set<string>>(new Set());
   const [offDaysSaveStatus, setOffDaysSaveStatus] = useState<OffDaysSaveStatus>("idle");
+  const [offDaysSaveMessage, setOffDaysSaveMessage] = useState("Kaydedilemedi");
+  const [offDaysLoading, setOffDaysLoading] = useState(true);
   const [statsSettingsOpen, setStatsSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -135,29 +178,67 @@ const WorkHistory = () => {
     } catch { /* ignore */ }
   }, [storageKey]);
 
-  useEffect(() => {
-    if (!offDaysStorageKey) return;
+  const importLegacyOffDays = useCallback(async () => {
+    if (!user || !offDaysStorageKey || !offDaysImportMarkerKey) return;
+    if (typeof window === "undefined") return;
+
     try {
+      if (localStorage.getItem(offDaysImportMarkerKey)) return;
       const raw = localStorage.getItem(offDaysStorageKey);
-      if (!raw) {
-        setOffDays(new Set());
-        setDraftOffDays(new Set());
+      const legacyDays = Array.from(new Set(parseStoredOffDays(raw)));
+      if (legacyDays.length === 0) {
+        localStorage.setItem(offDaysImportMarkerKey, new Date().toISOString());
         return;
       }
-      const arr = JSON.parse(raw) as string[];
-      if (Array.isArray(arr)) {
-        const saved = new Set(arr.filter((value): value is string => typeof value === "string" && value.length > 0));
-        setOffDays(saved);
-        setDraftOffDays(new Set(saved));
-      } else {
-        setOffDays(new Set());
-        setDraftOffDays(new Set());
+
+      const { error } = await supabase
+        .from("user_off_days")
+        .upsert(
+          legacyDays.map((day) => ({ user_id: user.id, day })),
+          { onConflict: "user_id,day" },
+        );
+
+      if (!error) {
+        localStorage.setItem(offDaysImportMarkerKey, new Date().toISOString());
       }
     } catch {
+      // Keep import retryable if localStorage or network is unavailable.
+    }
+  }, [offDaysImportMarkerKey, offDaysStorageKey, user]);
+
+  const fetchOffDays = useCallback(async () => {
+    if (!user) {
       setOffDays(new Set());
       setDraftOffDays(new Set());
+      setOffDaysLoading(false);
+      return;
     }
-  }, [offDaysStorageKey]);
+
+    setOffDaysLoading(true);
+    try {
+      await importLegacyOffDays();
+      const { data, error } = await supabase
+        .from("user_off_days")
+        .select("day")
+        .eq("user_id", user.id)
+        .order("day", { ascending: true });
+
+      if (error) throw error;
+
+      const saved = new Set(((data || []) as Pick<UserOffDayRow, "day">[]).map((row) => row.day));
+      setOffDays(saved);
+      setDraftOffDays(new Set(saved));
+    } catch {
+      setOffDaysSaveStatus("error");
+      setOffDaysSaveMessage("Off günler yüklenemedi.");
+    } finally {
+      setOffDaysLoading(false);
+    }
+  }, [importLegacyOffDays, user]);
+
+  useEffect(() => {
+    void fetchOffDays();
+  }, [fetchOffDays]);
 
   const persistIncluded = (next: Set<string> | null) => {
     setIncludedCats(next);
@@ -168,20 +249,45 @@ const WorkHistory = () => {
     } catch { /* ignore */ }
   };
 
-  const persistOffDays = (next: Set<string>) => {
-    const saved = new Set(next);
-    if (!offDaysStorageKey) {
+  const persistOffDays = async (next: Set<string>) => {
+    if (!user) {
       return false;
     }
+
     try {
-      const serialized = JSON.stringify(Array.from(saved).sort());
-      if (saved.size === 0) localStorage.removeItem(offDaysStorageKey);
-      else localStorage.setItem(offDaysStorageKey, serialized);
-      const persistedRaw = localStorage.getItem(offDaysStorageKey);
-      if (saved.size === 0 ? persistedRaw !== null : persistedRaw !== serialized) return false;
-      setOffDays(saved);
+      const saved = new Set(next);
+      const added = Array.from(saved).filter((day) => !offDays.has(day));
+      const removed = Array.from(offDays).filter((day) => !saved.has(day));
+
+      if (added.length > 0) {
+        const { error } = await supabase
+          .from("user_off_days")
+          .upsert(
+            added.map((day) => ({ user_id: user.id, day })),
+            { onConflict: "user_id,day" },
+          );
+        if (error) {
+          setOffDaysSaveMessage(offDaysErrorMessage(error));
+          return false;
+        }
+      }
+
+      if (removed.length > 0) {
+        const { error } = await supabase
+          .from("user_off_days")
+          .delete()
+          .eq("user_id", user.id)
+          .in("day", removed);
+        if (error) {
+          setOffDaysSaveMessage(offDaysErrorMessage(error));
+          return false;
+        }
+      }
+
+      await fetchOffDays();
       return true;
     } catch {
+      setOffDaysSaveMessage("Ağ bağlantısı nedeniyle kaydedilemedi.");
       return false;
     }
   };
@@ -384,6 +490,7 @@ const WorkHistory = () => {
     if (open) {
       setDraftOffDays(new Set(offDays));
       setOffDaysSaveStatus("idle");
+      setOffDaysSaveMessage("Kaydedilemedi");
     }
   };
 
@@ -391,25 +498,27 @@ const WorkHistory = () => {
     const next = new Set((dates || []).filter(Boolean).map((d) => dateKey(d)));
     setDraftOffDays(next);
     setOffDaysSaveStatus("idle");
+    setOffDaysSaveMessage("Kaydedilemedi");
   };
 
   const clearDraftOffDays = () => {
     setDraftOffDays(new Set());
     setOffDaysSaveStatus("idle");
+    setOffDaysSaveMessage("Kaydedilemedi");
   };
 
   const resetDraftOffDays = () => {
     setDraftOffDays(new Set(offDays));
     setOffDaysSaveStatus("idle");
+    setOffDaysSaveMessage("Kaydedilemedi");
   };
 
-  const saveDraftOffDays = () => {
-    const saved = persistOffDays(draftOffDays);
+  const saveDraftOffDays = async () => {
+    const saved = await persistOffDays(draftOffDays);
     if (!saved) {
       setOffDaysSaveStatus("error");
       return;
     }
-    setDraftOffDays(new Set(draftOffDays));
     setOffDaysSaveStatus("saved");
   };
 
@@ -418,6 +527,7 @@ const WorkHistory = () => {
     next.delete(key);
     setDraftOffDays(next);
     setOffDaysSaveStatus("idle");
+    setOffDaysSaveMessage("Kaydedilemedi");
   };
 
   // -------- Group: month -> week -> day --------
@@ -715,7 +825,7 @@ const WorkHistory = () => {
                                 }`}
                               >
                                 {offDaysSaveStatus === "error"
-                                  ? "Kaydedilemedi"
+                                  ? offDaysSaveMessage
                                   : offDaysDraftDirty
                                     ? "Kaydedilmemiş değişiklikler var"
                                     : offDaysSaveStatus === "saved"
@@ -733,8 +843,8 @@ const WorkHistory = () => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={saveDraftOffDays}
-                                  disabled={!offDaysStorageKey || !offDaysDraftDirty}
+                                  onClick={() => { void saveDraftOffDays(); }}
+                                  disabled={!user || offDaysLoading || !offDaysDraftDirty}
                                   className="text-[11px] text-foreground transition-colors px-2 py-1 rounded-sm border border-border/60 hover:bg-accent/40 disabled:opacity-40 disabled:hover:bg-transparent"
                                 >
                                   Kaydet
