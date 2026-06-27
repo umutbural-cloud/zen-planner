@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import AppSidebar from "@/components/AppSidebar";
+import MobileBottomNav from "@/components/mobile/MobileBottomNav";
 import { PrayerTimesSync } from "@/components/PrayerTimesSync";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { usePageState } from "@/hooks/usePageState";
@@ -110,7 +111,10 @@ const AppShell = () => {
             navigate("/");
           }}
         />
-        <Outlet context={projectContext} />
+        <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+          <Outlet context={projectContext} />
+        </div>
+        <MobileBottomNav />
       </div>
     </SidebarProvider>
   );
