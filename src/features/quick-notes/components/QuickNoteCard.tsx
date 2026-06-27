@@ -8,6 +8,7 @@ import { isJsonObject, quickDocFromJson, quickTextFromJson } from "@/features/kn
 import { QuickNoteEditor } from "./QuickNoteEditor";
 
 type NoteUpdate = Partial<Pick<NotebookNote, "title" | "content" | "color" | "pinned">>;
+const TITLE_AUTOSAVE_DELAY_MS = 1000;
 
 const COLOR_TOKENS: { key: QuickNoteColor; label: string; bg: string; ring: string }[] = [
   { key: "default", label: "Varsayılan", bg: "bg-card", ring: "border-border/70" },
@@ -63,7 +64,32 @@ export const QuickNoteCard = ({
     }
   }, []);
 
+  useEffect(() => {
+    const flushBeforePageLeaves = () => {
+      const pendingTitle = pendingTitleRef.current;
+      if (pendingTitle === null) return;
+      if (debounceRef.current) {
+        window.clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      pendingTitleRef.current = null;
+      if (pendingTitle !== (latestNoteRef.current.title || "")) {
+        onUpdateRef.current(latestNoteRef.current.id, { title: pendingTitle });
+      }
+    };
+    window.addEventListener("pagehide", flushBeforePageLeaves);
+    window.addEventListener("beforeunload", flushBeforePageLeaves);
+    return () => {
+      window.removeEventListener("pagehide", flushBeforePageLeaves);
+      window.removeEventListener("beforeunload", flushBeforePageLeaves);
+    };
+  }, []);
+
   const flushTitle = (nextTitle = title) => {
+    if (debounceRef.current) {
+      window.clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     pendingTitleRef.current = null;
     const updates: NoteUpdate = {};
     const currentNote = latestNoteRef.current;
@@ -74,7 +100,7 @@ export const QuickNoteCard = ({
   const queueTitleFlush = (nextTitle: string) => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     pendingTitleRef.current = nextTitle;
-    flushTitle(nextTitle);
+    debounceRef.current = window.setTimeout(() => flushTitle(nextTitle), TITLE_AUTOSAVE_DELAY_MS);
   };
 
   return (
@@ -103,7 +129,6 @@ export const QuickNoteCard = ({
         onFocus={() => { focusedRef.current = true; }}
         onBlur={() => {
           focusedRef.current = false;
-          if (debounceRef.current) window.clearTimeout(debounceRef.current);
           flushTitle();
         }}
         onChange={(event) => {
