@@ -15,7 +15,7 @@ const HomeView = () => {
   const { openJournal, openHabits, openRetreat, openQuickNotes } = useHomeQuickActionsNavigation();
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
+    <div className="mx-auto max-w-7xl space-y-6 md:space-y-5">
       <HomeHero
         name={dashboard.userName}
         greetingLabel={dashboard.greetingLabel}
@@ -28,8 +28,8 @@ const HomeView = () => {
 
       <HomeMetrics metrics={dashboard.metrics} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-5">
+        <div className="space-y-6 lg:col-span-2 lg:space-y-5">
           <HomePlanPreview plan={dashboard.plan} study={dashboard.study} />
           <HomeQuickActions
             onOpenJournal={openJournal}
@@ -40,7 +40,7 @@ const HomeView = () => {
             }}
           />
         </div>
-        <div className="space-y-5">
+        <div className="space-y-6 lg:space-y-5">
           <HomePomodoroPreview pomodoro={dashboard.pomodoro} />
           <HomeRecentWorkPreview recentWork={dashboard.recentWork} />
           <HomeHabitsPreview

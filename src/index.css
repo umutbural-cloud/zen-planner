@@ -105,6 +105,17 @@
     font-weight: 300;
     letter-spacing: 0.05em;
   }
+
+  @media (max-width: 767px) {
+    body {
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.25;
+    }
+  }
 }
 
 /* TipTap editor styling — high specificity to override Tailwind preflight */
@@ -114,6 +125,18 @@
 }
 .rich-note-editor.ProseMirror {
   font-size: 16px;
+}
+@media (max-width: 767px) {
+  .ProseMirror {
+    font-size: 16px;
+    line-height: 1.78;
+  }
+
+  .ProseMirror p {
+    margin-top: 0.65rem;
+    margin-bottom: 0.65rem;
+    line-height: 1.78;
+  }
 }
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);

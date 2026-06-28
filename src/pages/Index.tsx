@@ -127,9 +127,9 @@ const Index = () => {
 
   return (
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-12 flex items-center justify-between border-b border-border/60 px-4 gap-4">
+          <header className="min-h-14 flex items-center justify-between border-b border-border/60 px-4 gap-3 md:h-12 md:min-h-0 md:gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <SidebarTrigger className="text-muted-foreground" />
+              <SidebarTrigger className="h-10 w-10 text-muted-foreground md:h-8 md:w-8" />
               {section === "home" && (
                 <h1 className="text-base tracking-wide truncate font-light">
                   Ana Sayfa
@@ -210,7 +210,7 @@ const Index = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button
-                        className="sm:hidden flex items-center gap-1.5 px-2 py-1 rounded-sm text-xs bg-accent/60 text-accent-foreground"
+                        className="sm:hidden flex min-h-10 items-center gap-1.5 rounded-lg bg-accent/60 px-3 py-2 text-xs text-accent-foreground"
                         title="Görünüm"
                       >
                         {(() => {
@@ -280,7 +280,7 @@ const Index = () => {
             </div>
           </header>
 
-          <main className="flex-1 p-3 sm:p-6 overflow-auto">
+          <main className="flex-1 overflow-auto px-4 py-5 sm:p-6">
             {section === "home" && <HomeView />}
             {section === "trash" && <TrashView />}
             {section === "journal" && (
@@ -298,8 +298,8 @@ const Index = () => {
             )}
             {section === "project" && (
               !selectedProject ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                  <div className="text-center space-y-2">
+                <div className="flex h-full items-center justify-center px-4 text-sm text-muted-foreground">
+                  <div className="space-y-3 rounded-2xl border border-dashed border-border/70 bg-card/35 px-6 py-8 text-center md:rounded-none md:border-0 md:bg-transparent md:p-0">
                     <p className="text-2xl tracking-widest">Plan</p>
                     <p className="text-xs">Bir proje seçin veya yeni bir proje oluşturun</p>
                   </div>
