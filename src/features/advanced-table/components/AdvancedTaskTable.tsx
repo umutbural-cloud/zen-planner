@@ -117,18 +117,17 @@ const AdvancedTaskTable = ({
   const content = (
     <div className="space-y-3">
       {groups.map((group) => (
-        <section key={group.key} className="overflow-hidden rounded-sm border border-border/60">
-          <div className="flex items-center gap-2 border-b border-border/50 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
-            {group.color && <span className="h-1.5 w-1.5 rounded-full" style={{ background: group.color }} />}
-            <span className="tracking-wide">{group.label}</span>
-            <span className="text-muted-foreground/60">·</span>
-            <span className="text-muted-foreground/60">{group.count}</span>
+        <section key={group.key} className="overflow-hidden rounded-[1.1rem] border border-border/60 bg-card/45 md:rounded-sm md:bg-transparent">
+          <div className="flex min-h-11 items-center gap-2 border-b border-border/50 bg-card/35 px-3.5 py-2 text-xs text-muted-foreground md:min-h-0 md:px-3">
+            {group.color && <span className="h-2 w-2 rounded-full md:h-1.5 md:w-1.5" style={{ background: group.color }} />}
+            <span className="tracking-wide text-foreground/80 md:text-muted-foreground">{group.label}</span>
+            <span className="rounded-full bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground md:bg-transparent md:px-0 md:py-0 md:text-xs">{group.count}</span>
           </div>
           <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
+            <Table className="min-w-[720px] md:min-w-[760px]">
               <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-9 px-2"></TableHead>
+                <TableRow className="border-border/50 bg-background/35 hover:bg-background/35 md:bg-transparent md:hover:bg-transparent">
+                  <TableHead className="w-16 px-3 md:w-9 md:px-2"></TableHead>
                   {columnDragEnabled ? (
                     <SortableContext items={columns.map((columnId) => getColumnSortableId(group.key, columnId))} strategy={horizontalListSortingStrategy}>
                       {columns.map((columnId) => (
@@ -149,7 +148,7 @@ const AdvancedTaskTable = ({
                     </SortableContext>
                   ) : (
                     columns.map((columnId) => (
-                      <TableHead key={columnId} className="h-9 whitespace-nowrap px-2 text-xs font-light tracking-wide">
+                      <TableHead key={columnId} className="h-10 whitespace-nowrap px-2 text-xs font-light tracking-wide md:h-9">
                         <ColumnHeaderMenu
                           columnId={columnId}
                           sort={sort}
@@ -173,7 +172,7 @@ const AdvancedTaskTable = ({
                       </TableHead>
                     ))
                   )}
-                  <TableHead className="w-28 px-2"></TableHead>
+                  <TableHead className="w-14 px-2 md:w-28"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

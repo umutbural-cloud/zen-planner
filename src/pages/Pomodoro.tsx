@@ -226,8 +226,8 @@ const Pomodoro = () => {
   return (
     <>
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-12 flex items-center border-b border-border/60 px-4 gap-3">
-            <SidebarTrigger className="text-muted-foreground" />
+          <header className="min-h-14 flex items-center border-b border-border/60 px-4 gap-3 md:h-12 md:min-h-0">
+            <SidebarTrigger className="h-10 w-10 text-muted-foreground md:h-8 md:w-8" />
             <Clock className="h-4 w-4 text-muted-foreground" />
             <h1 className="text-base font-light tracking-wide">Pomodoro</h1>
             <div className="ml-auto flex items-center gap-2">
@@ -235,7 +235,7 @@ const Pomodoro = () => {
                 <button
                   onClick={requestNotif}
                   title="Pomodoro bittiğinde bildirim al"
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-sm border border-border/60 hover:bg-accent/40"
+                  className="flex min-h-10 items-center gap-1.5 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground md:min-h-0 md:rounded-sm md:px-2 md:py-1"
                 >
                   <Bell className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Bildirimleri aç</span>
@@ -254,7 +254,7 @@ const Pomodoro = () => {
               <button
                 onClick={toggleTheme}
                 title={theme === "dark" ? "Aydınlık tema" : "Karanlık tema"}
-                className="p-1.5 rounded-sm text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                className="min-h-10 min-w-10 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground md:min-h-0 md:min-w-0 md:rounded-sm md:p-1.5"
               >
                 {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
               </button>
@@ -262,7 +262,7 @@ const Pomodoro = () => {
           </header>
 
           <main className="flex-1 overflow-auto">
-            <div className="max-w-5xl mx-auto p-8">
+            <div className="mx-auto max-w-5xl px-5 py-7 sm:p-8">
               <div
                 className={`text-center transition-all duration-700 ease-out ${
                   isRunning ? "py-24" : "py-12"
@@ -277,7 +277,7 @@ const Pomodoro = () => {
                 </div>
 
                 {isLoading ? (
-                  <div className="text-8xl font-extralight tracking-widest tabular-nums mb-8 text-muted-foreground/50 select-none">
+                  <div className="mb-8 select-none text-6xl font-extralight tracking-widest text-muted-foreground/50 tabular-nums sm:text-8xl">
                     --:--
                   </div>
                 ) : editingTime && isIdle ? (
@@ -290,14 +290,14 @@ const Pomodoro = () => {
                       if (e.key === "Escape") { setEditVal(formatMMSS(remainingSec)); setEditingTime(false); }
                     }}
                     autoFocus
-                    className="w-[28rem] max-w-full text-center bg-transparent border-b border-border/60 focus:border-foreground/40 outline-none text-8xl font-extralight tracking-widest tabular-nums mb-8 mx-auto block"
+                    className="mx-auto mb-8 block w-[28rem] max-w-full border-b border-border/60 bg-transparent text-center text-6xl font-extralight tracking-widest tabular-nums outline-none focus:border-foreground/40 sm:text-8xl"
                   />
                 ) : (
                   <button
                     onClick={() => { if (isIdle) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
                     disabled={!isIdle}
                     title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
-                    className={`text-8xl font-extralight tracking-widest tabular-nums mb-8 block mx-auto transition-all duration-700 ease-out ${
+                    className={`mx-auto mb-8 block text-6xl font-extralight tracking-widest tabular-nums transition-all duration-700 ease-out sm:text-8xl ${
                       isRunning
                         ? "scale-110 text-foreground"
                         : isIdle
@@ -315,40 +315,40 @@ const Pomodoro = () => {
                   }`}
                 >
                   {isLoading ? (
-                    <button disabled className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 text-sm text-muted-foreground/60 cursor-not-allowed">
+                    <button disabled className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm text-muted-foreground/60 cursor-not-allowed md:rounded-sm">
                       Yükleniyor...
                     </button>
                   ) : isRunning ? (
                     <>
-                      <button onClick={pause} className="flex items-center gap-2 px-5 py-2 rounded-sm bg-accent hover:bg-accent/80 text-sm transition-colors">
+                      <button onClick={pause} className="flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 py-2 text-sm transition-colors hover:bg-accent/80 md:rounded-sm">
                         <Pause className="h-4 w-4" /> Duraklat
                       </button>
                       {isBreak ? (
-                        <button onClick={skipBreak} className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 hover:bg-accent/50 text-sm transition-colors">
+                        <button onClick={skipBreak} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <SkipForward className="h-4 w-4" /> Atla
                         </button>
                       ) : (
-                        <button onClick={complete} className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 hover:bg-accent/50 text-sm transition-colors">
+                        <button onClick={complete} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <Check className="h-4 w-4" /> Tamamla
                         </button>
                       )}
                     </>
                   ) : isPaused ? (
                     <>
-                      <button onClick={resume} className="flex items-center gap-2 px-5 py-2 rounded-sm bg-accent hover:bg-accent/80 text-sm transition-colors">
+                      <button onClick={resume} className="flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 py-2 text-sm transition-colors hover:bg-accent/80 md:rounded-sm">
                         <Play className="h-4 w-4" /> Devam
                       </button>
-                      <button onClick={complete} className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 hover:bg-accent/50 text-sm transition-colors">
+                      <button onClick={complete} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                         <Check className="h-4 w-4" /> Tamamla
                       </button>
                     </>
                   ) : (
                     <>
-                      <button onClick={start} className="flex items-center gap-2 px-6 py-2 rounded-sm bg-foreground text-background hover:bg-foreground/90 text-sm transition-colors">
+                      <button onClick={start} className="flex min-h-12 items-center gap-2 rounded-xl bg-foreground px-7 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 md:min-h-0 md:rounded-sm md:px-6 md:py-2">
                         <Play className="h-4 w-4" /> Başlat
                       </button>
                       {isBreak && (
-                        <button onClick={skipBreak} className="flex items-center gap-2 px-5 py-2 rounded-sm border border-border/60 hover:bg-accent/50 text-sm transition-colors">
+                        <button onClick={skipBreak} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <SkipForward className="h-4 w-4" /> Atla
                         </button>
                       )}

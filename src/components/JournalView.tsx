@@ -109,19 +109,19 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
   const shift = (n: number) => onDateChange(format(addDays(currentDate, n), "yyyy-MM-dd"));
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-7 flex items-center justify-between gap-3 md:mb-6">
         <div className="flex items-center gap-1">
-          <button onClick={() => shift(-1)} className="p-1.5 text-muted-foreground hover:text-foreground rounded-sm hover:bg-accent/50" title="Önceki gün">
+          <button onClick={() => shift(-1)} className="min-h-10 min-w-10 rounded-lg p-2 text-muted-foreground hover:bg-accent/50 hover:text-foreground md:min-h-0 md:min-w-0 md:rounded-sm md:p-1.5" title="Önceki gün">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
             <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 px-3 py-1.5 rounded-sm hover:bg-accent/50 transition-colors">
+              <button className="flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors hover:bg-accent/50 md:min-h-0 md:rounded-sm md:py-1.5">
                 <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                 <div className="text-left">
                   <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">Günlük</div>
-                  <div className="text-2xl font-light tracking-wide">
+                  <div className="text-lg font-light tracking-wide sm:text-2xl">
                     {format(currentDate, "d MMMM yyyy, EEEE", { locale: tr })}
                   </div>
                 </div>
@@ -142,13 +142,13 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
               />
             </PopoverContent>
           </Popover>
-          <button onClick={() => shift(1)} className="p-1.5 text-muted-foreground hover:text-foreground rounded-sm hover:bg-accent/50" title="Sonraki gün">
+          <button onClick={() => shift(1)} className="min-h-10 min-w-10 rounded-lg p-2 text-muted-foreground hover:bg-accent/50 hover:text-foreground md:min-h-0 md:min-w-0 md:rounded-sm md:p-1.5" title="Sonraki gün">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
         <button
           onClick={() => onDateChange(format(new Date(), "yyyy-MM-dd"))}
-          className="text-[10px] tracking-wide text-muted-foreground hover:text-foreground uppercase"
+          className="min-h-10 rounded-lg px-3 text-[10px] uppercase tracking-wide text-muted-foreground hover:bg-accent/40 hover:text-foreground md:min-h-0 md:rounded-sm"
         >
           Bugün
         </button>

@@ -674,16 +674,16 @@ const AdvancedTaskRow = ({
       <TableRow
         ref={rowDragEnabled ? setNodeRef : undefined}
         style={rowStyle}
-        className={`group ${isDragging ? "relative z-10 bg-card/40" : ""}`}
+        className={`group h-11 md:h-auto ${isDragging ? "relative z-10 bg-card/40" : ""}`}
       >
-        <TableCell className="w-12 px-2 py-1" onClick={(event) => event.stopPropagation()}>
-          <div className="flex items-center gap-1">
+        <TableCell className="w-16 px-3 py-1.5 md:w-12 md:px-2 md:py-1" onClick={(event) => event.stopPropagation()}>
+          <div className="flex items-center gap-1.5 md:gap-1">
             {rowDragEnabled && (
               <button
                 type="button"
                 {...attributes}
                 {...listeners}
-                className="inline-flex h-6 w-4 touch-none cursor-grab items-center justify-center rounded-sm text-muted-foreground/40 transition-colors hover:bg-card/40 hover:text-muted-foreground active:cursor-grabbing"
+                className="inline-flex h-8 w-5 touch-none cursor-grab items-center justify-center rounded-sm text-muted-foreground/45 transition-colors hover:bg-card/40 hover:text-muted-foreground active:cursor-grabbing md:h-6 md:w-4"
                 aria-label="Görevi sırala"
                 title="Sürükle"
               >
@@ -697,12 +697,12 @@ const AdvancedTaskRow = ({
           </div>
         </TableCell>
         {columns.map((columnId) => (
-          <TableCell key={columnId} className="px-2 py-1 align-middle">
+          <TableCell key={columnId} className="px-2 py-1.5 align-middle md:py-1">
             {renderCell(columnId)}
           </TableCell>
         ))}
-        <TableCell className="w-28 px-2 py-1 text-right">
-          <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+        <TableCell className="w-14 px-2 py-1.5 text-right md:w-28 md:py-1">
+          <div className="flex items-center justify-end gap-1 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
             <button
               type="button"
               onClick={() => {
@@ -710,20 +710,22 @@ const AdvancedTaskRow = ({
                 blurActiveElement();
                 onOpen(task);
               }}
-              className="p-1 text-muted-foreground hover:text-foreground"
+              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground md:min-h-0 md:min-w-0 md:rounded-sm md:p-1"
               title="Düzenle"
+              aria-label="Düzenle"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
             <button
               type="button"
               onClick={() => onUpdate(task.id, { hidden: !task.hidden })}
-              className="p-1 text-muted-foreground hover:text-foreground"
+              className="hidden p-1 text-muted-foreground hover:text-foreground md:inline-flex"
               title={task.hidden ? "Göster" : "Gizle"}
+              aria-label={task.hidden ? "Göster" : "Gizle"}
             >
               {task.hidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
             </button>
-            <button type="button" onClick={() => onDelete(task.id)} className="p-1 text-muted-foreground hover:text-destructive" title="Sil">
+            <button type="button" onClick={() => onDelete(task.id)} className="hidden p-1 text-muted-foreground hover:text-destructive md:inline-flex" title="Sil" aria-label="Sil">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>

@@ -44,7 +44,7 @@ const AdvancedTaskTableToolbar = ({
   const activeFilters: TableFilter[] = config.filters;
   const activeFilterCount = activeFilters.length;
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 md:space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={newTitle}
@@ -53,10 +53,11 @@ const AdvancedTaskTableToolbar = ({
             if (event.key === "Enter") onCreate();
           }}
           placeholder="Yeni görev..."
-          className="h-9 min-w-[14rem] flex-1 bg-transparent text-sm"
+          className="min-w-full flex-1 bg-background/70 text-base md:h-9 md:min-w-[14rem] md:bg-transparent md:text-sm"
         />
-        <Button variant="ghost" size="sm" onClick={onCreate} className="h-9 shrink-0" title="Görev ekle" aria-label="Görev ekle">
+        <Button variant="ghost" size="sm" onClick={onCreate} className="shrink-0 px-4 md:h-9 md:px-3" title="Görev ekle" aria-label="Görev ekle">
           <Plus className="h-3.5 w-3.5" />
+          <span className="md:hidden">Ekle</span>
         </Button>
         <FilterMenu
           filters={config.filters}
@@ -75,7 +76,7 @@ const AdvancedTaskTableToolbar = ({
         <Button
           variant="ghost"
           size="sm"
-          className="h-9 shrink-0 px-2 text-muted-foreground"
+          className="shrink-0 px-3 text-muted-foreground md:h-9 md:px-2"
           onClick={onClearTableControls}
           title="Görünüm ayarlarını sıfırla"
           aria-label="Görünüm ayarlarını sıfırla"

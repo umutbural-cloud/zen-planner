@@ -81,7 +81,7 @@ const AppShell = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background md:bg-background">
         <PrayerTimesSync />
         <AppSidebar
           projects={projects}
@@ -111,7 +111,7 @@ const AppShell = () => {
             navigate("/");
           }}
         />
-        <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+        <div className="flex min-w-0 flex-1 flex-col pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-0">
           <Outlet context={projectContext} />
         </div>
         <MobileBottomNav projects={projects} />

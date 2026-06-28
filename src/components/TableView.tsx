@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useTasks, Task } from "@/hooks/useTasks";
 import { usePomodoroCategories } from "@/hooks/usePomodoroCategories";
 import { colorHex } from "@/hooks/useHabitCategories";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 import TaskEditDialog from "./TaskEditDialog";
@@ -33,6 +34,92 @@ type StatusFilter = "all" | "active" | "done";
 type TableViewProps = {
   projectId: string;
   showHeader?: boolean;
+};
+
+const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onOpen, categoryDot }: {
+  task: Task;
+  subtasks: Task[];
+  onUpdate: (id: string, updates: Partial<Task>) => void;
+  onOpen: (task: Task) => void;
+  categoryDot?: string;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  const doneSubtasks = subtasks.filter((subtask) => subtask.status === "done").length;
+
+  return (
+    <article
+      ref={setNodeRef}
+      style={style}
+      className={`relative overflow-hidden rounded-[1.35rem] border border-border/55 bg-card/70 px-4 pb-4 pt-4 shadow-[0_8px_28px_-24px_hsl(var(--foreground))] transition-colors active:bg-accent/25 ${
+        isDragging ? "z-10 border-primary/35 bg-card/85 shadow-md" : ""
+      }`}
+    >
+      <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-border/70 to-transparent" aria-hidden="true" />
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        onClick={(event) => event.stopPropagation()}
+        className="absolute right-2.5 top-2.5 inline-flex min-h-11 min-w-11 touch-none cursor-grab items-center justify-center rounded-2xl border border-border/40 bg-background/55 text-muted-foreground/60 transition-colors active:cursor-grabbing active:bg-accent/60 active:text-foreground"
+        aria-label="Görevi sürükle"
+        title="Sürükle"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpen(task)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpen(task);
+          }
+        }}
+        className="block w-full pr-12 text-left"
+      >
+        <div className="flex items-start gap-3">
+          <span
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+            className="mt-0.5 inline-flex min-h-10 min-w-10 items-center justify-center rounded-2xl bg-background/55"
+          >
+            <Checkbox
+              checked={task.status === "done"}
+              onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
+              className="h-5 w-5"
+            />
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className={`block break-words text-[1rem] leading-6 tracking-[-0.01em] text-foreground ${task.status === "done" ? "text-muted-foreground line-through" : ""}`}>
+              {task.title}
+            </span>
+            {(categoryDot || subtasks.length > 0) && (
+              <span className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                {categoryDot && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: categoryDot }} />
+                    Etiket
+                  </span>
+                )}
+                {subtasks.length > 0 && (
+                  <span className="rounded-full bg-background/70 px-2 py-1">
+                    {doneSubtasks}/{subtasks.length} alt görev
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
 };
 
 const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpen, categoryDot }: {
@@ -203,6 +290,7 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
 const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
   const { tasks, loading, createTask, updateTask, deleteTask, reorderTasks } = useTasks(projectId);
   const { categories } = usePomodoroCategories();
+  const isMobile = useIsMobile();
   const [newTitle, setNewTitle] = useState("");
   const [showDone, setShowDone] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
@@ -297,25 +385,27 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto w-full">
+    <div className="mx-auto w-full max-w-3xl space-y-5 md:space-y-4">
       {showHeader && (
         <h2 className="text-lg tracking-wide font-light">Tablo</h2>
       )}
 
-      <div className="flex gap-2">
+      <div className="rounded-[1.35rem] border border-border/45 bg-card/40 p-2.5 md:rounded-none md:border-0 md:bg-transparent md:p-0">
+        <div className="flex flex-wrap gap-2">
         <Input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           placeholder="Yeni görev..."
-          className="bg-transparent h-9 text-sm"
+          className="min-w-full bg-background/70 text-base md:h-9 md:min-w-0 md:bg-transparent md:text-sm"
         />
-        <Button variant="ghost" size="sm" onClick={handleCreate} className="h-9">
+        <Button variant="ghost" size="sm" onClick={handleCreate} className="px-4 md:h-9 md:px-3">
           <Plus className="h-3.5 w-3.5" />
+          <span className="md:hidden">Ekle</span>
         </Button>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className={`h-9 px-2 ${filterActive ? "text-foreground" : "text-muted-foreground"}`} title="Filtre">
+            <Button variant="ghost" size="sm" className={`px-3 md:h-9 md:px-2 ${filterActive ? "text-foreground" : "text-muted-foreground"}`} title="Filtre">
               <Filter className="h-3.5 w-3.5" />
               {filterActive && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-foreground" />}
             </Button>
@@ -363,10 +453,11 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
             </div>
           </PopoverContent>
         </Popover>
+        </div>
       </div>
 
       {filterActive && (
-        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 font-light tracking-wide">
+        <div className="flex min-h-10 items-center gap-2 text-[10px] font-light tracking-wide text-muted-foreground/70 md:min-h-0">
           <span>Filtre:</span>
           {statusFilter !== "all" && <span className="px-1.5 py-0.5 rounded-sm bg-accent/50">{statusFilter === "active" ? "Aktif" : "Tamamlanan"}</span>}
           {activeCategory && <span className="px-1.5 py-0.5 rounded-sm bg-accent/50 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: colorHex(activeCategory.color) }} />{activeCategory.name}</span>}
@@ -381,18 +472,32 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
         </div>
       ) : visible.length > 0 && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <div className="border border-border/60 rounded-sm overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead className="w-10"></TableHead>
-                  <TableHead className="text-xs font-light tracking-wide">Başlık</TableHead>
-                  <TableHead className="w-24"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <SortableContext items={visible.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                <TableBody>
+          <SortableContext items={visible.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            {isMobile ? (
+              <div className="space-y-3.5">
+                {visible.map((task) => (
+                  <MobileSortableTaskCard
+                    key={task.id}
+                    task={task}
+                    subtasks={subtasksOf.get(task.id) || []}
+                    onUpdate={updateTask}
+                    onOpen={setEditTask}
+                    categoryDot={categoryDotOf(task)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-border/60 bg-card/35 md:rounded-sm md:bg-transparent">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-8"></TableHead>
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead className="text-xs font-light tracking-wide">Başlık</TableHead>
+                      <TableHead className="w-24"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {visible.map((task) => (
                     <SortableRow
                       key={task.id}
@@ -405,10 +510,11 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
                       categoryDot={categoryDotOf(task)}
                     />
                   ))}
-                </TableBody>
-              </SortableContext>
-            </Table>
-          </div>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </SortableContext>
         </DndContext>
       )}
 
@@ -417,32 +523,32 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
         const visibleDone = showDone ? doneTasks : doneTasks.slice(0, 3);
         const hiddenCount = Math.max(0, doneTasks.length - 3);
         return (
-          <div className="border border-border/60 rounded-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground bg-card/30">
+          <div className="overflow-hidden rounded-[1.35rem] border border-border/55 bg-card/40 md:rounded-sm md:bg-transparent">
+            <div className="flex min-h-10 items-center gap-2 bg-card/35 px-3.5 py-2 text-xs text-muted-foreground md:min-h-0 md:px-3">
               <span className="tracking-wide">Tamamlananlar</span>
               <span className="text-muted-foreground/60">{doneTasks.length}</span>
             </div>
             <Table>
               <TableBody>
                 {visibleDone.map((task) => (
-                  <TableRow key={task.id} className="group cursor-pointer" onClick={() => setEditTask(task)}>
-                    <TableCell className="w-8 sm:w-10 py-1 px-1 sm:px-2" onClick={(e) => e.stopPropagation()}>
+                  <TableRow key={task.id} className="group h-[42px] cursor-pointer md:h-auto" onClick={() => setEditTask(task)}>
+                    <TableCell className="w-11 py-1.5 pl-3 pr-2 md:w-10 md:px-2 md:py-1" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked
                         onCheckedChange={() => updateTask(task.id, { status: "todo" })}
                       />
                     </TableCell>
-                    <TableCell className="text-sm font-light text-muted-foreground line-through px-1 sm:px-2 py-1 break-words">{task.title}</TableCell>
-                    <TableCell className="text-[10px] sm:text-[11px] text-muted-foreground/70 font-light text-right whitespace-nowrap px-1 sm:px-2 py-1">
+                    <TableCell className="break-words py-1.5 pl-0 pr-2 text-sm font-light text-muted-foreground line-through md:px-2 md:py-1">{task.title}</TableCell>
+                    <TableCell className="whitespace-nowrap py-1.5 pl-2 pr-3 text-right text-[10px] font-light text-muted-foreground/70 md:px-2 md:py-1 sm:text-[11px]">
                       {task.completed_at
                         ? format(parseISO(task.completed_at), "d MMM HH:mm", { locale: tr })
                         : "—"}
                     </TableCell>
-                    <TableCell className="w-10 sm:w-12 text-right px-1 sm:px-2 py-1" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="w-10 px-1 py-1 text-right sm:w-12 sm:px-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         onClick={() => deleteTask(task.id)}
-                        className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
+                        className="hidden min-h-10 min-w-10 rounded-lg p-2 text-muted-foreground transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 md:inline-flex md:min-h-0 md:min-w-0 md:rounded-sm md:p-1"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -455,7 +561,7 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
               <button
                 type="button"
                 onClick={() => setShowDone(!showDone)}
-                className="w-full text-xs text-muted-foreground hover:text-foreground py-2 tracking-wide transition-colors border-t border-border/40"
+                className="w-full border-t border-border/40 py-2.5 text-xs tracking-wide text-muted-foreground transition-colors hover:text-foreground md:py-2"
               >
                 {showDone ? "↑ Sadece son 3'ü göster" : `↓ ${hiddenCount} tane daha göster`}
               </button>
@@ -466,11 +572,11 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
 
       {/* Gizlenenler */}
       {hiddenTasks.length > 0 && (
-        <div className="border border-border/60 rounded-sm overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-border/60 bg-card/35 md:rounded-sm md:bg-transparent">
           <button
             type="button"
             onClick={() => setShowHidden(!showHidden)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:bg-card/40 transition-colors"
+            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-card/40 md:min-h-0"
           >
             {showHidden ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
             <span className="tracking-wide">Gizlenenler</span>

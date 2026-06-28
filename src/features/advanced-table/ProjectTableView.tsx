@@ -36,10 +36,10 @@ const ProjectTableView = ({ projectId }: ProjectTableViewProps) => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-border/50 bg-card/20 px-3 py-2">
-        <h2 className="text-lg font-light tracking-wide">Tablo</h2>
-        <div className="flex items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
+    <div className="mx-auto w-full max-w-6xl space-y-5 md:space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/50 bg-card/35 px-4 py-3 md:rounded-sm md:bg-card/20 md:px-3 md:py-2">
+        <h2 className="text-lg font-light tracking-wide">Görevler</h2>
+        <div className="flex min-h-10 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground md:min-h-0">
           <span className={mode === "legacy" ? "text-foreground" : undefined}>Basit</span>
           <Switch checked={mode === "advanced"} onCheckedChange={handleModeChange} aria-label="Gelişmiş tablo modu" />
           <span className={mode === "advanced" ? "text-foreground" : undefined}>Gelişmiş</span>
