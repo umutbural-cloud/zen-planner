@@ -17,6 +17,7 @@ type RichEditorSurfaceProps = {
   contentClassName?: string;
   editorClassName?: string;
   resetKey?: string;
+  mobileToolbarBottom?: boolean;
 };
 
 type ErrorBoundaryProps = {
@@ -65,6 +66,7 @@ const RichEditorSurfaceInner = ({
   className,
   contentClassName,
   editorClassName,
+  mobileToolbarBottom = false,
 }: RichEditorSurfaceProps) => {
   const debounceRef = useRef<number | null>(null);
   const lastEmittedJsonRef = useRef<string | null>(null);
@@ -186,7 +188,13 @@ const RichEditorSurfaceInner = ({
 
   return (
     <div className={className}>
-      <div className="sticky top-0 z-10 -mx-6 sm:-mx-12 px-6 sm:px-12 py-1 mb-3 bg-background/80 backdrop-blur-sm opacity-60 hover:opacity-100 focus-within:opacity-100 transition-opacity">
+      <div
+        className={cn(
+          "sticky top-0 z-10 -mx-6 mb-3 bg-background/80 px-6 py-1 opacity-60 backdrop-blur-sm transition-opacity hover:opacity-100 focus-within:opacity-100 sm:-mx-12 sm:px-12",
+          mobileToolbarBottom &&
+            "fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] top-auto z-40 mx-0 mb-0 rounded-xl border border-border/70 bg-background/95 px-3 py-2 opacity-100 shadow-lg md:sticky md:inset-auto md:top-0 md:-mx-12 md:mb-3 md:rounded-none md:border-0 md:bg-background/80 md:px-12 md:py-1 md:shadow-none",
+        )}
+      >
         {isToolbarCollapsed ? (
           <button
             type="button"
@@ -201,13 +209,20 @@ const RichEditorSurfaceInner = ({
             Araçları göster
           </button>
         ) : (
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
+          <div
+            className={cn(
+              "flex items-center gap-2",
+              mobileToolbarBottom &&
+                "overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-visible",
+            )}
+          >
+            <div className={cn("min-w-0 flex-1", mobileToolbarBottom && "min-w-max flex-none md:min-w-0 md:flex-1")}>
               <RichTextToolbar
                 editor={editor}
                 features={{ link: true, taskList: false, codeBlock: true, details: true, history: false }}
                 onInsertLink={insertLink}
                 onInsertDetails={() => editor.chain().focus().setDetails().run()}
+                mobileSingleRow={mobileToolbarBottom}
               />
             </div>
             <button
@@ -217,7 +232,10 @@ const RichEditorSurfaceInner = ({
                 event.stopPropagation();
               }}
               onClick={() => setIsToolbarCollapsed(true)}
-              className="shrink-0 rounded-sm border border-border/70 bg-background/80 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+              className={cn(
+                "shrink-0 rounded-sm border border-border/70 bg-background/80 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground",
+                mobileToolbarBottom && "min-h-8 whitespace-nowrap rounded-lg px-3 md:min-h-0 md:rounded-sm md:px-2",
+              )}
               aria-label="Araç çubuğunu gizle"
             >
               Gizle

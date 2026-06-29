@@ -18,6 +18,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { MobileWorkHistoryDaySection, type MobileWorkHistoryEntry } from "@/features/work-history/components/MobileWorkHistoryDaySection";
 
 type Session = {
   id: string;
@@ -622,37 +623,73 @@ const DayGroup = ({
   const [expanded, setExpanded] = useState(false);
   const visibleItems = isToday || expanded ? items : items.slice(0, 3);
   const hiddenCount = items.length - visibleItems.length;
+  const dayDate = parseISO(day);
+  const totalSeconds = items.filter((s) => s.kind === "work").reduce((acc, s) => acc + s.duration_seconds, 0);
+  const mobileEntries: MobileWorkHistoryEntry[] = visibleItems.map((session) => {
+    const cat = categories.find((c) => c.id === session.category_id);
+    const note = session.note?.trim();
+    return {
+      id: session.id,
+      title: note || (session.kind === "break" ? "Mola" : "Odak çalışması"),
+      subtitle: session.kind === "break" ? "Mola" : cat?.name || "Kategorisiz",
+      startedAt: session.started_at,
+      endedAt: session.ended_at,
+      durationSeconds: session.duration_seconds,
+      color: cat ? colorHex(cat.color) : undefined,
+    };
+  });
+  const toggleFooter = !isToday && items.length > 3 ? (
+    <button
+      type="button"
+      onClick={() => setExpanded((v) => !v)}
+      className="w-full px-3 py-2.5 text-[10px] tracking-[0.2em] uppercase text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+    >
+      {expanded ? "Daha az göster" : `Devamını göster (+${hiddenCount})`}
+    </button>
+  ) : null;
+
   return (
-    <div className="border border-border/60 rounded-sm overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-card/40 border-b border-border/60">
-        <span className="text-sm font-light">
-          {format(parseISO(day), "d MMMM yyyy, EEEE", { locale: tr })}
-        </span>
-        <span className="text-xs text-muted-foreground tabular-nums">{totalLabel}</span>
+    <>
+      <div className="md:hidden">
+        <MobileWorkHistoryDaySection
+          date={dayDate}
+          totalSeconds={totalSeconds}
+          entries={mobileEntries}
+          footer={toggleFooter}
+        />
       </div>
-      <div className="divide-y divide-border/40">
-        {visibleItems.map((s) => (
-          <SessionRow
-            key={s.id}
-            session={s}
-            categories={categories}
-            onUpdateNote={onUpdateNote}
-            onUpdateDuration={onUpdateDuration}
-            onUpdateTimes={onUpdateTimes}
-            onUpdateCategory={onUpdateCategory}
-            onDelete={onDelete}
-          />
-        ))}
+
+      <div className="hidden overflow-hidden rounded-sm border border-border/60 md:block">
+        <div className="flex items-center justify-between border-b border-border/60 bg-card/40 px-3 py-2">
+          <span className="text-sm font-light">
+            {format(dayDate, "d MMMM yyyy, EEEE", { locale: tr })}
+          </span>
+          <span className="text-xs tabular-nums text-muted-foreground">{totalLabel}</span>
+        </div>
+        <div className="divide-y divide-border/40">
+          {visibleItems.map((s) => (
+            <SessionRow
+              key={s.id}
+              session={s}
+              categories={categories}
+              onUpdateNote={onUpdateNote}
+              onUpdateDuration={onUpdateDuration}
+              onUpdateTimes={onUpdateTimes}
+              onUpdateCategory={onUpdateCategory}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+        {!isToday && items.length > 3 && (
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full border-t border-border/60 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+          >
+            {expanded ? "Daha az göster" : `Devamını göster (+${hiddenCount})`}
+          </button>
+        )}
       </div>
-      {!isToday && items.length > 3 && (
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full px-3 py-2 text-[10px] tracking-[0.2em] uppercase text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors border-t border-border/60"
-        >
-          {expanded ? "Daha az göster" : `Devamını göster (+${hiddenCount})`}
-        </button>
-      )}
-    </div>
+    </>
   );
 };
 

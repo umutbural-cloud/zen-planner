@@ -127,12 +127,17 @@ const Index = () => {
 
   return (
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="min-h-14 flex items-center justify-between border-b border-border/60 px-4 gap-3 md:h-12 md:min-h-0 md:gap-4">
+          <header className={`${section === "journal" ? "hidden md:flex" : "flex"} min-h-14 items-center justify-between border-b border-border/60 px-4 gap-3 md:h-12 md:min-h-0 md:gap-4`}>
             <div className="flex items-center gap-3 min-w-0">
               <SidebarTrigger className="h-10 w-10 text-muted-foreground md:h-8 md:w-8" />
               {section === "home" && (
                 <h1 className="text-base tracking-wide truncate font-light">
                   Ana Sayfa
+                </h1>
+              )}
+              {section === "habits" && (
+                <h1 className="text-base tracking-wide truncate font-light">
+                  Alışkanlıklar
                 </h1>
               )}
               {section === "project" && selectedProject && (
@@ -280,7 +285,7 @@ const Index = () => {
             </div>
           </header>
 
-          <main className="flex-1 overflow-auto px-4 py-5 sm:p-6">
+          <main className={`flex-1 overflow-auto ${section === "journal" ? "p-0 md:p-6" : "px-4 py-5 sm:p-6"}`}>
             {section === "home" && <HomeView />}
             {section === "trash" && <TrashView />}
             {section === "journal" && (

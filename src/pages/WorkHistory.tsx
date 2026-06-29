@@ -31,6 +31,7 @@ import { colorClasses, type TaskColor } from "@/lib/taskColors";
 import { colorHex } from "@/hooks/useHabitCategories";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { MobileWorkHistoryDaySection, type MobileWorkHistoryEntry } from "@/features/work-history/components/MobileWorkHistoryDaySection";
 
 type Session = {
   id: string;
@@ -1127,8 +1128,42 @@ const WorkHistory = () => {
                     const sessionsExpanded = expandedSessionsByDay[d.key] ?? false;
                     const collapsed = collapsedDays[d.key] ?? false;
                     const visible = sessionsExpanded ? d.sessions : d.sessions.slice(0, 3);
+                    const mobileEntries: MobileWorkHistoryEntry[] = visible.map((session) => {
+                      const cat = categories.find((c) => c.id === session.category_id);
+                      const note = session.note?.trim();
+                      return {
+                        id: session.id,
+                        title: note || (session.kind === "break" ? "Mola" : "Odak çalışması"),
+                        subtitle: session.kind === "break" ? "Mola" : cat?.name || "Kategorisiz",
+                        startedAt: session.started_at,
+                        durationSeconds: session.duration_seconds,
+                        color: cat ? colorHex(cat.color) : undefined,
+                      };
+                    });
                     return (
-                      <div key={d.key} className="border border-border/60 rounded-sm overflow-hidden">
+                      <div key={d.key} className="space-y-4">
+                        <div className="md:hidden">
+                          <MobileWorkHistoryDaySection
+                            date={d.date}
+                            totalSeconds={d.total}
+                            entries={mobileEntries}
+                            footer={
+                              d.sessions.length > 3 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedSessionsByDay((s) => ({ ...s, [d.key]: !sessionsExpanded }))}
+                                  className="w-full py-2.5 text-[11px] text-muted-foreground transition-colors hover:bg-accent/20 hover:text-foreground"
+                                >
+                                  {sessionsExpanded
+                                    ? "Daha az göster"
+                                    : `Devamını göster (+${d.sessions.length - 3})`}
+                                </button>
+                              ) : null
+                            }
+                          />
+                        </div>
+
+                      <div className="hidden overflow-hidden rounded-sm border border-border/60 md:block">
                         <button
                           onClick={() => setCollapsedDays((s) => ({ ...s, [d.key]: !collapsed }))}
                           className={`w-full flex items-center justify-between px-3 py-2 bg-card/40 ${collapsed ? "" : "border-b border-border/60"} hover:bg-card/60 transition-colors text-left`}
@@ -1190,6 +1225,7 @@ const WorkHistory = () => {
                             <div className="px-3 py-3 text-[11px] text-muted-foreground/50 italic">Kayıt yok</div>
                           )
                         )}
+                      </div>
                       </div>
                     );
                   })}
