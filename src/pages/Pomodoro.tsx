@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil } from "lucide-react";
+import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -16,6 +16,7 @@ import { CategoryColorPicker } from "@/components/CategoryColorPicker";
 import PomodoroTaskBoard from "@/components/PomodoroTaskBoard";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { MobileWorkHistoryDaySection, type MobileWorkHistoryEntry } from "@/features/work-history/components/MobileWorkHistoryDaySection";
@@ -32,6 +33,127 @@ type Session = {
 
 type PomodoroSessionUpdate = Database["public"]["Tables"]["pomodoro_sessions"]["Update"];
 
+const generateTimeOptions = () => {
+  const options: string[] = [];
+  for (let hour = 0; hour < 24; hour += 1) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      options.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+    }
+  }
+  return options;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+const parseStorageDate = (value: string) => {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return undefined;
+
+  const [, yearRaw, monthRaw, dayRaw] = match;
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const date = new Date(year, month - 1, day);
+
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return undefined;
+  }
+
+  return date;
+};
+
+const formatDateForStorage = (date: Date) =>
+  `${String(date.getFullYear()).padStart(4, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const formatDateForDisplay = (value: string) => {
+  const date = parseStorageDate(value);
+  return date ? format(date, "dd.MM.yyyy") : "Tarih seç";
+};
+
+const entryPickerBaseClass =
+  "items-center gap-2 rounded-none border-0 border-b border-border/60 bg-transparent px-0 pb-2 text-left text-[0.85rem] font-light leading-none outline-none transition-colors hover:border-foreground/40 focus:border-foreground/50 md:w-auto md:max-w-none md:rounded-sm md:border md:border-border/60 md:bg-background md:px-2 md:py-1 md:text-xs";
+
+const entryDatePickerTriggerClass = `flex w-full justify-between ${entryPickerBaseClass}`;
+const entryTimePickerTriggerClass = `flex w-full justify-between ${entryPickerBaseClass} tabular-nums`;
+
+type EntryDatePickerProps = {
+  value: string;
+  onChange: (value: string) => void;
+};
+
+const EntryDatePicker = ({ value, onChange }: EntryDatePickerProps) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button type="button" className={entryDatePickerTriggerClass} aria-label="Tarih seç">
+        <span className="leading-none">{formatDateForDisplay(value)}</span>
+        <CalendarIcon className="h-3.5 w-3.5 shrink-0 self-center text-muted-foreground" />
+      </button>
+    </PopoverTrigger>
+    <PopoverContent
+      align="start"
+      className="z-50 w-auto rounded-sm border border-border/60 bg-popover/95 p-2 shadow-lg"
+    >
+      <Calendar
+        mode="single"
+        selected={parseStorageDate(value)}
+        locale={tr}
+        weekStartsOn={1}
+        onSelect={(date) => {
+          if (date) onChange(formatDateForStorage(date));
+        }}
+        className="p-1"
+        classNames={{
+          caption_label: "text-xs",
+          day: "h-8 w-8 text-xs",
+          head_cell: "w-8 text-[0.7rem]",
+          cell: "h-8 w-8",
+        }}
+      />
+    </PopoverContent>
+  </Popover>
+);
+
+type EntryTimePickerProps = {
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+};
+
+const EntryTimePicker = ({ value, onChange, ariaLabel }: EntryTimePickerProps) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <button type="button" className={entryTimePickerTriggerClass} aria-label={ariaLabel}>
+        <span className="leading-none tabular-nums">{value}</span>
+        <Clock className="h-3.5 w-3.5 shrink-0 self-center text-muted-foreground" />
+      </button>
+    </PopoverTrigger>
+    <PopoverContent
+      align="start"
+      className="z-50 w-24 rounded-sm border border-border/60 bg-popover/95 p-1 shadow-lg"
+    >
+      <div className="max-h-48 overflow-y-auto">
+        <div className="flex flex-col gap-1">
+          {TIME_OPTIONS.map((option) => {
+            const active = option === value.slice(0, 5);
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onChange(option)}
+                className={`block w-full rounded-sm px-2 py-1 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
+                  active ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </PopoverContent>
+  </Popover>
+);
+
 
 const Pomodoro = () => {
   const navigate = useNavigate();
@@ -43,7 +165,7 @@ const Pomodoro = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingTime, setEditingTime] = useState(false);
   const [editVal, setEditVal] = useState(formatMMSS(remainingSec));
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(true);
   const [addDate, setAddDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [addStart, setAddStart] = useState("09:00");
   const [addEnd, setAddEnd] = useState("09:25");
@@ -376,7 +498,7 @@ const Pomodoro = () => {
                     <div className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-light">
                       Çalışma Geçmişi
                     </div>
-                    <span className="text-[10px] text-muted-foreground/60">(son 3 gün)</span>
+                    <span className="hidden text-[10px] text-muted-foreground/60 sm:inline">(son 3 gün)</span>
                     <button
                       onClick={() => setShowAddForm((v) => !v)}
                       title="Geçmiş çalışma ekle"
@@ -389,15 +511,18 @@ const Pomodoro = () => {
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
+                          aria-label="Kategoriye göre filtrele"
                           title="Kategoriye göre filtrele"
-                          className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded-sm border border-border/60 hover:bg-accent/50 transition-colors"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-border/60 p-0 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground sm:h-auto sm:w-auto sm:gap-1 sm:px-1.5 sm:py-0.5"
                         >
                           <Filter className="h-3 w-3" />
-                          {filterCategoryId === "all"
-                            ? "Tümü"
-                            : filterCategoryId === "__none__"
-                            ? "Kategorisiz"
-                            : categories.find((c) => c.id === filterCategoryId)?.name || "Filtre"}
+                          <span className="hidden sm:inline">
+                            {filterCategoryId === "all"
+                              ? "Tümü"
+                              : filterCategoryId === "__none__"
+                              ? "Kategorisiz"
+                              : categories.find((c) => c.id === filterCategoryId)?.name || "Filtre"}
+                          </span>
                         </button>
                       </PopoverTrigger>
                       <PopoverContent align="start" className="w-48 p-1">
@@ -430,11 +555,12 @@ const Pomodoro = () => {
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
+                          aria-label="Sırala"
                           title="Sırala"
-                          className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded-sm border border-border/60 hover:bg-accent/50 transition-colors"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-border/60 p-0 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground sm:h-auto sm:w-auto sm:gap-1 sm:px-1.5 sm:py-0.5"
                         >
                           <ArrowUpDown className="h-3 w-3" />
-                          Sırala
+                          <span className="hidden sm:inline">Sırala</span>
                         </button>
                       </PopoverTrigger>
                       <PopoverContent align="start" className="w-56 p-1">
@@ -457,10 +583,12 @@ const Pomodoro = () => {
 
                     <button
                       onClick={() => setShowCategoriesDialog(true)}
+                      aria-label="Kategorileri yönet"
                       title="Kategorileri yönet"
-                      className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded-sm border border-border/60 hover:bg-accent/50 transition-colors"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-border/60 p-0 text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground sm:h-auto sm:w-auto sm:gap-1 sm:px-1.5 sm:py-0.5"
                     >
-                      <Tags className="h-3 w-3" /> Kategoriler
+                      <Tags className="h-3 w-3" />
+                      <span className="hidden sm:inline">Kategoriler</span>
                     </button>
                   </div>
                   <button
@@ -472,34 +600,19 @@ const Pomodoro = () => {
                 </div>
 
                 {showAddForm && (
-                  <div className="mb-4 border border-border/60 rounded-sm p-3 bg-card/40 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tarih</label>
-                        <input
-                          type="date"
-                          value={addDate}
-                          onChange={(e) => setAddDate(e.target.value)}
-                          className="bg-background border border-border/60 rounded-sm px-2 py-1 text-xs"
-                        />
+                  <div className="mb-4 space-y-5 rounded-[1.25rem] border border-border/50 bg-card/70 p-5 shadow-sm md:space-y-2 md:rounded-sm md:border-border/60 md:bg-card/40 md:p-3 md:shadow-none">
+                    <div className="grid grid-cols-2 gap-4 md:flex md:flex-wrap md:items-center md:gap-2">
+                      <div className="col-span-2 flex flex-col gap-1.5 md:col-span-1 md:gap-1">
+                        <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:text-[10px]">Tarih</label>
+                        <EntryDatePicker value={addDate} onChange={setAddDate} />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Başlangıç</label>
-                        <input
-                          type="time"
-                          value={addStart}
-                          onChange={(e) => setAddStart(e.target.value)}
-                          className="bg-background border border-border/60 rounded-sm px-2 py-1 text-xs tabular-nums"
-                        />
+                      <div className="flex min-w-0 flex-col gap-1.5 md:gap-1">
+                        <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:text-[10px]">Başlangıç</label>
+                        <EntryTimePicker value={addStart} onChange={setAddStart} ariaLabel="Başlangıç saati seç" />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Bitiş</label>
-                        <input
-                          type="time"
-                          value={addEnd}
-                          onChange={(e) => setAddEnd(e.target.value)}
-                          className="bg-background border border-border/60 rounded-sm px-2 py-1 text-xs tabular-nums"
-                        />
+                      <div className="flex min-w-0 flex-col gap-1.5 md:gap-1">
+                        <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:text-[10px]">Bitiş</label>
+                        <EntryTimePicker value={addEnd} onChange={setAddEnd} ariaLabel="Bitiş saati seç" />
                       </div>
                     </div>
                     <input
@@ -507,37 +620,39 @@ const Pomodoro = () => {
                       value={addNote}
                       onChange={(e) => setAddNote(e.target.value)}
                       placeholder="Not (opsiyonel)"
-                      className="w-full bg-background border border-border/60 rounded-sm px-2 py-1 text-xs"
+                      className="w-full rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background/70 md:rounded-sm md:border-border/60 md:bg-background md:px-2 md:py-1 md:text-xs"
                     />
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Kategori:</span>
-                      <button
-                        onClick={() => setAddCategoryId(null)}
-                        className={`text-[10px] px-2 py-0.5 rounded-sm border ${addCategoryId === null ? "bg-accent border-foreground/30" : "border-border/60 hover:bg-accent/50"}`}
-                      >
-                        Yok
-                      </button>
-                      {categories.map((c) => (
+                    <div className="space-y-2 md:flex md:flex-wrap md:items-center md:gap-2 md:space-y-0">
+                      <span className="block shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground md:text-[10px]">Kategori:</span>
+                      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden">
+                        <button
+                          onClick={() => setAddCategoryId(null)}
+                          className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors md:rounded-sm md:px-2 md:py-0.5 md:text-[10px] ${addCategoryId === null ? "bg-accent border-foreground/30" : "border-border/60 hover:bg-accent/50"}`}
+                        >
+                          Yok
+                        </button>
+                        {categories.map((c) => (
                         <button
                           key={c.id}
                           onClick={() => setAddCategoryId(c.id)}
-                          className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm border ${addCategoryId === c.id ? "bg-accent border-foreground/30" : "border-border/60 hover:bg-accent/50"}`}
+                          className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors md:rounded-sm md:px-2 md:py-0.5 md:text-[10px] ${addCategoryId === c.id ? "bg-accent border-foreground/30" : "border-border/60 hover:bg-accent/50"}`}
                         >
-                          <span className="h-2 w-2 rounded-full" style={{ background: colorHex(c.color) }} />
+                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorHex(c.color) }} />
                           {c.name}
                         </button>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex justify-end gap-2">
+                    <div className="grid grid-cols-2 gap-2 pt-1 md:flex md:justify-end md:pt-0">
                       <button
                         onClick={() => setShowAddForm(false)}
-                        className="px-3 py-1 text-xs rounded-sm border border-border/60 hover:bg-accent/50 transition-colors"
+                        className="rounded-xl border border-border/60 px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 md:rounded-sm md:py-1 md:text-xs"
                       >
                         İptal
                       </button>
                       <button
                         onClick={addManualSession}
-                        className="px-3 py-1 text-xs rounded-sm bg-foreground text-background hover:bg-foreground/90 transition-colors"
+                        className="rounded-xl bg-foreground px-3 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 md:rounded-sm md:py-1 md:text-xs"
                       >
                         Ekle
                       </button>
