@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarIcon, ChevronDown, ChevronRight, Clock3, Eye, EyeOff, GripVertical, Pencil, Trash2, X } from "lucide-react";
+import { tr } from "date-fns/locale";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -266,6 +267,8 @@ const AdvancedTaskRow = ({
         <Calendar
           mode="single"
           selected={selectedDate ?? undefined}
+          locale={tr}
+          weekStartsOn={1}
           onSelect={onSelect}
           className="p-1"
           classNames={{
