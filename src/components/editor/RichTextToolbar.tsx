@@ -35,6 +35,7 @@ type Props = {
   editor: Editor | null;
   compact?: boolean;
   sticky?: boolean;
+  mobileSingleRow?: boolean;
   features?: {
     headings?: boolean;
     strike?: boolean;
@@ -69,7 +70,7 @@ const ToolbarButton = ({ onClick, active, title, children }: ToolbarButtonProps)
   </button>
 );
 
-const Divider = () => <div className="mx-0.5 h-4 w-px bg-border/60" />;
+const Divider = () => <div data-toolbar-divider className="mx-0.5 h-4 w-px bg-border/60" />;
 
 const selectClass =
   "h-7 rounded-sm border border-border/60 bg-transparent px-1.5 text-xs font-light text-muted-foreground outline-none transition-colors hover:bg-accent/50 hover:text-foreground focus:text-foreground";
@@ -78,6 +79,7 @@ export const RichTextToolbar = ({
   editor,
   compact = false,
   sticky = false,
+  mobileSingleRow = false,
   features = {},
   onInsertLink,
   onInsertDetails,
@@ -155,7 +157,11 @@ export const RichTextToolbar = ({
     <div
       className={`flex flex-wrap items-center gap-0.5 border-b border-border/60 pb-2 ${
         compact ? "mb-2" : "mb-4"
-      } ${sticky ? "sticky top-0 z-10 bg-background/80 backdrop-blur-sm" : ""}`}
+      } ${sticky ? "sticky top-0 z-10 bg-background/80 backdrop-blur-sm" : ""} ${
+        mobileSingleRow
+          ? "mb-0 min-w-max flex-nowrap border-b-0 pb-0 [&>button]:shrink-0 [&>select]:shrink-0 [&>[data-toolbar-divider]]:shrink-0 md:mb-4 md:flex-wrap md:border-b md:pb-2"
+          : ""
+      }`}
     >
       {enabled.headings && (
         <>

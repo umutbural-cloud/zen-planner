@@ -15,10 +15,9 @@ const HabitsView = () => {
   const [tab, setTab] = useState<Tab>("today");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-7 md:space-y-6">
-      <div>
-        <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground font-light">Alışkanlıklar</div>
-        <h1 className="text-2xl font-light tracking-wide">Alışkanlıklar</h1>
+    <div className="mx-auto max-w-3xl space-y-3 md:space-y-6">
+      <div className="hidden md:block">
+        <h1 className="text-[2rem] font-light leading-tight tracking-[-0.03em] md:text-2xl md:tracking-wide">Alışkanlıklar</h1>
       </div>
 
       <div className="flex items-center gap-1 overflow-x-auto border-b border-border/60 pb-1 md:pb-0">
@@ -28,7 +27,7 @@ const HabitsView = () => {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`-mb-px flex min-h-11 shrink-0 items-baseline gap-2 border-b px-4 py-2.5 transition-colors md:min-h-0 md:px-3 md:py-2 ${
+              className={`-mb-px flex min-h-12 shrink-0 items-baseline gap-2 border-b-2 px-4 py-3 transition-colors md:min-h-0 md:border-b md:px-3 md:py-2 ${
                 active
                   ? "border-foreground text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
