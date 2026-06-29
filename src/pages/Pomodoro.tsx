@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
@@ -74,7 +74,89 @@ const entryPickerBaseClass =
   "items-center gap-2 rounded-none border-0 border-b border-border/60 bg-transparent px-0 pb-2 text-left text-[0.85rem] font-light leading-none outline-none transition-colors hover:border-foreground/40 focus:border-foreground/50 md:w-auto md:max-w-none md:rounded-sm md:border md:border-border/60 md:bg-background md:px-2 md:py-1 md:text-xs";
 
 const entryDatePickerTriggerClass = `flex w-full justify-between ${entryPickerBaseClass}`;
-const entryTimePickerTriggerClass = `flex w-full justify-between ${entryPickerBaseClass} tabular-nums`;
+const entryTimePickerShellClass = `flex w-full justify-between ${entryPickerBaseClass} tabular-nums`;
+const entryTimeInputClass =
+  "min-w-0 flex-1 bg-transparent p-0 text-[0.85rem] font-light leading-none tabular-nums outline-none placeholder:text-muted-foreground/50 focus:ring-0 md:text-xs";
+
+const getTimeDigits = (value: string) => value.replace(/\D/g, "").slice(0, 4);
+
+const formatHHMM = (hour: number, minute: number) =>
+  `${String(Math.min(23, Math.max(0, hour))).padStart(2, "0")}:${String(Math.min(59, Math.max(0, minute))).padStart(2, "0")}`;
+
+const normalizeManualTimeInput = (value: string, fallback: string) => {
+  const digits = getTimeDigits(value);
+  if (!digits) return fallback;
+
+  let hour = 0;
+  let minute = 0;
+
+  if (digits.length === 1) {
+    hour = Number(digits);
+  } else if (digits.length === 2) {
+    hour = Number(digits);
+  } else if (digits.length === 3) {
+    const firstTwo = Number(digits.slice(0, 2));
+    if (firstTwo > 23) {
+      hour = Number(digits[0]);
+      minute = Number(digits.slice(1, 3));
+    } else {
+      hour = firstTwo;
+      minute = Number(`${digits[2]}0`);
+    }
+  } else {
+    hour = Number(digits.slice(0, 2));
+    minute = Number(digits.slice(2, 4));
+  }
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return fallback;
+
+  return formatHHMM(hour, minute);
+};
+
+const normalizeTimeDisplay = (value: string, fallback: string) =>
+  /^\d{2}:\d{2}$/.test(value) ? value : normalizeManualTimeInput(value, fallback);
+
+const getEditableTimePosition = (position: number | null) => {
+  const pos = position ?? 0;
+  if (pos <= 0) return 0;
+  if (pos === 1) return 1;
+  if (pos <= 3) return 3;
+  return 4;
+};
+
+const getFollowingTimePosition = (position: number) => {
+  if (position === 0) return 1;
+  if (position === 1) return 3;
+  if (position === 3) return 4;
+  return 5;
+};
+
+const getPreviousTimePosition = (position: number | null) => {
+  const pos = position ?? 0;
+  if (pos <= 1) return 0;
+  if (pos <= 3) return 1;
+  if (pos <= 4) return 3;
+  return 4;
+};
+
+const replaceTimeDigit = (value: string, caretPosition: number | null, digit: string, fallback: string) => {
+  const displayValue = normalizeTimeDisplay(value, fallback);
+  const position = getEditableTimePosition(caretPosition);
+  const chars = displayValue.split("");
+  chars[position] = digit;
+
+  return {
+    value: chars.join(""),
+    caret: getFollowingTimePosition(position),
+  };
+};
+
+const setTimeInputCaret = (input: HTMLInputElement, position: number) => {
+  window.requestAnimationFrame(() => {
+    if (!input.isConnected || typeof input.setSelectionRange !== "function") return;
+    input.setSelectionRange(position, position);
+  });
+};
 
 type EntryDatePickerProps = {
   value: string;
@@ -119,14 +201,91 @@ type EntryTimePickerProps = {
   ariaLabel: string;
 };
 
-const EntryTimePicker = ({ value, onChange, ariaLabel }: EntryTimePickerProps) => (
-  <Popover>
-    <PopoverTrigger asChild>
-      <button type="button" className={entryTimePickerTriggerClass} aria-label={ariaLabel}>
-        <span className="leading-none tabular-nums">{value}</span>
-        <Clock className="h-3.5 w-3.5 shrink-0 self-center text-muted-foreground" />
-      </button>
-    </PopoverTrigger>
+const EntryTimePicker = ({ value, onChange, ariaLabel }: EntryTimePickerProps) => {
+  const [open, setOpen] = useState(false);
+  const lastValidValueRef = useRef(normalizeManualTimeInput(value, "09:00"));
+
+  useEffect(() => {
+    if (/^\d{2}:\d{2}$/.test(value)) {
+      lastValidValueRef.current = normalizeManualTimeInput(value, lastValidValueRef.current);
+    }
+  }, [value]);
+
+  const commitManualValue = () => {
+    const normalized = normalizeManualTimeInput(value, lastValidValueRef.current);
+    lastValidValueRef.current = normalized;
+    onChange(normalized);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className={entryTimePickerShellClass}>
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="09:00"
+          value={value}
+          onChange={(event) => onChange(normalizeManualTimeInput(event.target.value, lastValidValueRef.current))}
+          onKeyDown={(event) => {
+            if (event.metaKey || event.ctrlKey || event.altKey || event.key === "Tab") return;
+
+            if (/^\d$/.test(event.key)) {
+              event.preventDefault();
+              const target = event.currentTarget;
+              const { value: nextValue, caret } = replaceTimeDigit(
+                value,
+                target.selectionStart,
+                event.key,
+                lastValidValueRef.current
+              );
+
+              onChange(nextValue);
+              setTimeInputCaret(target, caret);
+              return;
+            }
+
+            if (event.key === "Backspace") {
+              event.preventDefault();
+              const target = event.currentTarget;
+              setTimeInputCaret(target, getPreviousTimePosition(target.selectionStart));
+              return;
+            }
+
+            if (event.key === "Delete") {
+              event.preventDefault();
+              setTimeInputCaret(event.currentTarget, getEditableTimePosition(event.currentTarget.selectionStart));
+            }
+          }}
+          onBlur={commitManualValue}
+          onFocus={(event) => {
+            const target = event.currentTarget;
+            window.setTimeout(() => {
+              if (!target.isConnected || typeof target.scrollIntoView !== "function") return;
+
+              target.scrollIntoView({ block: "center", behavior: "smooth" });
+            }, 120);
+          }}
+          onPaste={(event) => {
+            event.preventDefault();
+            const normalized = normalizeManualTimeInput(event.clipboardData.getData("text"), lastValidValueRef.current);
+            lastValidValueRef.current = normalized;
+            onChange(normalized);
+            setTimeInputCaret(event.currentTarget, 5);
+          }}
+          className={entryTimeInputClass}
+          aria-label={ariaLabel.replace("seç", "yaz")}
+        />
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex shrink-0 items-center justify-center rounded-sm p-1 text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label={ariaLabel}
+          >
+            <Clock className="h-3.5 w-3.5 shrink-0 self-center" />
+          </button>
+        </PopoverTrigger>
+      </div>
     <PopoverContent
       align="start"
       className="z-50 w-24 rounded-sm border border-border/60 bg-popover/95 p-1 shadow-lg"
@@ -139,7 +298,11 @@ const EntryTimePicker = ({ value, onChange, ariaLabel }: EntryTimePickerProps) =
               <button
                 key={option}
                 type="button"
-                onClick={() => onChange(option)}
+                onClick={() => {
+                  lastValidValueRef.current = option;
+                  onChange(option);
+                  setOpen(false);
+                }}
                 className={`block w-full rounded-sm px-2 py-1 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground ${
                   active ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                 }`}
@@ -152,7 +315,8 @@ const EntryTimePicker = ({ value, onChange, ariaLabel }: EntryTimePickerProps) =
       </div>
     </PopoverContent>
   </Popover>
-);
+  );
+};
 
 
 const Pomodoro = () => {
