@@ -147,8 +147,8 @@
 }
 .ProseMirror h1 {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  font-size: 1.875rem;
-  line-height: 2.25rem;
+  font-size: 1.6rem;
+  line-height: 2rem;
   font-weight: 400;
   letter-spacing: 0.05em;
   margin-top: 1.5rem;
@@ -156,8 +156,8 @@
 }
 .ProseMirror h2 {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  font-size: 1.5rem;
-  line-height: 2rem;
+  font-size: 1.4rem;
+  line-height: 1.8rem;
   font-weight: 400;
   letter-spacing: 0.05em;
   margin-top: 1.25rem;
@@ -165,8 +165,8 @@
 }
 .ProseMirror h3 {
   font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
-  font-size: 1.25rem;
-  line-height: 1.75rem;
+  font-size: 1.2rem;
+  line-height: 1.6rem;
   font-weight: 400;
   letter-spacing: 0.05em;
   margin-top: 1rem;
@@ -403,19 +403,33 @@
   margin: 0.25rem 0;
 }
 .ProseMirror ul[data-type="taskList"] li > label {
-  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  height: 1.85em;
+  margin: 0;
   cursor: pointer;
   user-select: none;
 }
 .ProseMirror ul[data-type="taskList"] li > label > input[type="checkbox"] {
   width: 0.875rem;
   height: 0.875rem;
+  margin: 0;
   border-radius: 0.125rem;
   accent-color: hsl(var(--foreground));
   cursor: pointer;
 }
-.ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+.ProseMirror ul[data-type="taskList"] li > div > p:first-child {
+  margin-top: 0;
+}
+.ProseMirror ul[data-type="taskList"] li > div > p:last-child {
+  margin-bottom: 0;
+}
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
   color: hsl(var(--muted-foreground));
   text-decoration: line-through;

@@ -1,6 +1,8 @@
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { Details, DetailsSummary, DetailsContent } from "@tiptap/extension-details";
 import { common, createLowlight } from "lowlight";
@@ -24,6 +26,8 @@ export const createRichEditorExtensions = ({ placeholder, linkClassName }: RichE
     gapcursor: false,
     link: false,
   }),
+  TaskList,
+  TaskItem.configure({ nested: true }),
   CodeBlockLowlight.configure({ lowlight }),
   Details.configure({
     persist: true,

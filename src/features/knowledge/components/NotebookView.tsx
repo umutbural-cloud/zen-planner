@@ -64,7 +64,7 @@ const RichDocumentEditor = ({
           </button>
           <button
             onClick={() => onDelete(note.id)}
-            className="p-1.5 rounded-sm text-muted-foreground hover:text-destructive hover:bg-accent/40 transition-colors"
+            className="hidden p-1.5 rounded-sm text-muted-foreground hover:text-destructive hover:bg-accent/40 transition-colors md:inline-flex"
             title="Sil"
           >
             <Trash2 className="h-3.5 w-3.5" />

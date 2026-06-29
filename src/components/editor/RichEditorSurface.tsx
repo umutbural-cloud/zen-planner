@@ -1,5 +1,6 @@
-import { Component, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useRef, useState, type CSSProperties, type ErrorInfo, type ReactNode } from "react";
 import { EditorContent, useEditor, type Editor, type JSONContent } from "@tiptap/react";
+import { ChevronDown } from "lucide-react";
 import { BubbleTextMenu } from "@/components/editor/BubbleTextMenu";
 import { createRichEditorExtensions } from "@/components/editor/createRichEditorExtensions";
 import { LinkBubbleMenu } from "@/components/editor/LinkBubbleMenu";
@@ -18,6 +19,7 @@ type RichEditorSurfaceProps = {
   editorClassName?: string;
   resetKey?: string;
   mobileToolbarBottom?: boolean;
+  mobileToolbarStyle?: CSSProperties;
 };
 
 type ErrorBoundaryProps = {
@@ -67,6 +69,7 @@ const RichEditorSurfaceInner = ({
   contentClassName,
   editorClassName,
   mobileToolbarBottom = false,
+  mobileToolbarStyle,
 }: RichEditorSurfaceProps) => {
   const debounceRef = useRef<number | null>(null);
   const lastEmittedJsonRef = useRef<string | null>(null);
@@ -192,8 +195,9 @@ const RichEditorSurfaceInner = ({
         className={cn(
           "sticky top-0 z-10 -mx-6 mb-3 bg-background/80 px-6 py-1 opacity-60 backdrop-blur-sm transition-opacity hover:opacity-100 focus-within:opacity-100 sm:-mx-12 sm:px-12",
           mobileToolbarBottom &&
-            "fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] top-auto z-40 mx-0 mb-0 rounded-xl border border-border/70 bg-background/95 px-3 py-2 opacity-100 shadow-lg md:sticky md:inset-auto md:top-0 md:-mx-12 md:mb-3 md:rounded-none md:border-0 md:bg-background/80 md:px-12 md:py-1 md:shadow-none",
+            "fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] top-auto z-40 mx-0 mb-0 flex h-[34px] min-h-[34px] max-h-[34px] items-center overflow-hidden rounded-xl border border-border/70 bg-background/95 px-2.5 py-px opacity-100 shadow-lg md:sticky md:inset-auto md:top-0 md:h-auto md:min-h-0 md:max-h-none md:-mx-12 md:mb-3 md:rounded-none md:border-0 md:bg-background/80 md:px-12 md:py-1 md:shadow-none",
         )}
+        style={mobileToolbarBottom ? mobileToolbarStyle : undefined}
       >
         {isToolbarCollapsed ? (
           <button
@@ -213,13 +217,19 @@ const RichEditorSurfaceInner = ({
             className={cn(
               "flex items-center gap-2",
               mobileToolbarBottom &&
-                "overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-visible",
+                "h-full min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:h-auto md:overflow-visible",
             )}
           >
-            <div className={cn("min-w-0 flex-1", mobileToolbarBottom && "min-w-max flex-none md:min-w-0 md:flex-1")}>
+            <div
+              className={cn(
+                "min-w-0 flex-1",
+                mobileToolbarBottom &&
+                  "flex h-full min-h-0 min-w-max flex-none items-center overflow-y-hidden max-md:[&>div]:mb-0 max-md:[&>div]:h-full max-md:[&>div]:min-h-0 max-md:[&>div]:items-center max-md:[&>div]:overflow-y-hidden max-md:[&>div]:pb-0 md:block md:h-auto md:min-h-0 md:min-w-0 md:flex-1 md:overflow-visible",
+              )}
+            >
               <RichTextToolbar
                 editor={editor}
-                features={{ link: true, taskList: false, codeBlock: true, details: true, history: false }}
+                features={{ link: true, taskList: true, codeBlock: true, details: true, history: false }}
                 onInsertLink={insertLink}
                 onInsertDetails={() => editor.chain().focus().setDetails().run()}
                 mobileSingleRow={mobileToolbarBottom}
@@ -234,11 +244,19 @@ const RichEditorSurfaceInner = ({
               onClick={() => setIsToolbarCollapsed(true)}
               className={cn(
                 "shrink-0 rounded-sm border border-border/70 bg-background/80 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground",
-                mobileToolbarBottom && "min-h-8 whitespace-nowrap rounded-lg px-3 md:min-h-0 md:rounded-sm md:px-2",
+                mobileToolbarBottom &&
+                  "inline-flex h-6 w-6 min-h-0 items-center justify-center self-center rounded-sm border-0 bg-transparent p-1 hover:bg-accent/50 md:h-auto md:w-auto md:border md:bg-background/80 md:px-2 md:py-1",
               )}
               aria-label="Araç çubuğunu gizle"
             >
-              Gizle
+              {mobileToolbarBottom ? (
+                <>
+                  <ChevronDown className="h-3 w-3 md:hidden" aria-hidden="true" />
+                  <span className="hidden md:inline">Gizle</span>
+                </>
+              ) : (
+                "Gizle"
+              )}
             </button>
           </div>
         )}

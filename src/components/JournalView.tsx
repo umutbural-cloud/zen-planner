@@ -57,6 +57,12 @@ const journalContentToDoc = (content: string | null | undefined): JSONContent =>
   }
 };
 
+const KEYBOARD_OPEN_THRESHOLD = 80;
+const KEYBOARD_TOOLBAR_GAP = 6;
+const KEYBOARD_SAVE_STATUS_OFFSET = "3.65rem";
+const CLOSED_TOOLBAR_BOTTOM = "calc(4.75rem + env(safe-area-inset-bottom))";
+const CLOSED_SAVE_STATUS_BOTTOM = "calc(8.15rem + env(safe-area-inset-bottom))";
+
 const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: string) => void }) => {
   const { user } = useAuth();
   const { categories } = usePomodoroCategories();
@@ -68,6 +74,7 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
   const [activityOpen, setActivityOpen] = useState(false);
   const [workSessions, setWorkSessions] = useState<WorkSession[]>([]);
   const [workSessionsLoading, setWorkSessionsLoading] = useState(false);
+  const [keyboardState, setKeyboardState] = useState({ inset: 0, open: false });
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const currentDate = parseISO(date);
@@ -145,6 +152,30 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
     };
   }, []);
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardState = () => {
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      setKeyboardState({
+        inset: Math.round(inset),
+        open: inset > KEYBOARD_OPEN_THRESHOLD,
+      });
+    };
+
+    updateKeyboardState();
+    viewport.addEventListener("resize", updateKeyboardState);
+    viewport.addEventListener("scroll", updateKeyboardState);
+    window.addEventListener("resize", updateKeyboardState);
+
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardState);
+      viewport.removeEventListener("scroll", updateKeyboardState);
+      window.removeEventListener("resize", updateKeyboardState);
+    };
+  }, []);
+
   const handleEditorChange = useCallback((doc: JSONContent) => {
     setEntryDoc(doc);
     if (!entryId || !user) return;
@@ -176,6 +207,12 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
     });
   }, [categories, workSessions]);
   const activityTotalSeconds = workSessions.reduce((total, session) => total + session.duration_seconds, 0);
+  const mobileToolbarBottom = keyboardState.open
+    ? `calc(${keyboardState.inset}px + ${KEYBOARD_TOOLBAR_GAP}px)`
+    : CLOSED_TOOLBAR_BOTTOM;
+  const saveStatusBottom = keyboardState.open
+    ? `calc(${keyboardState.inset}px + ${KEYBOARD_SAVE_STATUS_OFFSET})`
+    : CLOSED_SAVE_STATUS_BOTTOM;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -293,11 +330,15 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
             placeholder="Bugün için yaz..."
             resetKey={entryId ?? date}
             mobileToolbarBottom
+            mobileToolbarStyle={{ bottom: mobileToolbarBottom }}
             className="md:block"
             contentClassName="min-h-[calc(100dvh-19rem)] px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] md:min-h-[60vh] md:px-0 md:pb-0"
             editorClassName="text-[15px] leading-[1.9] md:text-[12px] md:leading-[1.85]"
           />
-          <div className="fixed inset-x-4 bottom-[calc(8.15rem+env(safe-area-inset-bottom))] z-30 text-right text-[10px] tracking-wide text-muted-foreground md:static md:mt-6 md:text-left">
+          <div
+            className="fixed inset-x-4 bottom-[calc(8.15rem+env(safe-area-inset-bottom))] z-30 text-right text-[10px] tracking-wide text-muted-foreground md:static md:mt-6 md:text-left"
+            style={{ bottom: saveStatusBottom }}
+          >
             {saving ? "Kaydediliyor..." : "Kaydedildi"}
           </div>
           <div className="hidden md:block">

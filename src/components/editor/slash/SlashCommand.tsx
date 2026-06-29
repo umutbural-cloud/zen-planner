@@ -126,6 +126,12 @@ const slashCommandItems: SlashCommandItem[] = [
     command: ({ editor }) => editor.chain().focus().toggleOrderedList().run(),
   },
   {
+    title: "Checkbox",
+    description: "Yapılacaklar listesi",
+    keywords: ["checkbox", "check", "task", "todo", "yapılacak", "yapilacak", "görev", "gorev", "tik", "checklist"],
+    command: ({ editor }) => editor.chain().focus().toggleTaskList().run(),
+  },
+  {
     title: "Code Block",
     description: "Preformatted code",
     keywords: ["code", "pre", "kod"],
