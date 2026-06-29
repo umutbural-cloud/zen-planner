@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid, type LucideIcon } from "lucide-react";
+import { FileText, Table as TableIcon, GanttChart, Kanban, Calendar, Plus, Undo, Redo, Moon, Sun, LayoutGrid, Trash2, type LucideIcon } from "lucide-react";
 import { ProjectIconPicker } from "@/components/AppSidebar";
 import NotesView from "@/components/NotesView";
 import GanttView from "@/components/GanttView";
@@ -41,12 +41,18 @@ const Index = () => {
   const { section, selectedProjectId, view, journalDate, selectedNotebookId, selectedKnowledgeNoteId, setSection, setSelectedProjectId, setView, setJournalDate, setSelectedNotebookId, setSelectedKnowledgeNoteId } = usePageState();
   const { startup } = useStartupPage();
   const { loading: settingsLoading } = useUserSettings();
-  const { notes: knowledgeNotes } = useKnowledgeNotes();
+  const { notes: knowledgeNotes, deleteNote: deleteKnowledgeNote } = useKnowledgeNotes();
   const navigate = useNavigate();
   const startupAppliedUserRef = useRef<string | null>(null);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
   const selectedKnowledgeNote = knowledgeNotes.find((note) => note.id === selectedKnowledgeNoteId) || null;
+  const selectedKnowledgeNoteTitle = selectedKnowledgeNote
+    ? selectedKnowledgeNote.title || (selectedKnowledgeNote.type === "quick" ? "Anlık not" : "Başlıksız doküman")
+    : "";
+  const mobileKnowledgeNoteHeaderTitle = selectedKnowledgeNote?.type === "rich"
+    ? "Not Defteri"
+    : selectedKnowledgeNoteTitle;
   const projectViews: ViewKey[] = selectedProject?.enabled_views || ["table", "notes"];
 
   // İlk yüklemede açılış sayfası tercihini uygula
@@ -123,6 +129,12 @@ const Index = () => {
     updateProject(selectedProject.id, { enabled_views: [...projectViews, v] });
   };
 
+  const handleDeleteSelectedKnowledgeNote = async () => {
+    if (!selectedKnowledgeNote) return;
+    const deletedIds = await deleteKnowledgeNote(selectedKnowledgeNote.id);
+    if (deletedIds.includes(selectedKnowledgeNote.id)) setSelectedKnowledgeNoteId(null);
+  };
+
   const availableToAdd = VIEWS.filter((v) => !projectViews.includes(v.id));
 
   return (
@@ -152,12 +164,24 @@ const Index = () => {
               )}
               {section === "notebook" && selectedKnowledgeNote && (
                 <h1 className="text-sm tracking-wide truncate font-light text-muted-foreground">
-                  {selectedKnowledgeNote.title || (selectedKnowledgeNote.type === "quick" ? "Anlık not" : "Başlıksız doküman")}
+                  <span className="md:hidden">{mobileKnowledgeNoteHeaderTitle}</span>
+                  <span className="hidden md:inline">{selectedKnowledgeNoteTitle}</span>
                 </h1>
               )}
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2">
+              {section === "notebook" && selectedKnowledgeNote?.type === "rich" && (
+                <button
+                  type="button"
+                  onClick={handleDeleteSelectedKnowledgeNote}
+                  aria-label="Not defterini sil"
+                  title="Sil"
+                  className="ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/40 hover:text-destructive md:hidden"
+                >
+                  <Trash2 className="h-[18px] w-[18px]" strokeWidth={1.5} />
+                </button>
+              )}
               {section === "project" && selectedProject && (
                 <>
                   {/* Desktop: tüm view sekmeleri */}
