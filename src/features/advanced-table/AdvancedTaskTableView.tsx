@@ -167,11 +167,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
     () => {
       const done = sortedFilteredTasks.filter((task) => !task.hidden && task.status === "done");
       if (config.sort) return done;
-      return done.sort((a, b) => {
-        const aTime = new Date(a.completed_at || a.created_at).getTime();
-        const bTime = new Date(b.completed_at || b.created_at).getTime();
-        return bTime - aTime;
-      });
+      return done;
     },
     [config.sort, sortedFilteredTasks],
   );
@@ -210,16 +206,21 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
 
   const handleReorderRows = (activeTaskId: string, overTaskId: string) => {
     if (activeTaskId === overTaskId) return;
-    const oldIndex = activeTasks.findIndex((task) => task.id === activeTaskId);
-    const newIndex = activeTasks.findIndex((task) => task.id === overTaskId);
-    if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return;
+    const reorderWithinSection = (sectionRows: Task[]) => {
+      const oldIndex = sectionRows.findIndex((task) => task.id === activeTaskId);
+      const newIndex = sectionRows.findIndex((task) => task.id === overTaskId);
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) return null;
+      return arrayMove(sectionRows, oldIndex, newIndex);
+    };
 
-    const reorderedActiveTasks = arrayMove(activeTasks, oldIndex, newIndex);
-    const reorderedIds = new Set(reorderedActiveTasks.map((task) => task.id));
-    const finalOrder = [
-      ...reorderedActiveTasks,
-      ...tasks.filter((task) => !reorderedIds.has(task.id)),
-    ];
+    const reorderedRows = reorderWithinSection(activeTasks) ?? reorderWithinSection(doneTasks);
+    if (!reorderedRows) return;
+
+    const reorderedIds = new Set(reorderedRows.map((task) => task.id));
+    let nextIndex = 0;
+    const finalOrder = tasks.map((task) => (
+      reorderedIds.has(task.id) ? reorderedRows[nextIndex++] : task
+    ));
 
     void reorderTasks(finalOrder.map((task) => task.id));
   };
@@ -307,6 +308,8 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           expandedTaskIds={expandedTaskIds}
           onToggleExpanded={handleToggleExpandedTask}
           onReorderColumns={handleReorderColumns}
+          rowReorderEnabled={rowReorderEnabled}
+          onReorderRows={handleReorderRows}
           sort={config.sort}
           groupBy={config.groupBy}
           filters={config.filters}

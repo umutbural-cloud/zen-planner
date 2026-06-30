@@ -679,18 +679,18 @@ const AdvancedTaskRow = ({
         style={rowStyle}
         className={`group h-11 md:h-auto ${isDragging ? "relative z-10 bg-card/40" : ""}`}
       >
-        <TableCell className="w-16 px-3 py-1.5 md:w-12 md:px-2 md:py-1" onClick={(event) => event.stopPropagation()}>
+        <TableCell className={`w-16 py-1.5 pr-3 md:w-12 md:pr-2 md:py-1 ${task.status === "done" ? "pl-2 md:pl-2" : "pl-3 md:pl-2"}`} onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center gap-1.5 md:gap-1">
             {rowDragEnabled ? (
               <button
                 type="button"
                 {...attributes}
                 {...listeners}
-                className="inline-flex h-8 w-5 touch-none cursor-grab items-center justify-center rounded-sm text-muted-foreground/45 transition-colors hover:bg-card/40 hover:text-muted-foreground active:cursor-grabbing md:h-6 md:w-4"
+                className="inline-flex h-8 w-5 touch-none cursor-grab items-center justify-center rounded-sm text-muted-foreground/70 transition-colors hover:bg-accent/40 hover:text-foreground active:cursor-grabbing md:h-6 md:w-4"
                 aria-label="Görevi sırala"
                 title="Sürükle"
               >
-                <GripVertical className="h-3.5 w-3.5" />
+                <GripVertical className="h-4 w-4" />
               </button>
             ) : (
               <span
@@ -698,7 +698,7 @@ const AdvancedTaskRow = ({
                 aria-label="Sıralama pasif"
                 title="Sürükleme için sıralama, filtre ve gruplamayı kapat"
               >
-                <GripVertical className="h-3.5 w-3.5" />
+                <GripVertical className="h-4 w-4" />
               </span>
             )}
             <Checkbox

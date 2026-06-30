@@ -282,7 +282,7 @@ const AdvancedTaskTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rowDragEnabled && group.key === "active" ? (
+                {rowDragEnabled ? (
                   <SortableContext items={group.rows.map((task) => getRowSortableId(group.key, task.id))} strategy={verticalListSortingStrategy}>
                     {group.rows.map((task) => (
                       <AdvancedTaskRow
