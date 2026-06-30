@@ -681,7 +681,7 @@ const AdvancedTaskRow = ({
       >
         <TableCell className="w-16 px-3 py-1.5 md:w-12 md:px-2 md:py-1" onClick={(event) => event.stopPropagation()}>
           <div className="flex items-center gap-1.5 md:gap-1">
-            {rowDragEnabled && (
+            {rowDragEnabled ? (
               <button
                 type="button"
                 {...attributes}
@@ -692,6 +692,14 @@ const AdvancedTaskRow = ({
               >
                 <GripVertical className="h-3.5 w-3.5" />
               </button>
+            ) : (
+              <span
+                className="inline-flex h-8 w-5 items-center justify-center rounded-sm text-muted-foreground/25 md:h-6 md:w-4"
+                aria-label="Sıralama pasif"
+                title="Sürükleme için sıralama, filtre ve gruplamayı kapat"
+              >
+                <GripVertical className="h-3.5 w-3.5" />
+              </span>
             )}
             <Checkbox
               checked={task.status === "done"}
