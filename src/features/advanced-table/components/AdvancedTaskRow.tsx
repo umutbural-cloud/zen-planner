@@ -735,27 +735,26 @@ const AdvancedTaskRow = ({
         </TableCell>
       </TableRow>
       {expanded && subtasks.length > 0 && (
-        <TableRow className="bg-card/10 hover:bg-card/10">
-          <TableCell colSpan={columns.length + 2} className="px-0 py-0">
-            <div className="ml-9 mr-2 border-l border-border/70 pl-2">
-              <div className="space-y-0.5 py-1">
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={columns.length + 2} className="!pb-4 !pl-4 !pr-0 !pt-2 sm:!pb-4 sm:!pl-4 sm:!pr-0 sm:!pt-2">
+            <div className="ml-10 mr-2">
+              <div className="space-y-0.5 py-0.5">
                 {subtasks.map((subtask) => (
                   <div
                     key={subtask.id}
-                    className="group/subtask flex min-h-7 cursor-pointer items-center gap-2 rounded-sm px-1.5 py-0.5 text-sm transition-colors hover:bg-accent/40"
+                    className="group/subtask flex min-h-6 cursor-pointer items-center gap-2 rounded-sm px-1 py-0 text-sm leading-5 text-muted-foreground transition-colors hover:bg-accent/20 hover:text-foreground"
                     onClick={(event) => {
                       event.stopPropagation();
                       onOpen(subtask);
                     }}
                   >
-                    <span className="h-px w-2.5 shrink-0 bg-border/80" aria-hidden="true" />
                     <Checkbox
                       checked={subtask.status === "done"}
                       onClick={(event) => event.stopPropagation()}
                       onCheckedChange={(checked) => onUpdate(subtask.id, { status: checked === true ? "done" : "todo" })}
                       className="h-3.5 w-3.5"
                     />
-                    <span className={`min-w-0 flex-1 truncate text-xs font-light ${subtask.status === "done" ? "text-muted-foreground line-through" : ""}`}>
+                    <span className={`min-w-0 flex-1 truncate font-light ${subtask.status === "done" ? "text-muted-foreground/70 line-through" : ""}`}>
                       {subtask.title}
                     </span>
                     <button
