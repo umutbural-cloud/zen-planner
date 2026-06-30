@@ -89,7 +89,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   const [showHidden, setShowHidden] = useState(false);
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
   const [config, setConfig] = useState<CurrentTableConfig>(() => loadTableConfig(projectId));
-  const { columnWidths, setColumnWidth, persistColumnWidths } = useAdvancedTableColumnWidths();
+  const { columnWidths, setColumnWidth, persistColumnWidths } = useAdvancedTableColumnWidths(projectId);
 
   useEffect(() => {
     setConfig(loadTableConfig(projectId));

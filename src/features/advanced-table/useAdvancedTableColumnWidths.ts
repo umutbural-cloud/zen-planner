@@ -1,7 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database, Json } from "@/integrations/supabase/types";
-import { useAuth } from "@/hooks/useAuth";
 import {
   clampColumnWidth,
   createDefaultColumnWidths,
@@ -10,53 +7,31 @@ import {
 } from "./columnSizing";
 import type { AdvancedTaskColumnId } from "./types";
 
-const ADVANCED_TABLE_KEY = "advanced_tasks";
+const STORAGE_VERSION = 1;
 
-const toJsonColumnWidths = (widths: AdvancedTaskColumnWidthMap): Json =>
-  Object.fromEntries(Object.entries(widths)) as Json;
+const getStorageKey = (projectId: string) => `zen:advanced-task-table:column-widths:v${STORAGE_VERSION}:${projectId}`;
 
-export const useAdvancedTableColumnWidths = () => {
-  const { user, initialAuthResolved } = useAuth();
-  const userId = user?.id ?? null;
+export const useAdvancedTableColumnWidths = (projectId: string) => {
   const [columnWidths, setColumnWidths] = useState<AdvancedTaskColumnWidthMap>(() => createDefaultColumnWidths());
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!initialAuthResolved) {
-      setIsLoading(true);
-      return;
-    }
-
-    if (!userId) {
+    if (typeof window === "undefined") {
       setColumnWidths(createDefaultColumnWidths());
-      setIsLoading(false);
       return;
     }
 
-    let cancelled = false;
-    setIsLoading(true);
+    try {
+      const raw = window.localStorage.getItem(getStorageKey(projectId));
+      if (!raw) {
+        setColumnWidths(createDefaultColumnWidths());
+        return;
+      }
 
-    void supabase
-      .from("user_table_preferences")
-      .select("column_widths")
-      .eq("user_id", userId)
-      .eq("table_key", ADVANCED_TABLE_KEY)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        setColumnWidths(sanitizeColumnWidths(data?.column_widths));
-      })
-      .catch(() => {
-        if (!cancelled) setColumnWidths(createDefaultColumnWidths());
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [initialAuthResolved, userId]);
+      setColumnWidths(sanitizeColumnWidths(JSON.parse(raw)));
+    } catch {
+      setColumnWidths(createDefaultColumnWidths());
+    }
+  }, [projectId]);
 
   const setColumnWidth = useCallback((columnId: AdvancedTaskColumnId, width: number) => {
     setColumnWidths((current) => ({
@@ -65,28 +40,17 @@ export const useAdvancedTableColumnWidths = () => {
     }));
   }, []);
 
-  const persistColumnWidths = useCallback(async (nextWidths?: AdvancedTaskColumnWidthMap) => {
-    if (!userId) return { error: null };
+  const persistColumnWidths = useCallback((nextWidths?: AdvancedTaskColumnWidthMap) => {
+    if (typeof window === "undefined") return;
 
     const sanitized = sanitizeColumnWidths(nextWidths ?? columnWidths);
-    const payload: Database["public"]["Tables"]["user_table_preferences"]["Insert"] = {
-      user_id: userId,
-      table_key: ADVANCED_TABLE_KEY,
-      column_widths: toJsonColumnWidths(sanitized),
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error } = await supabase
-      .from("user_table_preferences")
-      .upsert(payload, { onConflict: "user_id,table_key" });
-
-    return { error };
-  }, [columnWidths, userId]);
+    window.localStorage.setItem(getStorageKey(projectId), JSON.stringify(sanitized));
+  }, [columnWidths, projectId]);
 
   return {
     columnWidths,
     setColumnWidth,
     persistColumnWidths,
-    isLoading,
+    isLoading: false,
   };
 };
