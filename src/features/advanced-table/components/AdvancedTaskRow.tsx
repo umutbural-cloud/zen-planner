@@ -680,7 +680,7 @@ const AdvancedTaskRow = ({
         className={`group h-11 md:h-auto ${isDragging ? "relative z-10 bg-card/40" : ""}`}
       >
         <TableCell className={`w-16 py-1.5 pr-3 md:w-12 md:pr-2 md:py-1 ${task.status === "done" ? "pl-2 md:pl-2" : "pl-3 md:pl-2"}`} onClick={(event) => event.stopPropagation()}>
-          <div className="flex items-center gap-1.5 md:gap-1">
+          <div className="flex items-center gap-2">
             {rowDragEnabled ? (
               <button
                 type="button"
