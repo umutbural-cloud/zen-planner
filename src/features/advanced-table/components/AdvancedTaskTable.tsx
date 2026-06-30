@@ -9,6 +9,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { horizontalListSortingStrategy, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { GripVertical } from "lucide-react";
 import type { Task } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
 import { ADVANCED_TASK_COLUMN_SIZING, clampColumnWidth, type AdvancedTaskColumnWidthMap } from "../columnSizing";
@@ -207,7 +208,15 @@ const AdvancedTaskTable = ({
               </colgroup>
               <TableHeader>
                 <TableRow className="border-border/50 bg-background/35 hover:bg-background/35 md:bg-transparent md:hover:bg-transparent">
-                  <TableHead className="w-16 px-3 md:w-9 md:px-2"></TableHead>
+                  <TableHead className="w-16 px-3 md:w-9 md:px-2">
+                    <span
+                      className="inline-flex h-6 w-4 items-center justify-center rounded-sm text-muted-foreground/25"
+                      aria-hidden="true"
+                      title="Satır sıralama"
+                    >
+                      <GripVertical className="h-3.5 w-3.5" />
+                    </span>
+                  </TableHead>
                   {columnDragEnabled ? (
                     <SortableContext items={columns.map((columnId) => getColumnSortableId(group.key, columnId))} strategy={horizontalListSortingStrategy}>
                       {columns.map((columnId) => (
@@ -273,7 +282,7 @@ const AdvancedTaskTable = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rowDragEnabled && group.key === "active" ? (
+                {rowDragEnabled ? (
                   <SortableContext items={group.rows.map((task) => getRowSortableId(group.key, task.id))} strategy={verticalListSortingStrategy}>
                     {group.rows.map((task) => (
                       <AdvancedTaskRow
