@@ -44,12 +44,12 @@ const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onOpen, categoryDot 
   categoryDot?: string;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const [expanded, setExpanded] = useState(false);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
   };
-  const doneSubtasks = subtasks.filter((subtask) => subtask.status === "done").length;
 
   return (
     <article
@@ -85,39 +85,75 @@ const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onOpen, categoryDot 
         className="block w-full pr-12 text-left"
       >
         <div className="flex items-start gap-3">
-          <span
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-            className="mt-0.5 inline-flex min-h-10 min-w-10 items-center justify-center rounded-2xl bg-background/55"
-          >
-            <Checkbox
-              checked={task.status === "done"}
-              onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
-              className="h-5 w-5"
-            />
-          </span>
+          <div className="mt-0.5 flex shrink-0 items-center gap-1">
+            <span
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-2xl bg-background/55"
+            >
+              <Checkbox
+                checked={task.status === "done"}
+                onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
+                className="h-5 w-5"
+              />
+            </span>
+            {subtasks.length > 0 && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setExpanded((current) => !current);
+                }}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                aria-expanded={expanded}
+                aria-label={expanded ? "Alt görevleri kapat" : "Alt görevleri aç"}
+              >
+                <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`} />
+              </button>
+            )}
+          </div>
           <div className="min-w-0 flex-1">
             <span className={`block break-words text-[1rem] leading-6 tracking-[-0.01em] text-foreground ${task.status === "done" ? "text-muted-foreground line-through" : ""}`}>
               {task.title}
             </span>
-            {(categoryDot || subtasks.length > 0) && (
+            {categoryDot && (
               <span className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                {categoryDot && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-1">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: categoryDot }} />
-                    Etiket
-                  </span>
-                )}
-                {subtasks.length > 0 && (
-                  <span className="rounded-full bg-background/70 px-2 py-1">
-                    {doneSubtasks}/{subtasks.length} alt görev
-                  </span>
-                )}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-1">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: categoryDot }} />
+                  Etiket
+                </span>
               </span>
             )}
           </div>
         </div>
       </div>
+      {expanded && subtasks.length > 0 && (
+        <div className="mt-2 rounded-lg bg-muted/20 px-2 py-2">
+          <div className="space-y-1">
+            {subtasks.map((subtask) => (
+              <div
+                key={subtask.id}
+                className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onOpen(subtask);
+                }}
+              >
+                <Checkbox
+                  checked={subtask.status === "done"}
+                  onClick={(event) => event.stopPropagation()}
+                  onCheckedChange={(checked) => onUpdate(subtask.id, { status: checked ? "done" : "todo" })}
+                  className="h-4 w-4 shrink-0"
+                />
+                <span className={`min-w-0 flex-1 break-words font-light ${subtask.status === "done" ? "text-muted-foreground/70 line-through" : "text-foreground"}`}>
+                  {subtask.title}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </article>
   );
 };

@@ -564,7 +564,7 @@ const Pomodoro = () => {
                 </div>
 
                 {isLoading ? (
-                  <div className="mb-8 select-none text-6xl font-extralight tracking-widest text-muted-foreground/50 tabular-nums sm:text-8xl">
+                  <div className="mb-8 w-full max-w-full select-none whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] text-muted-foreground/50 tabular-nums sm:text-8xl sm:tracking-widest">
                     --:--
                   </div>
                 ) : editingTime && isIdle ? (
@@ -577,14 +577,14 @@ const Pomodoro = () => {
                       if (e.key === "Escape") { setEditVal(formatMMSS(remainingSec)); setEditingTime(false); }
                     }}
                     autoFocus
-                    className="mx-auto mb-8 block w-[28rem] max-w-full border-b border-border/60 bg-transparent text-center text-6xl font-extralight tracking-widest tabular-nums outline-none focus:border-foreground/40 sm:text-8xl"
+                    className="mx-auto mb-8 block w-full max-w-full border-b border-border/60 bg-transparent text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums outline-none focus:border-foreground/40 sm:w-[28rem] sm:text-8xl sm:tracking-widest"
                   />
                 ) : (
                   <button
                     onClick={() => { if (isIdle) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
                     disabled={!isIdle}
                     title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
-                    className={`mx-auto mb-8 block text-6xl font-extralight tracking-widest tabular-nums transition-all duration-700 ease-out sm:text-8xl ${
+                    className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
                       isRunning
                         ? "scale-110 text-foreground"
                         : isIdle

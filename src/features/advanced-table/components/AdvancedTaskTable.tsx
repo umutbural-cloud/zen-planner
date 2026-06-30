@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   closestCenter,
@@ -10,6 +11,7 @@ import {
 import { horizontalListSortingStrategy, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Task } from "@/hooks/useTasks";
 import type { PomodoroCategory } from "@/hooks/usePomodoroCategories";
+import { ADVANCED_TASK_COLUMN_SIZING, clampColumnWidth, type AdvancedTaskColumnWidthMap } from "../columnSizing";
 import { getColumn } from "../columns";
 import type { AdvancedTaskGroup } from "../grouping";
 import type { AdvancedTaskColumnId, ColumnFilterOption, TableFilter, TableSort } from "../types";
@@ -38,7 +40,13 @@ type AdvancedTaskTableProps = {
   onGroupByChange: (columnId: AdvancedTaskColumnId | null) => void;
   onSetColumnFilter: (filter: TableFilter) => void;
   onClearColumnFilter: (columnId: AdvancedTaskColumnId) => void;
+  columnWidths: AdvancedTaskColumnWidthMap;
+  onColumnWidthChange: (columnId: AdvancedTaskColumnId, width: number) => void;
+  onColumnWidthsCommit: (widths: AdvancedTaskColumnWidthMap) => void;
 };
+
+const LEADING_COLUMN_WIDTH = 48;
+const TRAILING_COLUMN_WIDTH = 112;
 
 const AdvancedTaskTable = ({
   groups,
@@ -61,10 +69,71 @@ const AdvancedTaskTable = ({
   onGroupByChange,
   onSetColumnFilter,
   onClearColumnFilter,
+  columnWidths,
+  onColumnWidthChange,
+  onColumnWidthsCommit,
 }: AdvancedTaskTableProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const columnDragEnabled = Boolean(onReorderColumns) && columns.length > 1;
   const rowDragEnabled = Boolean(rowReorderEnabled && onReorderRows);
+  const latestColumnWidthsRef = useRef(columnWidths);
+
+  useEffect(() => {
+    latestColumnWidthsRef.current = columnWidths;
+  }, [columnWidths]);
+
+  useEffect(() => () => {
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, []);
+
+  const tableWidth = useMemo(() => {
+    const dynamicWidth = columns.reduce((total, columnId) => total + columnWidths[columnId], 0);
+    return LEADING_COLUMN_WIDTH + dynamicWidth + TRAILING_COLUMN_WIDTH;
+  }, [columnWidths, columns]);
+
+  const tableStyle = {
+    "--advanced-table-width": `${tableWidth}px`,
+  } as CSSProperties;
+
+  const createColumnStyle = (columnId: AdvancedTaskColumnId) => ({
+    "--advanced-column-width": `${columnWidths[columnId]}px`,
+  }) as CSSProperties;
+
+  const handleColumnResizeStart = useCallback((columnId: AdvancedTaskColumnId, startX: number) => {
+    const startWidth = columnWidths[columnId];
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const nextWidth = clampColumnWidth(columnId, startWidth + event.clientX - startX);
+      const nextWidths = {
+        ...latestColumnWidthsRef.current,
+        [columnId]: nextWidth,
+      };
+      latestColumnWidthsRef.current = nextWidths;
+      onColumnWidthChange(columnId, nextWidth);
+    };
+
+    const cleanup = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+    };
+
+    const handleMouseUp = () => {
+      cleanup();
+      onColumnWidthsCommit(latestColumnWidthsRef.current);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, [columnWidths, onColumnWidthChange, onColumnWidthsCommit]);
+
   const getColumnSortableId = (groupKey: string, columnId: AdvancedTaskColumnId) => `column:${groupKey}:${columnId}`;
   const getRowSortableId = (groupKey: string, taskId: string) => `row:${groupKey}:${taskId}`;
   const getColumnIdFromSortableId = (id: unknown): AdvancedTaskColumnId | null => {
@@ -124,7 +193,18 @@ const AdvancedTaskTable = ({
             <span className="rounded-full bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground md:bg-transparent md:px-0 md:py-0 md:text-xs">{group.count}</span>
           </div>
           <div className="overflow-x-auto">
-            <Table className="min-w-[720px] md:min-w-[760px]">
+            <Table className="min-w-[720px] md:min-w-[var(--advanced-table-width)]" style={tableStyle}>
+              <colgroup>
+                <col className="md:[width:48px]" />
+                {columns.map((columnId) => (
+                  <col
+                    key={columnId}
+                    className="md:[width:var(--advanced-column-width)]"
+                    style={createColumnStyle(columnId)}
+                  />
+                ))}
+                <col className="md:[width:112px]" />
+              </colgroup>
               <TableHeader>
                 <TableRow className="border-border/50 bg-background/35 hover:bg-background/35 md:bg-transparent md:hover:bg-transparent">
                   <TableHead className="w-16 px-3 md:w-9 md:px-2"></TableHead>
@@ -143,12 +223,16 @@ const AdvancedTaskTable = ({
                           onGroupByChange={onGroupByChange}
                           onSetColumnFilter={onSetColumnFilter}
                           onClearColumnFilter={onClearColumnFilter}
+                          width={columnWidths[columnId]}
+                          minWidth={ADVANCED_TASK_COLUMN_SIZING[columnId].minWidth}
+                          maxWidth={ADVANCED_TASK_COLUMN_SIZING[columnId].maxWidth}
+                          onResizeStart={handleColumnResizeStart}
                         />
                       ))}
                     </SortableContext>
                   ) : (
                     columns.map((columnId) => (
-                      <TableHead key={columnId} className="h-10 whitespace-nowrap px-2 text-xs font-light tracking-wide md:h-9">
+                      <TableHead key={columnId} className="group relative h-10 whitespace-nowrap px-2 text-xs font-light tracking-wide md:h-9">
                         <ColumnHeaderMenu
                           columnId={columnId}
                           sort={sort}
@@ -169,6 +253,19 @@ const AdvancedTaskTable = ({
                             {getColumn(columnId)?.label || columnId}
                           </button>
                         </ColumnHeaderMenu>
+                        <button
+                          type="button"
+                          className="absolute right-0 top-0 z-10 hidden h-full w-3 cursor-col-resize items-center justify-center md:flex"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleColumnResizeStart(columnId, event.clientX);
+                          }}
+                          aria-label={`${getColumn(columnId)?.label || columnId} kolon genişliğini değiştir`}
+                          title="Kolon genişliğini değiştir"
+                        >
+                          <span className="h-5 w-px rounded-full bg-muted-foreground/40 opacity-70 transition-colors group-hover:bg-muted-foreground/70 group-hover:opacity-100" />
+                        </button>
                       </TableHead>
                     ))
                   )}
