@@ -12,6 +12,7 @@ import { loadTableConfig, saveTableConfig } from "./storage";
 import type { AdvancedTaskColumnId, ColumnFilterOption, CurrentTableConfig, TableFilter, TableSort } from "./types";
 import AdvancedTaskTable from "./components/AdvancedTaskTable";
 import AdvancedTaskTableToolbar from "./components/AdvancedTaskTableToolbar";
+import { useAdvancedTableColumnWidths } from "./useAdvancedTableColumnWidths";
 import { arrayMove } from "@dnd-kit/sortable";
 import { formatTaskStatus } from "./statusLabels";
 
@@ -88,6 +89,7 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
   const [showHidden, setShowHidden] = useState(false);
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
   const [config, setConfig] = useState<CurrentTableConfig>(() => loadTableConfig(projectId));
+  const { columnWidths, setColumnWidth, persistColumnWidths } = useAdvancedTableColumnWidths(projectId);
 
   useEffect(() => {
     setConfig(loadTableConfig(projectId));
@@ -313,6 +315,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
           onGroupByChange={handleGroupByChange}
           onSetColumnFilter={handleSetColumnFilter}
           onClearColumnFilter={handleClearColumnFilter}
+          columnWidths={columnWidths}
+          onColumnWidthChange={setColumnWidth}
+          onColumnWidthsCommit={persistColumnWidths}
         />
         {hiddenDoneCount > 0 && (
           <button
@@ -361,6 +366,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
             onGroupByChange={handleGroupByChange}
             onSetColumnFilter={handleSetColumnFilter}
             onClearColumnFilter={handleClearColumnFilter}
+            columnWidths={columnWidths}
+            onColumnWidthChange={setColumnWidth}
+            onColumnWidthsCommit={persistColumnWidths}
           />
         )}
       </div>
@@ -452,6 +460,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onGroupByChange={handleGroupByChange}
               onSetColumnFilter={handleSetColumnFilter}
               onClearColumnFilter={handleClearColumnFilter}
+              columnWidths={columnWidths}
+              onColumnWidthChange={setColumnWidth}
+              onColumnWidthsCommit={persistColumnWidths}
             />
           )}
 
@@ -480,6 +491,9 @@ const AdvancedTaskTableView = ({ projectId }: AdvancedTaskTableViewProps) => {
               onGroupByChange={handleGroupByChange}
               onSetColumnFilter={handleSetColumnFilter}
               onClearColumnFilter={handleClearColumnFilter}
+              columnWidths={columnWidths}
+              onColumnWidthChange={setColumnWidth}
+              onColumnWidthsCommit={persistColumnWidths}
             />
           )}
           {renderDoneSection()}

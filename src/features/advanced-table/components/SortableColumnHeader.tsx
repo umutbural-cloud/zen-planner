@@ -17,6 +17,10 @@ type SortableColumnHeaderProps = {
   onGroupByChange: (columnId: AdvancedTaskColumnId | null) => void;
   onSetColumnFilter: (filter: TableFilter) => void;
   onClearColumnFilter: (columnId: AdvancedTaskColumnId) => void;
+  width: number;
+  minWidth: number;
+  maxWidth: number;
+  onResizeStart: (columnId: AdvancedTaskColumnId, startX: number) => void;
 };
 
 const SortableColumnHeader = ({
@@ -30,6 +34,10 @@ const SortableColumnHeader = ({
   onGroupByChange,
   onSetColumnFilter,
   onClearColumnFilter,
+  width,
+  minWidth,
+  maxWidth,
+  onResizeStart,
 }: SortableColumnHeaderProps) => {
   const column = getColumn(columnId);
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({ id: sortableId });
@@ -44,7 +52,7 @@ const SortableColumnHeader = ({
     <TableHead
       ref={setNodeRef}
       style={style}
-      className="h-9 whitespace-nowrap px-2 text-xs font-light tracking-wide"
+      className="group relative h-9 whitespace-nowrap px-2 text-xs font-light tracking-wide"
     >
       <button
         type="button"
@@ -78,6 +86,19 @@ const SortableColumnHeader = ({
           <ChevronDown className="h-3 w-3 opacity-60" />
         </button>
       </ColumnHeaderMenu>
+      <button
+        type="button"
+        className="absolute right-0 top-0 z-10 hidden h-full w-3 cursor-col-resize items-center justify-center md:flex"
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onResizeStart(columnId, event.clientX);
+        }}
+        aria-label={`${column?.label || columnId} kolon genişliğini değiştir`}
+        title={`Kolon genişliğini değiştir (${width}px, min ${minWidth}px, max ${maxWidth}px)`}
+      >
+        <span className="h-5 w-px rounded-full bg-muted-foreground/40 opacity-70 transition-colors group-hover:bg-muted-foreground/70 group-hover:opacity-100" />
+      </button>
     </TableHead>
   );
 };
