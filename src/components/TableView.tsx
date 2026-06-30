@@ -202,30 +202,34 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
   };
 
   return (
-    <>
-      <TableRow
-        ref={setNodeRef}
-        style={style}
-        className={`group cursor-pointer ${expanded && subtasks.length > 0 ? "border-b-0" : ""}`}
-        onClick={handleRowClick}
-        onDoubleClick={handleRowDoubleClick}
-      >
-        <TableCell className="py-1 px-1 sm:px-2 w-7 sm:w-8" onClick={(e) => e.stopPropagation()}>
-          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground touch-none">
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
-        </TableCell>
-        <TableCell className="py-1 px-1 sm:px-2 w-8 sm:w-10" onClick={(e) => e.stopPropagation()}>
-          <Checkbox
-            checked={task.status === "done"}
-            onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
-          />
-        </TableCell>
-        <TableCell className="text-sm font-light px-1 sm:px-2 py-1">
-          <div className="flex items-center gap-1.5">
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className="group cursor-pointer"
+      onClick={handleRowClick}
+      onDoubleClick={handleRowDoubleClick}
+    >
+      <TableCell colSpan={4} className="!p-0 sm:!p-0">
+        <div className="grid grid-cols-[2rem_2.5rem_minmax(0,1fr)_6rem]">
+          <div className="flex h-[60px] min-h-[60px] items-center px-1 sm:px-2" onClick={(e) => e.stopPropagation()}>
+            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground touch-none">
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="flex h-[60px] min-h-[60px] items-center px-1 sm:px-2" onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={task.status === "done"}
+              onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
+            />
+          </div>
+          <div className="flex h-[60px] min-h-[60px] min-w-0 items-center gap-1.5 px-1 text-sm font-light sm:px-2">
             {subtasks.length > 0 && (
               <button
-                onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setExpanded(!expanded);
+                }}
                 className="text-muted-foreground/60 hover:text-foreground"
               >
                 {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -242,7 +246,7 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
                 flush(title);
               }}
               onChange={(e) => handleChange(e.target.value)}
-              className="bg-transparent border-none p-0 h-7 text-sm font-light focus-visible:ring-0"
+              className="h-8 border-none bg-transparent p-0 text-sm font-light focus-visible:ring-0"
             />
             {subtasks.length > 0 && (
               <span className="text-[10px] text-muted-foreground/60 shrink-0">
@@ -250,9 +254,7 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
               </span>
             )}
           </div>
-        </TableCell>
-        <TableCell className="w-20 sm:w-24 px-1 sm:px-2 py-1 text-right" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+          <div className="flex h-[60px] min-h-[60px] items-center justify-end gap-1 px-1 text-right transition-opacity sm:px-2 sm:opacity-0 sm:group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => onOpen(task)}
               className="text-muted-foreground hover:text-foreground p-1"
@@ -275,51 +277,44 @@ const SortableRow = ({ task, subtasks, onUpdate, onDelete, onToggleHidden, onOpe
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
-        </TableCell>
-      </TableRow>
 
-      {expanded && subtasks.length > 0 && (
-        <TableRow className="bg-card/10 hover:bg-card/10">
-          <TableCell colSpan={4} className="px-0 py-0">
-            <div className="ml-[2.75rem] sm:ml-[3.25rem] mr-2 mb-1 border-l border-border/70 pl-2">
-              <div className="space-y-0.5 py-0.5">
-                {subtasks.map((s) => (
-                  <div
-                    key={s.id}
-                    className="group/subtask flex min-h-7 items-center gap-2 rounded-sm px-1.5 py-0.5 text-sm hover:bg-accent/40"
+          {expanded && subtasks.length > 0 && (
+            <div className="col-start-3 col-span-2 -mt-1 mb-1 space-y-0.5 pr-2">
+              {subtasks.map((s) => (
+                <div
+                  key={s.id}
+                  className="group/subtask flex min-h-6 items-center gap-2 rounded-sm px-1 py-0 text-sm leading-5 text-muted-foreground hover:bg-accent/20 hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpen(s);
+                  }}
+                >
+                  <Checkbox
+                    checked={s.status === "done"}
+                    onClick={(e) => e.stopPropagation()}
+                    onCheckedChange={(c) => onUpdate(s.id, { status: c ? "done" : "todo" })}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className={`min-w-0 flex-1 truncate font-light ${s.status === "done" ? "line-through text-muted-foreground/70" : ""}`}>
+                    {s.title}
+                  </span>
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onOpen(s);
+                      onDelete(s.id);
                     }}
+                    className="p-1 text-muted-foreground opacity-100 transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover/subtask:opacity-100"
+                    title="Sil"
                   >
-                    <span className="h-px w-2.5 shrink-0 bg-border/80" aria-hidden="true" />
-                    <Checkbox
-                      checked={s.status === "done"}
-                      onClick={(e) => e.stopPropagation()}
-                      onCheckedChange={(c) => onUpdate(s.id, { status: c ? "done" : "todo" })}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span className={`min-w-0 flex-1 truncate text-xs font-light ${s.status === "done" ? "line-through text-muted-foreground" : ""}`}>
-                      {s.title}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(s.id);
-                      }}
-                      className="p-1 text-muted-foreground opacity-100 transition-opacity hover:text-destructive sm:opacity-0 sm:group-hover/subtask:opacity-100"
-                      title="Sil"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
             </div>
-          </TableCell>
-        </TableRow>
-      )}
-    </>
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
   );
 };
 

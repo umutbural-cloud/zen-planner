@@ -4,7 +4,7 @@ import { useAuth } from "./useAuth";
 
 export type TrashItem = {
   id: string;
-  kind: "task" | "note" | "project" | "journal" | "backlog";
+  kind: "task" | "note" | "quick_note" | "project" | "journal" | "backlog";
   title: string;
   deleted_at: string;
 };
@@ -17,9 +17,10 @@ export const useTrash = () => {
   const fetchAll = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [tasks, notes, projects, journals, backlog] = await Promise.all([
+    const [tasks, notes, quickNotes, projects, journals, backlog] = await Promise.all([
       supabase.from("tasks").select("id, title, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
       supabase.from("notes").select("id, title, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
+      supabase.from("notebook_notes").select("id, title, deleted_at").eq("user_id", user.id).eq("type", "quick").not("deleted_at", "is", null),
       supabase.from("projects").select("id, name, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
       supabase.from("journal_entries").select("id, entry_date, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
       supabase.from("backlog_tasks").select("id, title, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
@@ -27,6 +28,7 @@ export const useTrash = () => {
     const all: TrashItem[] = [
       ...(tasks.data || []).flatMap((t) => t.deleted_at ? [{ id: t.id, kind: "task" as const, title: t.title || "(başlıksız)", deleted_at: t.deleted_at }] : []),
       ...(notes.data || []).flatMap((n) => n.deleted_at ? [{ id: n.id, kind: "note" as const, title: n.title || "(başlıksız not)", deleted_at: n.deleted_at }] : []),
+      ...(quickNotes.data || []).flatMap((n) => n.deleted_at ? [{ id: n.id, kind: "quick_note" as const, title: n.title || "(anlık not)", deleted_at: n.deleted_at }] : []),
       ...(projects.data || []).flatMap((p) => p.deleted_at ? [{ id: p.id, kind: "project" as const, title: p.name || "(proje)", deleted_at: p.deleted_at }] : []),
       ...(journals.data || []).flatMap((j) => j.deleted_at ? [{ id: j.id, kind: "journal" as const, title: `Günlük: ${j.entry_date}`, deleted_at: j.deleted_at }] : []),
       ...(backlog.data || []).flatMap((b) => b.deleted_at ? [{ id: b.id, kind: "backlog" as const, title: b.title, deleted_at: b.deleted_at }] : []),
@@ -41,6 +43,7 @@ export const useTrash = () => {
     if (!user) return null;
     if (item.kind === "task") return supabase.from("tasks").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id);
     if (item.kind === "note") return supabase.from("notes").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id);
+    if (item.kind === "quick_note") return supabase.from("notebook_notes").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id);
     if (item.kind === "project") return supabase.from("projects").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id);
     if (item.kind === "journal") return supabase.from("journal_entries").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id);
     return supabase.from("backlog_tasks").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id);
@@ -50,6 +53,7 @@ export const useTrash = () => {
     if (!user) return null;
     if (item.kind === "task") return supabase.from("tasks").delete().eq("id", item.id).eq("user_id", user.id);
     if (item.kind === "note") return supabase.from("notes").delete().eq("id", item.id).eq("user_id", user.id);
+    if (item.kind === "quick_note") return supabase.from("notebook_notes").delete().eq("id", item.id).eq("user_id", user.id);
     if (item.kind === "project") return supabase.from("projects").delete().eq("id", item.id).eq("user_id", user.id);
     if (item.kind === "journal") return supabase.from("journal_entries").delete().eq("id", item.id).eq("user_id", user.id);
     return supabase.from("backlog_tasks").delete().eq("id", item.id).eq("user_id", user.id);
