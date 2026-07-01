@@ -74,6 +74,20 @@ const formatDateForDisplay = (value: string) => {
   return date ? format(date, "dd.MM.yyyy") : "Tarih seç";
 };
 
+const buildLocalDateTime = (dateValue: string, timeValue: string) => {
+  const date = parseStorageDate(dateValue);
+  const timeMatch = timeValue.match(/^(\d{1,2}):(\d{2})$/);
+  if (!date || !timeMatch) return null;
+
+  const hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  if (Number.isNaN(hour) || Number.isNaN(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+    return null;
+  }
+
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0, 0);
+};
+
 const entryPickerBaseClass =
   "items-center gap-2 rounded-none border-0 border-b border-border/60 bg-transparent px-0 pb-2 text-left text-[0.85rem] font-light leading-none outline-none transition-colors hover:border-foreground/40 focus:border-foreground/50 md:w-auto md:max-w-none md:rounded-sm md:border md:border-border/60 md:bg-background md:px-2 md:py-1 md:text-xs";
 
@@ -343,6 +357,13 @@ const Pomodoro = () => {
   const [sortBy, setSortBy] = useState<"started_desc" | "started_asc" | "dur_desc" | "dur_asc">("started_desc");
   const [showCategoriesDialog, setShowCategoriesDialog] = useState(false);
   const [openSwipe, setOpenSwipe] = useState<OpenSwipeState>(null);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [editDate, setEditDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [editStartTime, setEditStartTime] = useState("09:00");
+  const [editEndTime, setEditEndTime] = useState("09:25");
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [editNote, setEditNote] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
@@ -508,9 +529,79 @@ const Pomodoro = () => {
     toast.success("Çöp kutusuna taşındı.");
   };
 
-  const handleRequestEditSession = () => {
+  const handleRequestEditSession = (id: string) => {
+    const session = sessions.find((s) => s.id === id);
     setOpenSwipe(null);
-    toast("Düzenleme ekranı sonraki aşamada eklenecek.");
+    if (!session) {
+      toast.error("Düzenlenecek kayıt bulunamadı.");
+      return;
+    }
+
+    setEditingSession(session);
+    setEditDate(formatDateForStorage(parseISO(session.started_at)));
+    setEditStartTime(isoToTimeInput(session.started_at));
+    setEditEndTime(isoToTimeInput(session.ended_at));
+    setEditCategoryId(session.category_id);
+    setEditNote(session.note || "");
+  };
+
+  const closeEditDialog = () => {
+    if (isSavingEdit) return;
+    setEditingSession(null);
+  };
+
+  const saveEditSession = async () => {
+    if (!user || !editingSession) return;
+
+    const startDate = buildLocalDateTime(editDate, editStartTime);
+    const endDate = buildLocalDateTime(editDate, editEndTime);
+    if (!startDate || !endDate) {
+      toast.error("Geçerli tarih ve saat girin.");
+      return;
+    }
+    if (endDate.getTime() <= startDate.getTime()) {
+      toast.error("Bitiş başlangıçtan sonra olmalı.");
+      return;
+    }
+
+    const durationSeconds = Math.round((endDate.getTime() - startDate.getTime()) / 1000);
+    if (durationSeconds <= 0) {
+      toast.error("Süre sıfırdan büyük olmalı.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    const payload: PomodoroSessionUpdate = {
+      started_at: startDate.toISOString(),
+      ended_at: endDate.toISOString(),
+      duration_seconds: durationSeconds,
+      category_id: editCategoryId,
+      note: editNote.trim() || null,
+    };
+    const { data, error } = await supabase
+      .from("pomodoro_sessions")
+      .update(payload)
+      .eq("id", editingSession.id)
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .select("*")
+      .maybeSingle();
+
+    setIsSavingEdit(false);
+    if (error) {
+      toast.error("Kayıt güncellenemedi.");
+      return;
+    }
+    if (!data) {
+      toast.error("Kayıt bulunamadı veya çöp kutusuna taşınmış.");
+      return;
+    }
+
+    const updatedSession = data as Session;
+    setSessions((arr) => arr.map((session) => (session.id === updatedSession.id ? updatedSession : session)));
+    window.dispatchEvent(new Event("pomodoro:session-saved"));
+    setEditingSession(null);
+    toast.success("Kayıt güncellendi.");
   };
 
   const addManualSession = async () => {
@@ -889,6 +980,92 @@ const Pomodoro = () => {
             </div>
           </main>
         </div>
+
+      <Dialog open={Boolean(editingSession)} onOpenChange={(open) => { if (!open) closeEditDialog(); }}>
+        <DialogContent className="bottom-0 left-0 top-auto max-h-[88vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.5rem] border-border/60 bg-card p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-6">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle className="text-base font-light tracking-wide">Çalışmayı düzenle</DialogTitle>
+            <DialogDescription className="text-xs">
+              Başlık mevcut Pomodoro storage modelinde not alanı üzerinden tutulur.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 flex flex-col gap-1.5">
+                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tarih</label>
+                <EntryDatePicker value={editDate} onChange={setEditDate} />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Başlangıç</label>
+                <EntryTimePicker value={editStartTime} onChange={setEditStartTime} ariaLabel="Başlangıç saati seç" />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Bitiş</label>
+                <EntryTimePicker value={editEndTime} onChange={setEditEndTime} ariaLabel="Bitiş saati seç" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Başlık / Not</label>
+              <input
+                type="text"
+                value={editNote}
+                onChange={(event) => setEditNote(event.target.value)}
+                placeholder={editingSession?.kind === "break" ? "Mola" : "Odak çalışması"}
+                className="w-full rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background/70"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className="block shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Kategori</span>
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <button
+                  type="button"
+                  onClick={() => setEditCategoryId(null)}
+                  className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    editCategoryId === null ? "border-foreground/30 bg-accent" : "border-border/60 hover:bg-accent/50"
+                  }`}
+                >
+                  Yok
+                </button>
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setEditCategoryId(category.id)}
+                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      editCategoryId === category.id ? "border-foreground/30 bg-accent" : "border-border/60 hover:bg-accent/50"
+                    }`}
+                  >
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={closeEditDialog}
+                disabled={isSavingEdit}
+                className="rounded-xl border border-border/60 px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={saveEditSession}
+                disabled={isSavingEdit}
+                className="rounded-xl bg-foreground px-3 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSavingEdit ? "Kaydediliyor..." : "Kaydet"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Categories management dialog */}
       <Dialog open={showCategoriesDialog} onOpenChange={setShowCategoriesDialog}>
