@@ -386,6 +386,7 @@ const Pomodoro = () => {
       .from("pomodoro_sessions")
       .select("*")
       .eq("user_id", user.id)
+      .is("deleted_at", null)
       .order("started_at", { ascending: false })
       .limit(500);
     setSessions((data || []) as Session[]);
@@ -479,8 +480,27 @@ const Pomodoro = () => {
 
   const deleteSession = async (id: string) => {
     if (!user) return;
-    await supabase.from("pomodoro_sessions").delete().eq("id", id).eq("user_id", user.id);
+    const { data, error } = await supabase
+      .from("pomodoro_sessions")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      toast.error("Çöp kutusuna taşınamadı.");
+      return;
+    }
+    if (!data) {
+      toast.error("Kayıt bulunamadı veya zaten taşınmış.");
+      return;
+    }
+
     setSessions((arr) => arr.filter((s) => s.id !== id));
+    window.dispatchEvent(new Event("pomodoro:session-saved"));
+    toast.success("Çöp kutusuna taşındı.");
   };
 
   const addManualSession = async () => {

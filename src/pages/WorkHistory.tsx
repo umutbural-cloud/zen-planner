@@ -384,6 +384,7 @@ const WorkHistory = () => {
           .select("id, started_at, duration_seconds, kind, note, category_id")
           .eq("user_id", user.id)
           .eq("kind", "work")
+          .is("deleted_at", null)
           .order("started_at", { ascending: false })
           .limit(5000);
         setSessions(((data || []) as PomodoroSessionRow[]) as Session[]);
