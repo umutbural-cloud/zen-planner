@@ -543,6 +543,7 @@ export type Database = {
           active_session_token: string | null
           category_id: string | null
           created_at: string
+          deleted_at: string | null
           duration_seconds: number
           ended_at: string
           id: string
@@ -558,6 +559,7 @@ export type Database = {
           active_session_token?: string | null
           category_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           duration_seconds: number
           ended_at: string
           id?: string
@@ -573,6 +575,7 @@ export type Database = {
           active_session_token?: string | null
           category_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           duration_seconds?: number
           ended_at?: string
           id?: string

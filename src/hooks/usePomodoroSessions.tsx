@@ -28,6 +28,7 @@ export const usePomodoroSessions = (rangeStart: Date, rangeEnd: Date) => {
       .select("*")
       .eq("user_id", user.id)
       .eq("kind", "work")
+      .is("deleted_at", null)
       .gte("started_at", startIso)
       .lte("started_at", endIso)
       .order("started_at", { ascending: true });

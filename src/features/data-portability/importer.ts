@@ -41,7 +41,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     "id", "completed_at", "completion_date", "habit_id", "stable_export_id", "user_id",
   ]),
   pomodoro_sessions: new Set([
-    "id", "category_id", "created_at", "duration_seconds", "ended_at", "kind", "note",
+    "id", "category_id", "created_at", "deleted_at", "duration_seconds", "ended_at", "kind", "note",
     "stable_export_id", "started_at", "task_id", "updated_at", "user_id",
   ]),
   backlog_tasks: new Set([

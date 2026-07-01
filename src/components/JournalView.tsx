@@ -127,6 +127,7 @@ const JournalView = ({ date, onDateChange }: { date: string; onDateChange: (d: s
         .select("id, started_at, ended_at, duration_seconds, kind, note, category_id")
         .eq("user_id", user.id)
         .eq("kind", "work")
+        .is("deleted_at", null)
         .gte("started_at", start.toISOString())
         .lte("started_at", end.toISOString())
         .order("started_at", { ascending: false });

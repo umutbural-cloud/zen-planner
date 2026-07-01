@@ -49,6 +49,7 @@ const JournalWorkSessions = ({ date }: { date: string }) => {
       .select("*")
       .eq("user_id", user.id)
       .eq("kind", "work")
+      .is("deleted_at", null)
       .gte("started_at", start.toISOString())
       .lte("started_at", end.toISOString())
       .order("started_at", { ascending: false });

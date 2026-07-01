@@ -1,4 +1,4 @@
-import { Trash2, RotateCcw, FileText, Folder, ListChecks, BookOpen, Package, StickyNote } from "lucide-react";
+import { Trash2, RotateCcw, FileText, Folder, ListChecks, BookOpen, Package, StickyNote, Clock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTrash, TrashItem } from "@/hooks/useTrash";
@@ -12,6 +12,7 @@ const kindMeta: Record<TrashItem["kind"], { label: string; icon: LucideIcon }> =
   project: { label: "Proje", icon: Folder },
   journal: { label: "Günlük", icon: BookOpen },
   backlog: { label: "Heybe", icon: Package },
+  pomodoro_session: { label: "Pomodoro", icon: Clock },
 };
 
 const TrashView = () => {
