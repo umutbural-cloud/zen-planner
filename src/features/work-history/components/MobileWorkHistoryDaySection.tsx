@@ -119,6 +119,17 @@ const SwipeableMobileWorkHistoryRow = ({
   const openOffset = getOpenOffset(entry.id, openSwipe);
   const currentOffset = isDragging ? dragX : openOffset;
   const isOpen = openSwipe?.id === entry.id;
+  const activeSide: SwipeSide | null = isDragging
+    ? currentOffset > 0
+      ? "edit"
+      : currentOffset < 0
+        ? "delete"
+        : null
+    : isOpen
+      ? openSwipe?.side ?? null
+      : null;
+  const editVisible = activeSide === "edit";
+  const deleteVisible = activeSide === "delete";
 
   const capturePointer = (event: PointerEvent<HTMLDivElement>) => {
     try {
@@ -222,26 +233,30 @@ const SwipeableMobileWorkHistoryRow = ({
         <button
           type="button"
           aria-label="Pomodoro kaydını düzenle"
-          tabIndex={isOpen && openSwipe?.side === "edit" ? 0 : -1}
+          tabIndex={editVisible ? 0 : -1}
           onClick={(event) => {
             event.stopPropagation();
             onOpenSwipeChange(null);
             onRequestEdit?.(entry.id);
           }}
-          className="flex w-[72px] shrink-0 items-center justify-center bg-accent text-foreground transition-colors hover:bg-accent/80"
+          className={`flex w-[72px] shrink-0 items-center justify-center bg-accent text-foreground transition-opacity ${
+            editVisible ? "pointer-events-auto opacity-100 hover:bg-accent/80" : "pointer-events-none opacity-0"
+          }`}
         >
           <Pencil className="h-5 w-5" aria-hidden="true" />
         </button>
         <button
           type="button"
           aria-label="Pomodoro kaydını sil"
-          tabIndex={isOpen && openSwipe?.side === "delete" ? 0 : -1}
+          tabIndex={deleteVisible ? 0 : -1}
           onClick={(event) => {
             event.stopPropagation();
             onOpenSwipeChange(null);
             onRequestDelete?.(entry.id);
           }}
-          className="flex w-[72px] shrink-0 items-center justify-center bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90"
+          className={`flex w-[72px] shrink-0 items-center justify-center bg-destructive text-destructive-foreground transition-opacity ${
+            deleteVisible ? "pointer-events-auto opacity-100 hover:bg-destructive/90" : "pointer-events-none opacity-0"
+          }`}
         >
           <Trash2 className="h-5 w-5" aria-hidden="true" />
         </button>
@@ -253,7 +268,7 @@ const SwipeableMobileWorkHistoryRow = ({
         onPointerUp={finishDrag}
         onPointerCancel={cancelDrag}
         onClick={handleRowClick}
-        className={`relative z-10 flex min-h-[72px] items-center gap-3 bg-card/85 px-3.5 py-3 ${
+        className={`relative z-10 flex min-h-[72px] items-center gap-3 bg-card px-3.5 py-3 ${
           isDragging ? "" : "transition-transform duration-200 ease-out"
         }`}
         style={{ transform: `translateX(${currentOffset}px)`, touchAction: "pan-y" }}
