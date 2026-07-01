@@ -19,7 +19,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { MobileWorkHistoryDaySection, type MobileWorkHistoryEntry } from "@/features/work-history/components/MobileWorkHistoryDaySection";
+import {
+  MobileWorkHistoryDaySection,
+  type MobileWorkHistoryEntry,
+  type OpenSwipeState,
+} from "@/features/work-history/components/MobileWorkHistoryDaySection";
 
 type Session = {
   id: string;
@@ -338,6 +342,7 @@ const Pomodoro = () => {
   const [filterCategoryId, setFilterCategoryId] = useState<string | "all">("all");
   const [sortBy, setSortBy] = useState<"started_desc" | "started_asc" | "dur_desc" | "dur_asc">("started_desc");
   const [showCategoriesDialog, setShowCategoriesDialog] = useState(false);
+  const [openSwipe, setOpenSwipe] = useState<OpenSwipeState>(null);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
@@ -501,6 +506,11 @@ const Pomodoro = () => {
     setSessions((arr) => arr.filter((s) => s.id !== id));
     window.dispatchEvent(new Event("pomodoro:session-saved"));
     toast.success("Çöp kutusuna taşındı.");
+  };
+
+  const handleRequestEditSession = () => {
+    setOpenSwipe(null);
+    toast("Düzenleme ekranı sonraki aşamada eklenecek.");
   };
 
   const addManualSession = async () => {
@@ -867,6 +877,9 @@ const Pomodoro = () => {
                           onUpdateTimes={updateTimes}
                           onUpdateCategory={updateSessionCategory}
                           onDelete={deleteSession}
+                          openSwipe={openSwipe}
+                          onOpenSwipeChange={setOpenSwipe}
+                          onRequestEdit={handleRequestEditSession}
                         />
                       );
                     })}
@@ -907,6 +920,9 @@ const DayGroup = ({
   onUpdateTimes,
   onUpdateCategory,
   onDelete,
+  openSwipe,
+  onOpenSwipeChange,
+  onRequestEdit,
 }: {
   day: string;
   items: Session[];
@@ -918,6 +934,9 @@ const DayGroup = ({
   onUpdateTimes: (id: string, startedAt: string, endedAt: string) => void;
   onUpdateCategory: (id: string, category_id: string | null) => void;
   onDelete: (id: string) => void;
+  openSwipe: OpenSwipeState;
+  onOpenSwipeChange: (next: OpenSwipeState) => void;
+  onRequestEdit: (id: string) => void;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const visibleItems = isToday || expanded ? items : items.slice(0, 3);
@@ -955,6 +974,10 @@ const DayGroup = ({
           totalSeconds={totalSeconds}
           entries={mobileEntries}
           footer={toggleFooter}
+          onRequestDelete={onDelete}
+          onRequestEdit={onRequestEdit}
+          openSwipe={openSwipe}
+          onOpenSwipeChange={onOpenSwipeChange}
         />
       </div>
 
