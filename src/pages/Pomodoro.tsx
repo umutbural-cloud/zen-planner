@@ -982,86 +982,88 @@ const Pomodoro = () => {
         </div>
 
       <Dialog open={Boolean(editingSession)} onOpenChange={(open) => { if (!open) closeEditDialog(); }}>
-        <DialogContent className="bottom-0 left-0 top-auto max-h-[88vh] max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-t-[1.5rem] border-border/60 bg-card p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:bottom-auto sm:left-[50%] sm:top-[50%] sm:max-w-md sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-6">
-          <DialogHeader className="pr-8 text-left">
-            <DialogTitle className="text-base font-light tracking-wide">Çalışmayı düzenle</DialogTitle>
-            <DialogDescription className="text-xs">
-              Başlık mevcut Pomodoro storage modelinde not alanı üzerinden tutulur.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="!bottom-0 !left-0 !right-0 !top-auto !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-hidden rounded-b-none rounded-t-[1.75rem] border-border/60 bg-card p-0 shadow-2xl sm:!bottom-auto sm:!left-1/2 sm:!right-auto sm:!top-1/2 sm:!w-full sm:!max-w-lg sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-3xl">
+          <div className="max-h-[85vh] w-full min-w-0 overflow-y-auto px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6">
+            <DialogHeader className="min-w-0 pr-9 text-left">
+              <DialogTitle className="text-base font-light tracking-wide">Çalışmayı düzenle</DialogTitle>
+              <DialogDescription className="text-xs">
+                Başlık mevcut Pomodoro storage modelinde not alanı üzerinden tutulur.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 flex flex-col gap-1.5">
-                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tarih</label>
-                <EntryDatePicker value={editDate} onChange={setEditDate} />
+            <div className="mt-5 space-y-5">
+              <div className="grid w-full min-w-0 grid-cols-2 gap-4">
+                <div className="col-span-2 flex min-w-0 flex-col gap-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tarih</label>
+                  <EntryDatePicker value={editDate} onChange={setEditDate} />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Başlangıç</label>
+                  <EntryTimePicker value={editStartTime} onChange={setEditStartTime} ariaLabel="Başlangıç saati seç" />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Bitiş</label>
+                  <EntryTimePicker value={editEndTime} onChange={setEditEndTime} ariaLabel="Bitiş saati seç" />
+                </div>
               </div>
+
               <div className="flex min-w-0 flex-col gap-1.5">
-                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Başlangıç</label>
-                <EntryTimePicker value={editStartTime} onChange={setEditStartTime} ariaLabel="Başlangıç saati seç" />
+                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Başlık / Not</label>
+                <input
+                  type="text"
+                  value={editNote}
+                  onChange={(event) => setEditNote(event.target.value)}
+                  placeholder={editingSession?.kind === "break" ? "Mola" : "Odak çalışması"}
+                  className="w-full min-w-0 rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background/70"
+                />
               </div>
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Bitiş</label>
-                <EntryTimePicker value={editEndTime} onChange={setEditEndTime} ariaLabel="Bitiş saati seç" />
-              </div>
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Başlık / Not</label>
-              <input
-                type="text"
-                value={editNote}
-                onChange={(event) => setEditNote(event.target.value)}
-                placeholder={editingSession?.kind === "break" ? "Mola" : "Odak çalışması"}
-                className="w-full rounded-xl border border-border/50 bg-muted/30 px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground/30 focus:bg-background/70"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <span className="block shrink-0 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Kategori</span>
-              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                <button
-                  type="button"
-                  onClick={() => setEditCategoryId(null)}
-                  className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    editCategoryId === null ? "border-foreground/30 bg-accent" : "border-border/60 hover:bg-accent/50"
-                  }`}
-                >
-                  Yok
-                </button>
-                {categories.map((category) => (
+              <div className="space-y-2">
+                <span className="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Kategori</span>
+                <div className="flex w-full min-w-0 flex-wrap gap-2">
                   <button
-                    key={category.id}
                     type="button"
-                    onClick={() => setEditCategoryId(category.id)}
-                    className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                      editCategoryId === category.id ? "border-foreground/30 bg-accent" : "border-border/60 hover:bg-accent/50"
+                    onClick={() => setEditCategoryId(null)}
+                    className={`max-w-full rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      editCategoryId === null ? "border-foreground/30 bg-accent" : "border-border/60 hover:bg-accent/50"
                     }`}
                   >
-                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
-                    {category.name}
+                    Yok
                   </button>
-                ))}
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setEditCategoryId(category.id)}
+                      className={`flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                        editCategoryId === category.id ? "border-foreground/30 bg-accent" : "border-border/60 hover:bg-accent/50"
+                      }`}
+                    >
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
+                      <span className="min-w-0 truncate">{category.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <button
-                type="button"
-                onClick={closeEditDialog}
-                disabled={isSavingEdit}
-                className="rounded-xl border border-border/60 px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                İptal
-              </button>
-              <button
-                type="button"
-                onClick={saveEditSession}
-                disabled={isSavingEdit}
-                className="rounded-xl bg-foreground px-3 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSavingEdit ? "Kaydediliyor..." : "Kaydet"}
-              </button>
+              <div className="grid w-full grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={closeEditDialog}
+                  disabled={isSavingEdit}
+                  className="w-full rounded-xl border border-border/60 px-3 py-2.5 text-sm transition-colors hover:bg-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEditSession}
+                  disabled={isSavingEdit}
+                  className="w-full rounded-xl bg-foreground px-3 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingEdit ? "Kaydediliyor..." : "Kaydet"}
+                </button>
+              </div>
             </div>
           </div>
         </DialogContent>
