@@ -799,6 +799,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           deleted_at: string | null
+          deleted_by_parent_id: string | null
           description: string | null
           end_date: string | null
           end_time: string | null
@@ -824,6 +825,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           deleted_at?: string | null
+          deleted_by_parent_id?: string | null
           description?: string | null
           end_date?: string | null
           end_time?: string | null
@@ -849,6 +851,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           deleted_at?: string | null
+          deleted_by_parent_id?: string | null
           description?: string | null
           end_date?: string | null
           end_time?: string | null
@@ -874,6 +877,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "pomodoro_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_deleted_by_parent_id_fkey"
+            columns: ["deleted_by_parent_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {

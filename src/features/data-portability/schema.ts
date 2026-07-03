@@ -33,7 +33,7 @@ export const TABLES: TableSpec[] = [
   { name: "habit_categories", fk: {} },
   { name: "pomodoro_categories", fk: {} },
   { name: "notes", fk: { project_id: "projects" } },
-  { name: "tasks", fk: { project_id: "projects", parent_block_id: "tasks", category_id: "pomodoro_categories" } },
+  { name: "tasks", fk: { project_id: "projects", parent_block_id: "tasks", deleted_by_parent_id: "tasks", category_id: "pomodoro_categories" } },
   { name: "habits", fk: { project_id: "projects", category_id: "habit_categories" } },
   { name: "habit_completions", fk: { habit_id: "habits" } },
   { name: "pomodoro_sessions", fk: { task_id: "tasks", category_id: "pomodoro_categories" } },

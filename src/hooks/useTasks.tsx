@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useUndo } from "./useUndo";
 import type { Database } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
 export type TaskStatus = Database["public"]["Enums"]["task_status"];
 export type TaskColor = "gray" | "yellow" | "red" | "blue" | "green";
@@ -28,6 +29,7 @@ export type Task = {
   position: number;
   hidden: boolean;
   deleted_at: string | null;
+  deleted_by_parent_id: string | null;
   created_at: string;
   completed_at: string | null;
   color: TaskColor;
@@ -199,18 +201,74 @@ export const useTasks = (projectId: string | null) => {
     if (!user) return;
     const before = tasks.find((t) => t.id === id);
     if (!before) return;
-    await supabase.from("pomodoro_sessions").delete().eq("task_id", id).eq("user_id", user.id);
-    await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    const deletedAt = new Date().toISOString();
+    const isSubtask = Boolean(before.parent_block_id);
+    const cascadeChildren = isSubtask ? [] : tasks.filter((t) => t.parent_block_id === id && !t.deleted_at);
+    const taskPayload: TaskUpdate = { deleted_at: deletedAt, deleted_by_parent_id: null };
+    const childPayload: TaskUpdate = { deleted_at: deletedAt, deleted_by_parent_id: id };
+
+    const rollbackDelete = async () => {
+      await supabase.from("tasks").update({ deleted_at: null, deleted_by_parent_id: null }).eq("id", id).eq("user_id", user.id);
+      if (!isSubtask) {
+        await supabase
+          .from("tasks")
+          .update({ deleted_at: null, deleted_by_parent_id: null })
+          .eq("user_id", user.id)
+          .eq("parent_block_id", id)
+          .eq("deleted_by_parent_id", id);
+      }
+    };
+
+    try {
+      const { error: taskError } = await supabase.from("tasks").update(taskPayload).eq("id", id).eq("user_id", user.id);
+      if (taskError) throw taskError;
+
+      if (!isSubtask) {
+        const { error: childError } = await supabase
+          .from("tasks")
+          .update(childPayload)
+          .eq("user_id", user.id)
+          .eq("parent_block_id", id)
+          .is("deleted_at", null);
+        if (childError) throw childError;
+      }
+    } catch (error) {
+      await rollbackDelete();
+      await fetchTasks();
+      toast.error("Görev silinemedi.");
+      return;
+    }
+
+    setTasks((prev) => prev.filter((t) => t.id !== id && (isSubtask || t.parent_block_id !== id)));
     push({
       label: "Görev silindi",
       undo: async () => {
-        await supabase.from("tasks").update({ deleted_at: null }).eq("id", id).eq("user_id", user.id);
-        setTasks((prev) => [...prev, { ...before, deleted_at: null }].sort((a, b) => a.position - b.position));
+        await supabase.from("tasks").update({ deleted_at: null, deleted_by_parent_id: null }).eq("id", id).eq("user_id", user.id);
+        if (!isSubtask) {
+          await supabase
+            .from("tasks")
+            .update({ deleted_at: null, deleted_by_parent_id: null })
+            .eq("user_id", user.id)
+            .eq("deleted_by_parent_id", id);
+        }
+        setTasks((prev) =>
+          [...prev, { ...before, deleted_at: null, deleted_by_parent_id: null }, ...cascadeChildren.map((child) => ({ ...child, deleted_at: null, deleted_by_parent_id: null }))]
+            .filter((task, index, arr) => arr.findIndex((candidate) => candidate.id === task.id) === index)
+            .sort((a, b) => a.position - b.position)
+        );
       },
       redo: async () => {
-        await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id).eq("user_id", user.id);
-        setTasks((prev) => prev.filter((t) => t.id !== id));
+        const nextDeletedAt = new Date().toISOString();
+        await supabase.from("tasks").update({ deleted_at: nextDeletedAt, deleted_by_parent_id: null }).eq("id", id).eq("user_id", user.id);
+        if (!isSubtask) {
+          await supabase
+            .from("tasks")
+            .update({ deleted_at: nextDeletedAt, deleted_by_parent_id: id })
+            .eq("user_id", user.id)
+            .eq("parent_block_id", id)
+            .is("deleted_at", null);
+        }
+        setTasks((prev) => prev.filter((t) => t.id !== id && (isSubtask || t.parent_block_id !== id)));
       },
     });
   };
