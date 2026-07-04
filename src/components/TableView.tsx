@@ -70,6 +70,7 @@ const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onDelete, onOpen, ca
   const openOffset = isSwipeOpen ? -TASK_SWIPE_ACTION_WIDTH : 0;
   const currentSwipeOffset = isSwipeDragging ? dragX : openOffset;
   const deleteVisible = currentSwipeOffset < 0 || isSwipeOpen;
+  const deleteActionEnabled = isSwipeOpen;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -157,6 +158,14 @@ const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onDelete, onOpen, ca
     setDragX(0);
   };
 
+  const closeSwipe = () => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement && activeElement.closest(`[data-task-swipe-action="${task.id}"]`)) {
+      activeElement.blur();
+    }
+    onOpenSwipeTaskChange(null);
+  };
+
   const handleOpenTask = () => {
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
@@ -178,22 +187,25 @@ const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onDelete, onOpen, ca
       }`}
     >
       <div
+        data-task-swipe-action={task.id}
         className={`absolute inset-y-0 right-0 flex w-[72px] items-stretch justify-center ${
           deleteVisible ? "bg-destructive" : ""
         }`}
-        aria-hidden={!deleteVisible}
       >
         <button
           type="button"
           aria-label="Görevi sil"
-          tabIndex={deleteVisible ? 0 : -1}
+          disabled={!deleteActionEnabled}
+          tabIndex={deleteActionEnabled ? 0 : -1}
           onClick={(event) => {
             event.stopPropagation();
-            onOpenSwipeTaskChange(null);
+            closeSwipe();
             onDelete(task.id);
           }}
           className={`flex w-[72px] shrink-0 items-center justify-center text-destructive-foreground transition-opacity ${
-            deleteVisible ? "pointer-events-auto opacity-100 hover:bg-destructive/90" : "pointer-events-none opacity-0"
+            deleteActionEnabled ? "pointer-events-auto hover:bg-destructive/90" : "pointer-events-none"
+          } ${
+            deleteVisible ? "opacity-100" : "opacity-0"
           }`}
         >
           <Trash2 className="h-5 w-5" aria-hidden="true" />
