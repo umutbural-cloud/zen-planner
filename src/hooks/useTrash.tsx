@@ -8,6 +8,7 @@ export type TrashItem = {
   kind: "task" | "note" | "quick_note" | "project" | "journal" | "backlog" | "pomodoro_session";
   title: string;
   deleted_at: string;
+  parent_block_id?: string | null;
 };
 
 type MutationResult = {
@@ -24,7 +25,7 @@ export const useTrash = () => {
     if (!user) return;
     setLoading(true);
     const [tasks, notes, quickNotes, projects, journals, backlog, pomodoroSessions] = await Promise.all([
-      supabase.from("tasks").select("id, title, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
+      supabase.from("tasks").select("id, title, deleted_at, parent_block_id").eq("user_id", user.id).not("deleted_at", "is", null).is("deleted_by_parent_id", null),
       supabase.from("notes").select("id, title, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
       supabase.from("notebook_notes").select("id, title, deleted_at").eq("user_id", user.id).eq("type", "quick").not("deleted_at", "is", null),
       supabase.from("projects").select("id, name, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
@@ -33,7 +34,7 @@ export const useTrash = () => {
       supabase.from("pomodoro_sessions").select("id, note, started_at, duration_seconds, deleted_at").eq("user_id", user.id).not("deleted_at", "is", null),
     ]);
     const all: TrashItem[] = [
-      ...(tasks.data || []).flatMap((t) => t.deleted_at ? [{ id: t.id, kind: "task" as const, title: t.title || "(başlıksız)", deleted_at: t.deleted_at }] : []),
+      ...(tasks.data || []).flatMap((t) => t.deleted_at ? [{ id: t.id, kind: "task" as const, title: t.title || "(başlıksız)", deleted_at: t.deleted_at, parent_block_id: t.parent_block_id }] : []),
       ...(notes.data || []).flatMap((n) => n.deleted_at ? [{ id: n.id, kind: "note" as const, title: n.title || "(başlıksız not)", deleted_at: n.deleted_at }] : []),
       ...(quickNotes.data || []).flatMap((n) => n.deleted_at ? [{ id: n.id, kind: "quick_note" as const, title: n.title || "(anlık not)", deleted_at: n.deleted_at }] : []),
       ...(projects.data || []).flatMap((p) => p.deleted_at ? [{ id: p.id, kind: "project" as const, title: p.name || "(proje)", deleted_at: p.deleted_at }] : []),
@@ -66,7 +67,34 @@ export const useTrash = () => {
       return { ok: true, pomodoroChanged: item.kind === "pomodoro_session" };
     };
 
-    if (item.kind === "task") return applyResult(await supabase.from("tasks").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
+    if (item.kind === "task") {
+      const restored = await supabase
+        .from("tasks")
+        .update({ deleted_at: null, deleted_by_parent_id: null })
+        .eq("id", item.id)
+        .eq("user_id", user.id)
+        .not("deleted_at", "is", null)
+        .select("id")
+        .maybeSingle();
+      const result = applyResult(restored);
+      if (!result.ok || item.parent_block_id) return result;
+
+      const { error } = await supabase
+        .from("tasks")
+        .update({ deleted_at: null, deleted_by_parent_id: null })
+        .eq("user_id", user.id)
+        .eq("deleted_by_parent_id", item.id);
+      if (error) {
+        await supabase
+          .from("tasks")
+          .update({ deleted_at: item.deleted_at, deleted_by_parent_id: null })
+          .eq("id", item.id)
+          .eq("user_id", user.id);
+        toast.error("Alt görevler geri yüklenemedi.");
+        return { ok: false };
+      }
+      return result;
+    }
     if (item.kind === "note") return applyResult(await supabase.from("notes").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
     if (item.kind === "quick_note") return applyResult(await supabase.from("notebook_notes").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
     if (item.kind === "project") return applyResult(await supabase.from("projects").update({ deleted_at: null }).eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
@@ -90,7 +118,21 @@ export const useTrash = () => {
       return { ok: true, pomodoroChanged: item.kind === "pomodoro_session" };
     };
 
-    if (item.kind === "task") return applyResult(await supabase.from("tasks").delete().eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
+    if (item.kind === "task") {
+      if (!item.parent_block_id) {
+        const { error: detachError } = await supabase
+          .from("tasks")
+          .update({ parent_block_id: null })
+          .eq("user_id", user.id)
+          .eq("parent_block_id", item.id)
+          .is("deleted_by_parent_id", null);
+        if (detachError) {
+          toast.error("Alt görev bağlantıları koparılamadı.");
+          return { ok: false };
+        }
+      }
+      return applyResult(await supabase.from("tasks").delete().eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
+    }
     if (item.kind === "note") return applyResult(await supabase.from("notes").delete().eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
     if (item.kind === "quick_note") return applyResult(await supabase.from("notebook_notes").delete().eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());
     if (item.kind === "project") return applyResult(await supabase.from("projects").delete().eq("id", item.id).eq("user_id", user.id).not("deleted_at", "is", null).select("id").maybeSingle());

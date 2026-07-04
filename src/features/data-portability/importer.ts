@@ -28,7 +28,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     "id", "content", "created_at", "deleted_at", "project_id", "stable_export_id", "title", "updated_at", "user_id",
   ]),
   tasks: new Set([
-    "id", "category_id", "color", "completed_at", "created_at", "deleted_at", "description",
+    "id", "category_id", "color", "completed_at", "created_at", "deleted_at", "deleted_by_parent_id", "description",
     "end_date", "end_time", "hidden", "kind", "parent_block_id", "position", "project_id",
     "reminder_minutes_before", "stable_export_id", "start_date", "start_time", "status", "title", "user_id",
   ]),
@@ -121,7 +121,7 @@ const remapForeignKeys = (
 ) => {
   const updates: Record<string, string | null> = {};
   for (const [col, refTable] of Object.entries(fk)) {
-    if (refTable === "tasks" && col === "parent_block_id") continue;
+    if (refTable === "tasks" && (col === "parent_block_id" || col === "deleted_by_parent_id")) continue;
     const oldFk = row[col];
     if (!oldFk || typeof oldFk !== "string") continue;
     const mapped = idMap[refTable]?.get(oldFk);
