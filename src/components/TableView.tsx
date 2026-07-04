@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { type PointerEvent, useState, useEffect, useRef, useMemo } from "react";
 import { Plus, Trash2, GripVertical, EyeOff, Eye, ChevronDown, ChevronRight, Filter, Check, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,129 +31,300 @@ import { CSS } from "@dnd-kit/utilities";
 
 type StatusFilter = "all" | "active" | "done";
 
+const TASK_SWIPE_ACTION_WIDTH = 72;
+const TASK_SWIPE_INTENT_THRESHOLD = 10;
+
+type TaskSwipeDragState = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startOffset: number;
+  intent: "pending" | "horizontal" | "vertical";
+};
+
 type TableViewProps = {
   projectId: string;
   showHeader?: boolean;
 };
 
-const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onOpen, categoryDot }: {
+const clampTaskSwipe = (value: number) => Math.max(-TASK_SWIPE_ACTION_WIDTH, Math.min(0, value));
+
+const MobileSortableTaskCard = ({ task, subtasks, onUpdate, onDelete, onOpen, categoryDot, openSwipeTaskId, onOpenSwipeTaskChange }: {
   task: Task;
   subtasks: Task[];
   onUpdate: (id: string, updates: Partial<Task>) => void;
+  onDelete: (id: string) => void;
   onOpen: (task: Task) => void;
   categoryDot?: string;
+  openSwipeTaskId: string | null;
+  onOpenSwipeTaskChange: (id: string | null) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const [expanded, setExpanded] = useState(false);
+  const swipeRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<TaskSwipeDragState | null>(null);
+  const suppressClickRef = useRef(false);
+  const [dragX, setDragX] = useState(0);
+  const [isSwipeDragging, setIsSwipeDragging] = useState(false);
+  const isSwipeOpen = openSwipeTaskId === task.id;
+  const openOffset = isSwipeOpen ? -TASK_SWIPE_ACTION_WIDTH : 0;
+  const currentSwipeOffset = isSwipeDragging ? dragX : openOffset;
+  const deleteVisible = currentSwipeOffset < 0 || isSwipeOpen;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
   };
 
+  const capturePointer = (event: PointerEvent<HTMLDivElement>) => {
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is not guaranteed on every browser/input combination.
+    }
+  };
+
+  const releasePointer = (pointerId: number) => {
+    try {
+      swipeRef.current?.releasePointerCapture(pointerId);
+    } catch {
+      // Pointer cancel can arrive after the browser has already released capture.
+    }
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    if (openSwipeTaskId && openSwipeTaskId !== task.id) onOpenSwipeTaskChange(null);
+    capturePointer(event);
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startOffset: openOffset,
+      intent: "pending",
+    };
+    setDragX(openOffset);
+    setIsSwipeDragging(false);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+
+    if (drag.intent === "pending") {
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      if (absY > absX && absY > TASK_SWIPE_INTENT_THRESHOLD) {
+        drag.intent = "vertical";
+        setIsSwipeDragging(false);
+        return;
+      }
+      if (absX < TASK_SWIPE_INTENT_THRESHOLD) return;
+      drag.intent = "horizontal";
+      suppressClickRef.current = true;
+      setIsSwipeDragging(true);
+    }
+
+    if (drag.intent !== "horizontal") return;
+    setDragX(clampTaskSwipe(drag.startOffset + deltaX));
+  };
+
+  const finishSwipe = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    releasePointer(event.pointerId);
+    dragRef.current = null;
+    setIsSwipeDragging(false);
+
+    if (drag.intent !== "horizontal") {
+      setDragX(0);
+      return;
+    }
+
+    const finalX = clampTaskSwipe(drag.startOffset + event.clientX - drag.startX);
+    onOpenSwipeTaskChange(finalX <= -TASK_SWIPE_ACTION_WIDTH ? task.id : null);
+    setDragX(0);
+  };
+
+  const cancelSwipe = (event: PointerEvent<HTMLDivElement>) => {
+    releasePointer(event.pointerId);
+    dragRef.current = null;
+    setIsSwipeDragging(false);
+    setDragX(0);
+  };
+
+  const handleOpenTask = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    if (isSwipeOpen) {
+      onOpenSwipeTaskChange(null);
+      return;
+    }
+    onOpen(task);
+  };
+
   return (
     <article
       ref={setNodeRef}
       style={style}
-      className={`relative overflow-hidden rounded-[1.35rem] border border-border/55 bg-card/70 px-4 pb-4 pt-4 shadow-[0_8px_28px_-24px_hsl(var(--foreground))] transition-colors active:bg-accent/25 ${
-        isDragging ? "z-10 border-primary/35 bg-card/85 shadow-md" : ""
+      className={`relative overflow-hidden rounded-[1.35rem] ${
+        isDragging ? "z-10" : ""
       }`}
     >
-      <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-border/70 to-transparent" aria-hidden="true" />
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        onClick={(event) => event.stopPropagation()}
-        className="absolute right-2.5 top-2.5 inline-flex min-h-11 min-w-11 touch-none cursor-grab items-center justify-center rounded-2xl border border-border/40 bg-background/55 text-muted-foreground/60 transition-colors active:cursor-grabbing active:bg-accent/60 active:text-foreground"
-        aria-label="Görevi sürükle"
-        title="Sürükle"
+      <div
+        className={`absolute inset-y-0 right-0 flex w-[72px] items-stretch justify-center ${
+          deleteVisible ? "bg-destructive" : ""
+        }`}
+        aria-hidden={!deleteVisible}
       >
-        <GripVertical className="h-4 w-4" />
-      </button>
+        <button
+          type="button"
+          aria-label="Görevi sil"
+          tabIndex={deleteVisible ? 0 : -1}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenSwipeTaskChange(null);
+            onDelete(task.id);
+          }}
+          className={`flex w-[72px] shrink-0 items-center justify-center text-destructive-foreground transition-opacity ${
+            deleteVisible ? "pointer-events-auto opacity-100 hover:bg-destructive/90" : "pointer-events-none opacity-0"
+          }`}
+        >
+          <Trash2 className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </div>
 
       <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onOpen(task)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onOpen(task);
-          }
-        }}
-        className="block w-full pr-12 text-left"
+        ref={swipeRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishSwipe}
+        onPointerCancel={cancelSwipe}
+        onLostPointerCapture={cancelSwipe}
+        className={`relative z-10 overflow-hidden rounded-[1.35rem] border border-border/55 bg-card/70 px-4 pb-4 pt-4 shadow-[0_8px_28px_-24px_hsl(var(--foreground))] transition-colors active:bg-accent/25 ${
+          isDragging ? "border-primary/35 bg-card/85 shadow-md" : ""
+        } ${isSwipeDragging ? "" : "transition-transform duration-200 ease-out"}`}
+        style={{ transform: `translateX(${currentSwipeOffset}px)`, touchAction: "pan-y" }}
       >
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex shrink-0 items-center gap-1">
-            <span
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-              className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-2xl bg-background/55"
-            >
-              <Checkbox
-                checked={task.status === "done"}
-                onCheckedChange={(checked) => onUpdate(task.id, { status: checked ? "done" : "todo" })}
-                className="h-5 w-5"
-              />
-            </span>
-            {subtasks.length > 0 && (
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setExpanded((current) => !current);
-                }}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
-                aria-expanded={expanded}
-                aria-label={expanded ? "Alt görevleri kapat" : "Alt görevleri aç"}
-              >
-                <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`} />
-              </button>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className={`block break-words text-[1rem] leading-6 tracking-[-0.01em] text-foreground ${task.status === "done" ? "text-muted-foreground line-through" : ""}`}>
-              {task.title}
-            </span>
-            {categoryDot && (
-              <span className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-1">
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: categoryDot }} />
-                  Etiket
-                </span>
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-      {expanded && subtasks.length > 0 && (
-        <div className="mt-2 rounded-lg bg-muted/20 px-2 py-2">
-          <div className="space-y-1">
-            {subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpen(subtask);
-                }}
+        <span className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-border/70 to-transparent" aria-hidden="true" />
+        <span
+          onPointerDown={(event) => event.stopPropagation()}
+          className="absolute right-2.5 top-2.5"
+        >
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex min-h-11 min-w-11 touch-none cursor-grab items-center justify-center rounded-2xl border border-border/40 bg-background/55 text-muted-foreground/60 transition-colors active:cursor-grabbing active:bg-accent/60 active:text-foreground"
+            aria-label="Görevi sürükle"
+            title="Sürükle"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        </span>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={handleOpenTask}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              if (isSwipeOpen) {
+                onOpenSwipeTaskChange(null);
+                return;
+              }
+              onOpen(task);
+            }
+          }}
+          className="block w-full pr-12 text-left"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex shrink-0 items-center gap-1">
+              <span
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-2xl bg-background/55"
               >
                 <Checkbox
-                  checked={subtask.status === "done"}
-                  onClick={(event) => event.stopPropagation()}
-                  onCheckedChange={(checked) => onUpdate(subtask.id, { status: checked ? "done" : "todo" })}
-                  className="h-4 w-4 shrink-0"
+                  checked={task.status === "done"}
+                  onCheckedChange={(checked) => {
+                    onOpenSwipeTaskChange(null);
+                    onUpdate(task.id, { status: checked ? "done" : "todo" });
+                  }}
+                  className="h-5 w-5"
                 />
-                <span className={`min-w-0 flex-1 break-words font-light ${subtask.status === "done" ? "text-muted-foreground/70 line-through" : "text-foreground"}`}>
-                  {subtask.title}
+              </span>
+              {subtasks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onOpenSwipeTaskChange(null);
+                    setExpanded((current) => !current);
+                  }}
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                  aria-expanded={expanded}
+                  aria-label={expanded ? "Alt görevleri kapat" : "Alt görevleri aç"}
+                >
+                  <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`} />
+                </button>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className={`block break-words text-[1rem] leading-6 tracking-[-0.01em] text-foreground ${task.status === "done" ? "text-muted-foreground line-through" : ""}`}>
+                {task.title}
+              </span>
+              {categoryDot && (
+                <span className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2 py-1">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: categoryDot }} />
+                    Etiket
+                  </span>
                 </span>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         </div>
-      )}
+        {expanded && subtasks.length > 0 && (
+          <div className="mt-2 rounded-lg bg-muted/20 px-2 py-2">
+            <div className="space-y-1">
+              {subtasks.map((subtask) => (
+                <div
+                  key={subtask.id}
+                  className="flex min-h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenSwipeTaskChange(null);
+                    onOpen(subtask);
+                  }}
+                >
+                  <Checkbox
+                    checked={subtask.status === "done"}
+                    onClick={(event) => event.stopPropagation()}
+                    onCheckedChange={(checked) => {
+                      onOpenSwipeTaskChange(null);
+                      onUpdate(subtask.id, { status: checked ? "done" : "todo" });
+                    }}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  <span className={`min-w-0 flex-1 break-words font-light ${subtask.status === "done" ? "text-muted-foreground/70 line-through" : "text-foreground"}`}>
+                    {subtask.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </article>
   );
 };
@@ -328,6 +499,7 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string | "all">("all");
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [openSwipeTaskId, setOpenSwipeTaskId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -512,8 +684,11 @@ const TableView = ({ projectId, showHeader = true }: TableViewProps) => {
                     task={task}
                     subtasks={subtasksOf.get(task.id) || []}
                     onUpdate={updateTask}
+                    onDelete={deleteTask}
                     onOpen={setEditTask}
                     categoryDot={categoryDotOf(task)}
+                    openSwipeTaskId={openSwipeTaskId}
+                    onOpenSwipeTaskChange={setOpenSwipeTaskId}
                   />
                 ))}
               </div>
