@@ -5,7 +5,6 @@ import { useSidebarPreferences } from "@/hooks/useSidebarPreferences";
 import { useModuleLabels } from "@/hooks/useModuleLabels";
 import { HABIT_ICON_GROUPS, getHabitIcon } from "@/lib/habitIcons";
 import { CATEGORY_COLORS, colorHex } from "@/hooks/useHabitCategories";
-import SettingsDialog from "./SettingsDialog";
 import { Input } from "@/components/ui/input";
 import {
   Sidebar,
@@ -404,7 +403,6 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
   const [showInput, setShowInput] = useState(false);
   const [addingParentId, setAddingParentId] = useState<string | null>(null);
   const [subName, setSubName] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [newModuleOpen, setNewModuleOpen] = useState(false);
 
   const MODULE_OPTIONS: { key: "journal" | "habits" | "workHistory" | "pomodoro" | "retreat"; label: string; icon: LucideIcon }[] = [
@@ -634,7 +632,7 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => setSettingsOpen(true)}
+                    onClick={() => navigate("/settings")}
                     className="text-xs font-light text-muted-foreground"
                   >
                     <Settings className="h-3 w-3" />
@@ -657,7 +655,6 @@ const AppSidebar = ({ projects, selectedId, selectedView, section, selectedNoteb
           </button>
         </div>
       </SidebarFooter>
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </Sidebar>
   );
 };

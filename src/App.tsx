@@ -26,6 +26,7 @@ import Pomodoro from "./pages/Pomodoro";
 import WorkHistory from "./pages/WorkHistory";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,7 @@ const App = () => (
                   <Route path="/pomodoro" element={<Pomodoro />} />
                   <Route path="/work-history" element={<WorkHistory />} />
                 </Route>
+                <Route path="/settings" element={<ProtectedRoute><UserSettingsProvider><Settings /></UserSettingsProvider></ProtectedRoute>} />
                 <Route path="/admin/*" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
