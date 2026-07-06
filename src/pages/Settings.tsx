@@ -3,6 +3,7 @@ import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { SettingsHomePage } from "@/components/settings/SettingsHomePage";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { SettingsModulesPage } from "@/components/settings/SettingsModulesPage";
+import { SettingsPomodoroPage } from "@/components/settings/SettingsPomodoroPage";
 import { SettingsProjectsPage } from "@/components/settings/SettingsProjectsPage";
 import {
   SETTINGS_SECTION_COPY,
@@ -119,6 +120,7 @@ const renderSectionContent = (section: SettingsSectionKey, onSelectSection: (sec
   if (section === "modules") return <SettingsModulesPage onSelectSection={onSelectSection} />;
   if (section === "home") return <SettingsHomePage />;
   if (section === "tasks-projects") return <SettingsProjectsPage />;
+  if (section === "pomodoro-focus") return <SettingsPomodoroPage />;
   if (section === "notifications") {
     return <PlaceholderContent lines={["Bildirim merkezi hazırlanıyor", "Tarayıcı bildirim izni bu panelde bilgi satırı olarak yönetilecek."]} />;
   }
@@ -144,7 +146,7 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
       </div>
-      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" ? (
+      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" ? (
         renderSectionContent(activeSection, setActiveSection)
       ) : (
         <SettingsSection title={copy.title} description={copy.description}>

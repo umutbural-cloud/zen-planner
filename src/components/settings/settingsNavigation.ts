@@ -71,7 +71,7 @@ export const SETTINGS_SECTION_COPY: Record<SettingsSectionKey, { title: string; 
   },
   "pomodoro-focus": {
     title: "Pomodoro ve Odak",
-    description: "Pomodoro ve odak ayarları sonraki fazda mevcut ayarlarla bağlanacak.",
+    description: "Çalışma kategorilerini, varsayılan süreleri ve odak akışını düzenle.",
   },
   habits: {
     title: "Alışkanlıklar",
