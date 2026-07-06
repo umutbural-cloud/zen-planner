@@ -67,7 +67,7 @@ export const SETTINGS_SECTION_COPY: Record<SettingsSectionKey, { title: string; 
   },
   "tasks-projects": {
     title: "Görevler ve Projeler",
-    description: "Görevler ve projeler ayarları sonraki fazda mevcut ayarlarla bağlanacak.",
+    description: "Projelerini düzenle, görünüm tercihlerini belirle ve kullanılmayan projeleri çöp kutusuna taşı.",
   },
   "pomodoro-focus": {
     title: "Pomodoro ve Odak",
