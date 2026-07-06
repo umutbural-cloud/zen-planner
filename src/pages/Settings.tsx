@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
+import { SettingsHomePage } from "@/components/settings/SettingsHomePage";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { SettingsModulesPage } from "@/components/settings/SettingsModulesPage";
 import {
@@ -115,6 +116,7 @@ const PlaceholderContent = ({ lines }: { lines: string[] }) => (
 const renderSectionContent = (section: SettingsSectionKey, onSelectSection: (section: SettingsSectionKey) => void) => {
   if (section === "experience") return <ExperienceContent />;
   if (section === "modules") return <SettingsModulesPage onSelectSection={onSelectSection} />;
+  if (section === "home") return <SettingsHomePage />;
   if (section === "notifications") {
     return <PlaceholderContent lines={["Bildirim merkezi hazırlanıyor", "Tarayıcı bildirim izni bu panelde bilgi satırı olarak yönetilecek."]} />;
   }
@@ -140,7 +142,7 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
       </div>
-      {activeSection === "modules" ? (
+      {activeSection === "modules" || activeSection === "home" ? (
         renderSectionContent(activeSection, setActiveSection)
       ) : (
         <SettingsSection title={copy.title} description={copy.description}>

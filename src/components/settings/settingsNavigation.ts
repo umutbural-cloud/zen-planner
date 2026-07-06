@@ -63,7 +63,7 @@ export const SETTINGS_SECTION_COPY: Record<SettingsSectionKey, { title: string; 
   },
   home: {
     title: "Ana Sayfa",
-    description: "Ana Sayfa ayarları sonraki fazda mevcut ayarlarla bağlanacak.",
+    description: "Güne başlarken gördüğün alanları ve görev kaynaklarını düzenle.",
   },
   "tasks-projects": {
     title: "Görevler ve Projeler",
