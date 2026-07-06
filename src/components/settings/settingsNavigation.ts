@@ -75,7 +75,7 @@ export const SETTINGS_SECTION_COPY: Record<SettingsSectionKey, { title: string; 
   },
   habits: {
     title: "Alışkanlıklar",
-    description: "Alışkanlık ayarları sonraki fazda mevcut ayarlarla bağlanacak.",
+    description: "Alışkanlık görünümünü, gün dilimlerini ve otomatik vakit sistemini düzenle.",
   },
   notifications: {
     title: "Bildirimler",

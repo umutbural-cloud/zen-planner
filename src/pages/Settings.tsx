@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { SettingsHomePage } from "@/components/settings/SettingsHomePage";
+import { SettingsHabitsPage } from "@/components/settings/SettingsHabitsPage";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { SettingsModulesPage } from "@/components/settings/SettingsModulesPage";
 import { SettingsPomodoroPage } from "@/components/settings/SettingsPomodoroPage";
@@ -119,6 +120,7 @@ const renderSectionContent = (section: SettingsSectionKey, onSelectSection: (sec
   if (section === "experience") return <ExperienceContent />;
   if (section === "modules") return <SettingsModulesPage onSelectSection={onSelectSection} />;
   if (section === "home") return <SettingsHomePage />;
+  if (section === "habits") return <SettingsHabitsPage />;
   if (section === "tasks-projects") return <SettingsProjectsPage />;
   if (section === "pomodoro-focus") return <SettingsPomodoroPage />;
   if (section === "notifications") {
@@ -146,7 +148,7 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
       </div>
-      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" ? (
+      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" ? (
         renderSectionContent(activeSection, setActiveSection)
       ) : (
         <SettingsSection title={copy.title} description={copy.description}>
