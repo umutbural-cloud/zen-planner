@@ -20,7 +20,7 @@ const SettingsNavButton = ({
   nested?: boolean;
 }) => {
   const Icon = item.icon;
-  const active = activeSection === item.key;
+  const active = activeSection === item.key || Boolean(item.children?.some((child) => child.key === activeSection));
 
   return (
     <button

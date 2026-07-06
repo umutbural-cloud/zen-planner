@@ -1,15 +1,12 @@
 import { useState, type ReactNode } from "react";
-import { Check, ChevronRight } from "lucide-react";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { SettingsSection } from "@/components/settings/SettingsSection";
+import { SettingsModulesPage } from "@/components/settings/SettingsModulesPage";
 import {
-  MODULE_SETTING_ROWS,
   SETTINGS_SECTION_COPY,
   type SettingsSectionKey,
 } from "@/components/settings/settingsNavigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useModuleLabels } from "@/hooks/useModuleLabels";
-import { useSidebarPreferences } from "@/hooks/useSidebarPreferences";
 import { useStartupPage } from "@/hooks/useStartupPage";
 import { useTheme, type Theme } from "@/hooks/useTheme";
 import { useUiScale, type UiScale } from "@/hooks/useUiScale";
@@ -105,51 +102,6 @@ const ExperienceContent = () => {
   );
 };
 
-const ModulesContent = () => {
-  const { prefs } = useSidebarPreferences();
-  const { get: moduleLabel } = useModuleLabels();
-  const moduleStatus = new Map<string, boolean>([
-    ["Günlük", prefs.journal],
-    ["Alışkanlıklar", prefs.habits],
-    ["Pomodoro ve Odak", prefs.pomodoro],
-    ["Çalışma Geçmişi", prefs.workHistory],
-  ]);
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg bg-muted/45 px-4 py-3 text-sm leading-6 text-muted-foreground">
-        Modül görünürlüğü ve isimlendirme ayarları mevcut yapıya bağlı kalacak şekilde sonraki fazda genişletilecek.
-      </div>
-      <div className="divide-y divide-muted/70">
-        {MODULE_SETTING_ROWS.map((row) => {
-          const visible = moduleStatus.get(row);
-          const label = row === "Günlük"
-            ? moduleLabel("journal")
-            : row === "Alışkanlıklar"
-              ? moduleLabel("habits")
-              : row === "Çalışma Geçmişi"
-                ? moduleLabel("workHistory")
-                : row;
-          return (
-            <div key={row} className="flex items-center justify-between gap-4 py-4">
-              <div>
-                <h3 className="text-sm font-medium text-foreground">{label}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {visible === undefined ? "Çekirdek alan" : visible ? "Aktif modül" : "Sidebar'da gizli"}
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-2 rounded-md bg-muted/55 px-3 py-1.5 text-xs font-light text-muted-foreground">
-                {visible === undefined || visible ? <Check className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                {visible === undefined || visible ? "Görünür" : "Pasif"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 const PlaceholderContent = ({ lines }: { lines: string[] }) => (
   <div className="space-y-3">
     {lines.map((line) => (
@@ -160,9 +112,9 @@ const PlaceholderContent = ({ lines }: { lines: string[] }) => (
   </div>
 );
 
-const renderSectionContent = (section: SettingsSectionKey) => {
+const renderSectionContent = (section: SettingsSectionKey, onSelectSection: (section: SettingsSectionKey) => void) => {
   if (section === "experience") return <ExperienceContent />;
-  if (section === "modules") return <ModulesContent />;
+  if (section === "modules") return <SettingsModulesPage onSelectSection={onSelectSection} />;
   if (section === "notifications") {
     return <PlaceholderContent lines={["Bildirim merkezi hazırlanıyor", "Tarayıcı bildirim izni bu panelde bilgi satırı olarak yönetilecek."]} />;
   }
@@ -188,9 +140,13 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
       </div>
-      <SettingsSection title={copy.title} description={copy.description}>
-        {renderSectionContent(activeSection)}
-      </SettingsSection>
+      {activeSection === "modules" ? (
+        renderSectionContent(activeSection, setActiveSection)
+      ) : (
+        <SettingsSection title={copy.title} description={copy.description}>
+          {renderSectionContent(activeSection, setActiveSection)}
+        </SettingsSection>
+      )}
     </SettingsLayout>
   );
 };
