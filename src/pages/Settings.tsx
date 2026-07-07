@@ -147,7 +147,7 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
       </div>
-      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" || activeSection === "notifications" || activeSection === "data-privacy" || activeSection === "account-security" || activeSection === "about" ? (
+      {activeSection === "experience" || activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" || activeSection === "notifications" || activeSection === "data-privacy" || activeSection === "account-security" || activeSection === "about" ? (
         renderSectionContent(activeSection, setActiveSection)
       ) : (
         <SettingsSection title={copy.title} description={copy.description}>
