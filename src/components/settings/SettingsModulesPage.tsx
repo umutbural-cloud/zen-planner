@@ -145,7 +145,9 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
 
   const getLabel = (row: ModuleVisibilityRow) => {
     if (!isSidebarItemKey(row.preferenceKey) || row.preferenceKey === "retreat") return row.title;
-    return drafts[row.preferenceKey] ?? moduleLabel(row.preferenceKey);
+    const savedLabel = moduleLabel(row.preferenceKey)?.trim();
+    const customLabel = drafts[row.preferenceKey]?.trim();
+    return customLabel || savedLabel || row.title;
   };
 
   const commitLabel = (key: SidebarItemKey) => {
@@ -189,47 +191,82 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
             const disabledReason = "Bu alan çekirdek modül olduğu için bu fazda kapatılamaz.";
 
             return (
-              <div
-                key={row.id}
-                className={cn(
-                  "grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg bg-muted/25 px-3 py-4 transition-opacity md:grid-cols-[72px_minmax(0,1fr)_260px] md:items-center md:gap-4 md:rounded-none md:bg-transparent md:px-3 md:py-4",
-                  !visible && "opacity-55",
-                )}
-              >
-                <Switch
-                  checked={visible}
-                  disabled={!isConfigurable}
-                  title={!isConfigurable ? disabledReason : undefined}
-                  onCheckedChange={(checked) => {
-                    if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
-                  }}
-                  aria-label={`${row.title} görünürlüğü`}
-                  className="justify-self-end md:justify-self-start"
-                />
-                <div className="min-w-0 md:col-start-2 md:row-start-1">
-                  <ModuleName row={row} />
-                  {!isConfigurable && (
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground/80">
-                      {disabledReason}
-                    </p>
-                  )}
+              <div key={row.id} className={cn("rounded-lg bg-muted/25 px-3 py-4 transition-opacity md:rounded-none md:bg-transparent md:px-3 md:py-4", !visible && "opacity-55")}>
+                <div className="flex items-start justify-between gap-3 md:hidden">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-muted-foreground">
+                      <row.icon className="h-4 w-4" strokeWidth={1.7} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-medium tracking-normal text-foreground">{row.title}</h3>
+                      <p className="mt-1 text-[1rem] leading-6 text-muted-foreground">{row.description}</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={visible}
+                    disabled={!isConfigurable}
+                    title={!isConfigurable ? disabledReason : undefined}
+                    onCheckedChange={(checked) => {
+                      if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
+                    }}
+                    aria-label={`${row.title} görünürlüğü`}
+                    className="shrink-0 self-start"
+                  />
                 </div>
-                <LabelInput
-                  row={row}
-                  disabled={!isConfigurable || !visible}
-                  value={label}
-                  onChange={(value) => {
-                    if (!isConfigurable || !row.preferenceKey) return;
-                    setDrafts((prev) => ({ ...prev, [row.preferenceKey]: value }));
-                  }}
-                  onCommit={() => {
-                    if (isConfigurable && row.preferenceKey) commitLabel(row.preferenceKey);
-                  }}
-                  onReset={() => {
-                    if (isConfigurable && row.preferenceKey) resetLabel(row.preferenceKey);
-                  }}
-                  className="col-span-2 md:col-span-1 md:col-start-3 md:row-start-1"
-                />
+
+                <div className="hidden md:grid md:grid-cols-[72px_minmax(0,1fr)_260px] md:items-center md:gap-4">
+                  <Switch
+                    checked={visible}
+                    disabled={!isConfigurable}
+                    title={!isConfigurable ? disabledReason : undefined}
+                    onCheckedChange={(checked) => {
+                      if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
+                    }}
+                    aria-label={`${row.title} görünürlüğü`}
+                  />
+                  <div className="min-w-0">
+                    <ModuleName row={row} />
+                    {!isConfigurable && (
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground/80">
+                        {disabledReason}
+                      </p>
+                    )}
+                  </div>
+                  <LabelInput
+                    row={row}
+                    disabled={!isConfigurable || !visible}
+                    value={label}
+                    onChange={(value) => {
+                      if (!isConfigurable || !row.preferenceKey) return;
+                      setDrafts((prev) => ({ ...prev, [row.preferenceKey]: value }));
+                    }}
+                    onCommit={() => {
+                      if (isConfigurable && row.preferenceKey) commitLabel(row.preferenceKey);
+                    }}
+                    onReset={() => {
+                      if (isConfigurable && row.preferenceKey) resetLabel(row.preferenceKey);
+                    }}
+                  />
+                </div>
+
+                <div className="mt-4 md:hidden">
+                  <LabelInput
+                    row={row}
+                    disabled={!isConfigurable || !visible}
+                    value={label}
+                    onChange={(value) => {
+                      if (!isConfigurable || !row.preferenceKey) return;
+                      setDrafts((prev) => ({ ...prev, [row.preferenceKey]: value }));
+                    }}
+                    onCommit={() => {
+                      if (isConfigurable && row.preferenceKey) commitLabel(row.preferenceKey);
+                    }}
+                    onReset={() => {
+                      if (isConfigurable && row.preferenceKey) resetLabel(row.preferenceKey);
+                    }}
+                    className="w-full"
+                  />
+                </div>
               </div>
             );
           })}
