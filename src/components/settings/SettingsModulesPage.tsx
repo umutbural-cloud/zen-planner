@@ -61,7 +61,7 @@ const LabelInput = ({
       <Input
         value={row.title}
         disabled
-        className="h-10 rounded-md border-transparent bg-muted/45 text-sm font-light shadow-none"
+        className="h-10 rounded-md border-transparent bg-muted/45 text-sm font-light shadow-none dark:bg-muted/30"
       />
     );
   }
@@ -79,7 +79,7 @@ const LabelInput = ({
         }}
         disabled={disabled}
         placeholder={SIDEBAR_ITEM_LABELS[row.preferenceKey]}
-        className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none"
+        className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
       />
       {hasCustomLabel && (
         <Button
@@ -152,7 +152,7 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <h2 className="text-base font-medium tracking-normal text-foreground">Modül görünürlüğü</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Bir modülü kapattığında ana menüden gizlenir. Verilerin silinmez.
@@ -162,7 +162,7 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Aktif Modüller</h2>
         </div>
@@ -226,7 +226,7 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-4">
           <h2 className="text-base font-medium tracking-normal text-foreground">Modül Ayarları</h2>
         </div>

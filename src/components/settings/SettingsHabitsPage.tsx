@@ -31,7 +31,7 @@ const ChoiceButton = ({
     onClick={onClick}
     className={cn(
       "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-      active ? "bg-white font-medium text-foreground" : "font-light text-muted-foreground hover:text-foreground",
+      active ? "bg-white font-medium text-foreground dark:bg-muted/40" : "font-light text-muted-foreground hover:text-foreground",
     )}
   >
     {children}
@@ -111,7 +111,7 @@ export const SettingsHabitsPage = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-4">
           <h2 className="text-base font-medium tracking-normal text-foreground">Bugün varsayılan filtresi</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -119,7 +119,7 @@ export const SettingsHabitsPage = () => {
           </p>
         </div>
 
-        <div className="inline-flex rounded-md bg-muted/45 p-1">
+        <div className="inline-flex rounded-md bg-muted/45 p-1 dark:bg-muted/30">
           <ChoiceButton active={habitDefault === "time"} onClick={() => setHabitDefault("time")}>
             Günün Saati
           </ChoiceButton>
@@ -129,7 +129,7 @@ export const SettingsHabitsPage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
@@ -178,14 +178,14 @@ export const SettingsHabitsPage = () => {
                   onChange={(event) => renameTod(key, event.target.value)}
                   disabled={!isEnabled}
                   placeholder={DEFAULT_TIME_OF_DAY_LABELS[key].label}
-                  className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none"
+                  className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
                 />
                 <Input
                   type="time"
                   value={todStarts[key]}
                   onChange={(event) => updateTod(key, event.target.value)}
                   disabled={!isEnabled || todAuto}
-                  className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none"
+                  className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
                 />
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Switch
@@ -202,7 +202,7 @@ export const SettingsHabitsPage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <div className="flex items-start gap-2">
             <Sunrise className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -253,7 +253,7 @@ export const SettingsHabitsPage = () => {
             size="sm"
             disabled={geoLoading}
             onClick={() => void refreshLocation()}
-            className="h-9 border-0 bg-muted/45 px-3 text-xs hover:bg-muted"
+            className="h-9 border-0 bg-muted/45 px-3 text-xs hover:bg-muted dark:bg-muted/30 dark:hover:bg-muted/40"
           >
             {geoLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MapPin className="h-3.5 w-3.5" strokeWidth={1.7} />}
             Konumu güncelle
@@ -281,7 +281,7 @@ export const SettingsHabitsPage = () => {
               value={citySearch}
               onChange={(event) => setCitySearch(event.target.value)}
               placeholder="Şehir ara..."
-              className="h-10 rounded-md border-transparent bg-muted/55 pl-9 text-sm font-light shadow-none"
+              className="h-10 rounded-md border-transparent bg-muted/55 pl-9 text-sm font-light shadow-none dark:bg-muted/30"
             />
           </div>
 
@@ -295,7 +295,9 @@ export const SettingsHabitsPage = () => {
                   onClick={() => void selectCity(city.name, city.lat, city.lng)}
                   className={cn(
                     "block w-full px-3 py-2 text-left text-sm transition-colors",
-                    active ? "bg-accent/60 font-medium text-foreground" : "text-muted-foreground hover:bg-accent/35 hover:text-foreground",
+                    active
+                      ? "bg-accent/60 font-medium text-foreground dark:bg-accent/35"
+                      : "text-muted-foreground hover:bg-accent/35 hover:text-foreground dark:hover:bg-accent/30",
                   )}
                 >
                   {city.name}
@@ -309,7 +311,7 @@ export const SettingsHabitsPage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Alışkanlık kategorileri</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">

@@ -47,7 +47,7 @@ export const SettingsDataPrivacyPage = () => {
       >
         <div className="space-y-3">
           <div className="flex items-start gap-3 rounded-lg bg-muted/35 px-4 py-4">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-muted-foreground">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-muted-foreground dark:bg-muted/30">
               <Trash2 className="h-4 w-4" />
             </div>
             <div className="space-y-2">
@@ -96,7 +96,7 @@ export const SettingsDataPrivacyPage = () => {
                 </div>
                 <p className="text-sm text-foreground">{item}</p>
               </div>
-              <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+              <div className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 Yakında
               </div>

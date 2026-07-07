@@ -9,7 +9,7 @@ type SettingsLayoutProps = {
 };
 
 export const SettingsLayout = ({ activeSection, onSelectSection, children }: SettingsLayoutProps) => (
-  <div className="min-h-screen bg-[#f5f3f2]">
+  <div className="min-h-screen bg-[#f5f3f2] text-foreground dark:bg-background">
     <SettingsSidebar activeSection={activeSection} onSelect={onSelectSection} />
     <main className="ml-64 min-h-screen px-10 py-10">
       <div className="mx-auto w-full max-w-4xl">{children}</div>

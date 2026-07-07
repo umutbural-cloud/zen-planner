@@ -83,7 +83,7 @@ export const SettingsAboutPage = () => {
       <SettingsSection title="Geliştirme notları" description="Ayarlar yüzeyi ve ilgili özellikler için mevcut geliştirme çerçevesi.">
         <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
           {developmentNotes.map((note) => (
-            <li key={note} className="rounded-lg bg-muted/35 px-4 py-3">
+            <li key={note} className="rounded-lg bg-muted/35 px-4 py-3 dark:bg-muted/30">
               {note}
             </li>
           ))}
@@ -109,7 +109,7 @@ export const SettingsAboutPage = () => {
       <SettingsSection title="Lisans ve notlar" description="Bu uygulama kapalı test ve geliştirme süreci kapsamında kullanılmaktadır.">
         <ul className="space-y-3 text-sm leading-6 text-muted-foreground">
           {licenseNotes.map((note) => (
-            <li key={note} className="rounded-lg bg-muted/35 px-4 py-3">
+            <li key={note} className="rounded-lg bg-muted/35 px-4 py-3 dark:bg-muted/30">
               {note}
             </li>
           ))}

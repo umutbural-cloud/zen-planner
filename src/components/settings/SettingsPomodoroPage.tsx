@@ -31,7 +31,7 @@ const ColorSelect = ({
   disabled?: boolean;
 }) => (
   <Select value={value} onValueChange={onChange} disabled={disabled}>
-    <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none">
+    <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30">
       <SelectValue />
     </SelectTrigger>
     <SelectContent className="max-h-72">
@@ -97,7 +97,7 @@ export const SettingsPomodoroPage = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Varsayılan süreler</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -113,7 +113,9 @@ export const SettingsPomodoroPage = () => {
               disabled
               className={cn(
                 "h-9 rounded-md px-3 text-sm transition-colors",
-                preset.active ? "bg-accent text-foreground font-medium" : "bg-muted/45 text-muted-foreground",
+                preset.active
+                  ? "bg-accent font-medium text-foreground dark:bg-accent/35"
+                  : "bg-muted/45 text-muted-foreground dark:bg-muted/30",
                 "cursor-not-allowed opacity-80",
               )}
             >
@@ -128,7 +130,7 @@ export const SettingsPomodoroPage = () => {
             <Input
               value="25 dakika"
               disabled
-              className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none"
+              className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
             />
           </label>
           <label className="block">
@@ -136,7 +138,7 @@ export const SettingsPomodoroPage = () => {
             <Input
               value="5 dakika"
               disabled
-              className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none"
+              className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
             />
           </label>
         </div>
@@ -146,7 +148,7 @@ export const SettingsPomodoroPage = () => {
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-medium tracking-normal text-foreground">Çalışma kategorileri</h2>
@@ -172,7 +174,7 @@ export const SettingsPomodoroPage = () => {
               value={newCategory.name}
               onChange={(event) => setNewCategory((current) => ({ ...current, name: event.target.value }))}
               placeholder="Kategori adı"
-              className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none"
+              className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
             />
             <ColorSelect
               value={newCategory.color}
@@ -225,7 +227,7 @@ export const SettingsPomodoroPage = () => {
                         value={draft.name}
                         onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
                         placeholder="Kategori adı"
-                        className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none"
+                        className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
                       />
                     ) : (
                       <span className="block truncate text-sm font-medium text-foreground">{category.name}</span>
@@ -298,7 +300,7 @@ export const SettingsPomodoroPage = () => {
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <h2 className="text-base font-medium tracking-normal text-foreground">Oturum davranışı</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Otomatik dinlenmeye geçme, oturum bitince bildirim gönderme ve oturum sonunda not isteme seçenekleri sonraki fazda yönetilecek.

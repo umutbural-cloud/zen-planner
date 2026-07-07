@@ -153,14 +153,14 @@ export const SettingsProjectsPage = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <h2 className="text-base font-medium tracking-normal text-foreground">Proje silme güvenlidir</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Projeler kalıcı olarak silinmez; çöp kutusuna taşınır. Geri yükleme ayrı bir işlem olarak ele alınır.
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Proje Listesi</h2>
         </div>
@@ -247,7 +247,7 @@ export const SettingsProjectsPage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Proje Düzenleme</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -268,7 +268,7 @@ export const SettingsProjectsPage = () => {
                   value={draft.name}
                   onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                   placeholder="Proje adı"
-                  className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none"
+                  className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
                 />
               </label>
 
@@ -278,7 +278,7 @@ export const SettingsProjectsPage = () => {
                   value={draft.emoji}
                   onChange={(event) => setDraft({ ...draft, emoji: event.target.value })}
                   placeholder="📁"
-                  className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none"
+                  className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
                 />
               </label>
             </div>
@@ -320,7 +320,7 @@ export const SettingsProjectsPage = () => {
       </section>
 
       <AlertDialog open={Boolean(projectToTrash)} onOpenChange={(open) => !open && setProjectToTrash(null)}>
-        <AlertDialogContent className="border-0 bg-white shadow-lg">
+        <AlertDialogContent className="border-0 bg-white shadow-lg dark:bg-card">
           <AlertDialogHeader>
             <AlertDialogTitle>Projeyi çöp kutusuna taşı?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -328,7 +328,9 @@ export const SettingsProjectsPage = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-0 bg-muted/55 hover:bg-muted">Vazgeç</AlertDialogCancel>
+            <AlertDialogCancel className="border-0 bg-muted/55 hover:bg-muted dark:bg-muted/30 dark:hover:bg-muted/40">
+              Vazgeç
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();

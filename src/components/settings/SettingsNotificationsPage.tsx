@@ -60,10 +60,10 @@ const permissionCopy: Record<NotificationPermissionState, { label: string; descr
 
 const statusBadgeClassName = (state: NotificationPermissionState) => cn(
   "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
-  state === "granted" && "bg-emerald-50 text-emerald-700",
-  state === "default" && "bg-stone-100 text-stone-700",
-  state === "denied" && "bg-rose-50 text-rose-700",
-  state === "unsupported" && "bg-stone-200 text-stone-700",
+  state === "granted" && "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  state === "default" && "bg-stone-100 text-stone-700 dark:bg-muted/40 dark:text-foreground",
+  state === "denied" && "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  state === "unsupported" && "bg-stone-200 text-stone-700 dark:bg-muted/40 dark:text-muted-foreground",
 );
 
 export const SettingsNotificationsPage = () => {
@@ -117,7 +117,7 @@ export const SettingsNotificationsPage = () => {
     <div className="space-y-6">
       <SettingsSection title="Bildirim merkezi hazırlanıyor" description="Görev hatırlatmaları, Pomodoro bitiş bildirimleri, alışkanlık hatırlatmaları ve günlük plan bildirimleri bu alanda toplanacak.">
         <div className="space-y-4">
-          <div className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+          <div className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">
             Yakında
           </div>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
@@ -140,7 +140,7 @@ export const SettingsNotificationsPage = () => {
             <Button
               type="button"
               variant="secondary"
-              className="h-10 rounded-md border-transparent bg-muted/55 px-4 text-sm font-medium text-foreground shadow-none hover:bg-muted"
+              className="h-10 rounded-md border-transparent bg-muted/55 px-4 text-sm font-medium text-foreground shadow-none hover:bg-muted dark:bg-muted/30"
               onClick={() => void requestPermission()}
               disabled={permissionButton.disabled}
             >
@@ -167,7 +167,7 @@ export const SettingsNotificationsPage = () => {
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
                   </div>
                 </div>
-                <div className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+                <div className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">
                   Yakında
                 </div>
               </div>

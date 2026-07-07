@@ -36,7 +36,9 @@ const ChoiceButton = ({
     onClick={onClick}
     className={cn(
       "inline-flex h-10 items-center justify-center rounded-md px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-      active ? "bg-accent font-medium text-foreground" : "bg-muted/55 font-light text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+      active
+        ? "bg-accent font-medium text-foreground dark:bg-accent/35"
+        : "bg-muted/55 font-light text-muted-foreground hover:bg-accent/50 hover:text-foreground dark:bg-muted/30 dark:hover:bg-accent/30",
     )}
   >
     {children}
@@ -70,7 +72,7 @@ const ExperienceContent = () => {
           value={startupValue}
           onValueChange={(value) => setStartup({ type: "module", value: value as "home" | "pomodoro" | "workHistory" | "journal" | "habits" })}
         >
-          <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none">
+          <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30">
             <SelectValue placeholder="Ana Sayfa" />
           </SelectTrigger>
           <SelectContent>

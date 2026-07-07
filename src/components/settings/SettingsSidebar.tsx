@@ -30,8 +30,8 @@ const SettingsNavButton = ({
         "relative flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         nested && "h-9 pl-9 text-[13px]",
         active
-          ? "bg-accent/60 font-medium text-foreground"
-          : "font-light text-muted-foreground hover:bg-accent/35 hover:text-foreground",
+          ? "bg-accent/60 font-medium text-foreground dark:bg-accent/35"
+          : "font-light text-muted-foreground hover:bg-accent/35 hover:text-foreground dark:hover:bg-accent/30",
       )}
     >
       {active && <span className="absolute left-0 top-2 h-6 w-0.5 rounded-full bg-primary" />}
@@ -45,7 +45,7 @@ export const SettingsSidebar = ({ activeSection, onSelect }: SettingsSidebarProp
   const navigate = useNavigate();
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col bg-white px-4 py-6">
+    <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col bg-white px-4 py-6 dark:bg-card">
       <div className="mb-7">
         <p className="mb-4 px-1 text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground/70">
           ZEN PLANNER
@@ -53,7 +53,7 @@ export const SettingsSidebar = ({ activeSection, onSelect }: SettingsSidebarProp
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="mb-5 inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring dark:hover:bg-accent/30"
           aria-label="Ana sayfaya dön"
         >
           <ArrowLeft className="h-4 w-4" strokeWidth={1.8} />

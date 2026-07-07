@@ -138,7 +138,7 @@ export const SettingsAccountSecurityPage = () => {
                 id="settings-full-name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
-                className="h-11 border-transparent bg-muted/55 shadow-none"
+                className="h-11 border-transparent bg-muted/55 shadow-none dark:bg-muted/30"
               />
               <Button
                 type="button"
@@ -161,7 +161,7 @@ export const SettingsAccountSecurityPage = () => {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="h-11 border-transparent bg-muted/55 shadow-none"
+                className="h-11 border-transparent bg-muted/55 shadow-none dark:bg-muted/30"
               />
               <Button
                 type="button"
@@ -202,7 +202,7 @@ export const SettingsAccountSecurityPage = () => {
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
                 disabled={!passwordSupported || savingPassword}
-                className="h-11 border-transparent bg-muted/55 shadow-none"
+                className="h-11 border-transparent bg-muted/55 shadow-none dark:bg-muted/30"
               />
             </div>
 
@@ -217,7 +217,7 @@ export const SettingsAccountSecurityPage = () => {
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
                 disabled={!passwordSupported || savingPassword}
-                className="h-11 border-transparent bg-muted/55 shadow-none"
+                className="h-11 border-transparent bg-muted/55 shadow-none dark:bg-muted/30"
               />
             </div>
 
@@ -232,7 +232,7 @@ export const SettingsAccountSecurityPage = () => {
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 disabled={!passwordSupported || savingPassword}
-                className="h-11 border-transparent bg-muted/55 shadow-none"
+                className="h-11 border-transparent bg-muted/55 shadow-none dark:bg-muted/30"
               />
             </div>
           </div>
@@ -279,7 +279,7 @@ export const SettingsAccountSecurityPage = () => {
       </SettingsSection>
 
       <SettingsSection title="Hesap silme" description="Hesap silme ve tüm verileri kalıcı kaldırma işlemi ayrı güvenlik akışı ve ek onay gerektirir.">
-        <div className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
+        <div className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Ayrı faz
         </div>

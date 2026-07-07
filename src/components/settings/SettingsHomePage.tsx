@@ -106,7 +106,7 @@ export const SettingsHomePage = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-medium tracking-normal text-foreground">Günün Odağı</h2>
@@ -149,14 +149,14 @@ export const SettingsHomePage = () => {
                   if (event.key === "Enter") event.currentTarget.blur();
                 }}
                 placeholder="Odak adı"
-                className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none"
+                className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
                 aria-label="Odak adı"
               />
               <Select
                 value={option.color || "stone"}
                 onValueChange={(color) => updateFocusOption(index, { color })}
               >
-                <SelectTrigger className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none">
+                <SelectTrigger className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -186,7 +186,7 @@ export const SettingsHomePage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Ana sayfada gösterilecek projeler</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -194,13 +194,15 @@ export const SettingsHomePage = () => {
           </p>
         </div>
 
-        <div className="mb-4 inline-flex rounded-md bg-muted/45 p-1">
+        <div className="mb-4 inline-flex rounded-md bg-muted/45 p-1 dark:bg-muted/30">
           <button
             type="button"
             onClick={() => void updateHomeTaskProjects(null)}
             className={cn(
               "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              allProjectsMode ? "bg-white font-medium text-foreground" : "font-light text-muted-foreground hover:text-foreground",
+              allProjectsMode
+                ? "bg-white font-medium text-foreground dark:bg-muted/40"
+                : "font-light text-muted-foreground hover:text-foreground",
             )}
           >
             Tüm projeler
@@ -210,7 +212,9 @@ export const SettingsHomePage = () => {
             onClick={() => setSelectedProjectsModeOpen(true)}
             className={cn(
               "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              showSelectedProjectsMode ? "bg-white font-medium text-foreground" : "font-light text-muted-foreground hover:text-foreground",
+              showSelectedProjectsMode
+                ? "bg-white font-medium text-foreground dark:bg-muted/40"
+                : "font-light text-muted-foreground hover:text-foreground",
             )}
           >
             Sadece seçili projeler
@@ -248,7 +252,7 @@ export const SettingsHomePage = () => {
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5">
+      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
         <h2 className="text-base font-medium tracking-normal text-foreground">Ana sayfa bölümleri</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Günün Odağı, Pomodoro özeti, alışkanlık özeti ve çalışma geçmişi gibi alanların görünürlüğü sonraki fazda yönetilecek.
