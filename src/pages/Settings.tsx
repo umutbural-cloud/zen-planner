@@ -34,8 +34,9 @@ const ChoiceButton = ({
   <button
     type="button"
     onClick={onClick}
+    aria-pressed={active}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      "inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg px-3 text-center text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-10 md:min-h-10 md:rounded-md md:px-4",
       active
         ? "bg-accent font-medium text-foreground dark:bg-accent/35"
         : "bg-muted/55 font-light text-muted-foreground hover:bg-accent/50 hover:text-foreground dark:bg-muted/30 dark:hover:bg-accent/30",
@@ -46,12 +47,12 @@ const ChoiceButton = ({
 );
 
 const SettingRow = ({ label, description, children }: { label: string; description: string; children: ReactNode }) => (
-  <div className="grid grid-cols-[minmax(0,1fr)_240px] items-center gap-8 py-5">
-    <div>
+  <div className="grid grid-cols-1 gap-4 rounded-lg bg-muted/25 px-3 py-4 md:grid-cols-[minmax(0,1fr)_240px] md:items-center md:gap-8 md:rounded-none md:bg-transparent md:px-0 md:py-5">
+    <div className="min-w-0">
       <h3 className="text-sm font-medium text-foreground">{label}</h3>
       <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
     </div>
-    <div>{children}</div>
+    <div className="min-w-0">{children}</div>
   </div>
 );
 
@@ -63,7 +64,7 @@ const ExperienceContent = () => {
   const startupValue = startup.type === "module" ? startup.value : "home";
 
   return (
-    <div className="divide-y divide-muted/70">
+    <div className="space-y-3 md:divide-y md:divide-muted/70 md:space-y-0">
       <SettingRow
         label="Açılış Sayfası"
         description="Zen Planner'ı açtığında ilk olarak hangi modülün yükleneceğini seç."
@@ -72,7 +73,7 @@ const ExperienceContent = () => {
           value={startupValue}
           onValueChange={(value) => setStartup({ type: "module", value: value as "home" | "pomodoro" | "workHistory" | "journal" | "habits" })}
         >
-          <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30">
+          <SelectTrigger className="h-11 w-full rounded-lg border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30 md:h-10 md:rounded-md">
             <SelectValue placeholder="Ana Sayfa" />
           </SelectTrigger>
           <SelectContent>
@@ -96,9 +97,9 @@ const ExperienceContent = () => {
       </SettingRow>
 
       <SettingRow label="Arayüz Boyutu" description="Metin ve arayüz ölçeğini okuma rahatlığına göre ayarla.">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
           {([
-            ["normal", "Normal"],
+            ["normal", "Standart"],
             ["large", "Büyük"],
             ["xlarge", "Çok Büyük"],
           ] as [UiScale, string][]).map(([value, label]) => (
