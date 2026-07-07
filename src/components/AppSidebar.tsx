@@ -71,12 +71,22 @@ export const ProjectIconPicker = ({
   onChange,
   triggerClassName,
   iconClassName,
+  popoverSide,
+  popoverAlign = "start",
+  popoverSideOffset = 4,
+  popoverCollisionPadding = 8,
+  popoverClassName,
 }: {
   icon: string | null;
   iconColor: string | null;
   onChange: (updates: { icon?: string | null; icon_color?: string | null }) => void;
   triggerClassName?: string;
   iconClassName?: string;
+  popoverSide?: "top" | "right" | "bottom" | "left";
+  popoverAlign?: "start" | "center" | "end";
+  popoverSideOffset?: number;
+  popoverCollisionPadding?: number;
+  popoverClassName?: string;
 }) => {
   const [search, setSearch] = useState("");
   const Current = getHabitIcon(icon || "folder");
@@ -95,7 +105,14 @@ export const ProjectIconPicker = ({
           <Current className={iconClassName || "h-4 w-4"} strokeWidth={1.5} style={{ color: tint }} />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-2 max-h-[60vh] overflow-y-auto" align="start" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent
+        className={`w-72 p-2 max-h-[min(70vh,520px)] overflow-y-auto ${popoverClassName || ""}`}
+        side={popoverSide}
+        align={popoverAlign}
+        sideOffset={popoverSideOffset}
+        collisionPadding={popoverCollisionPadding}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground/70 font-light mb-1 px-1">Renk</div>
         <div className="flex flex-wrap gap-1 mb-2 px-1">
           {CATEGORY_COLORS.map((c) => {

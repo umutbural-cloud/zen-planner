@@ -295,6 +295,10 @@ export const SettingsProjectsPage = () => {
                   iconColor={draft.iconColor}
                   triggerClassName="h-10 w-10 rounded-md bg-muted/55 hover:bg-muted/70 dark:bg-muted/30 dark:hover:bg-muted/40"
                   iconClassName="h-4.5 w-4.5"
+                  popoverSide="left"
+                  popoverAlign="start"
+                  popoverSideOffset={12}
+                  popoverCollisionPadding={16}
                   onChange={(updates) =>
                     setDraft({
                       ...draft,
