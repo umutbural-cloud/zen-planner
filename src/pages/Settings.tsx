@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { SettingsHomePage } from "@/components/settings/SettingsHomePage";
 import { SettingsHabitsPage } from "@/components/settings/SettingsHabitsPage";
+import { SettingsDataPrivacyPage } from "@/components/settings/SettingsDataPrivacyPage";
 import { SettingsNotificationsPage } from "@/components/settings/SettingsNotificationsPage";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { SettingsModulesPage } from "@/components/settings/SettingsModulesPage";
@@ -125,9 +126,7 @@ const renderSectionContent = (section: SettingsSectionKey, onSelectSection: (sec
   if (section === "tasks-projects") return <SettingsProjectsPage />;
   if (section === "pomodoro-focus") return <SettingsPomodoroPage />;
   if (section === "notifications") return <SettingsNotificationsPage />;
-  if (section === "data-privacy") {
-    return <PlaceholderContent lines={["Veri dışa aktarma ve içe aktarma alanı sonraki fazda taşınacak.", shellNote]} />;
-  }
+  if (section === "data-privacy") return <SettingsDataPrivacyPage />;
   if (section === "account-security") {
     return <PlaceholderContent lines={["Profil, giriş e-postası ve şifre yönetimi sonraki fazda taşınacak.", shellNote]} />;
   }
@@ -147,7 +146,7 @@ const SettingsPage = () => {
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
       </div>
-      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" || activeSection === "notifications" ? (
+      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" || activeSection === "notifications" || activeSection === "data-privacy" ? (
         renderSectionContent(activeSection, setActiveSection)
       ) : (
         <SettingsSection title={copy.title} description={copy.description}>
