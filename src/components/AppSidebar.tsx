@@ -69,10 +69,14 @@ export const ProjectIconPicker = ({
   icon,
   iconColor,
   onChange,
+  triggerClassName,
+  iconClassName,
 }: {
   icon: string | null;
   iconColor: string | null;
   onChange: (updates: { icon?: string | null; icon_color?: string | null }) => void;
+  triggerClassName?: string;
+  iconClassName?: string;
 }) => {
   const [search, setSearch] = useState("");
   const Current = getHabitIcon(icon || "folder");
@@ -85,10 +89,10 @@ export const ProjectIconPicker = ({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-sm hover:bg-accent/40 transition-colors"
+          className={`shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-sm hover:bg-accent/40 transition-colors ${triggerClassName || ""}`}
           title="İkon değiştir"
         >
-          <Current className="h-4 w-4" strokeWidth={1.5} style={{ color: tint }} />
+          <Current className={`h-4 w-4 ${iconClassName || ""}`} strokeWidth={1.5} style={{ color: tint }} />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-2 max-h-[60vh] overflow-y-auto" align="start" onClick={(e) => e.stopPropagation()}>

@@ -278,7 +278,7 @@ export const SettingsProjectsPage = () => {
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_40px] items-end gap-3">
               <label className="block">
                 <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Proje adı</span>
                 <Input
@@ -289,10 +289,12 @@ export const SettingsProjectsPage = () => {
                 />
               </label>
 
-              <div className="flex items-start justify-end pt-6">
+              <div className="flex h-10 w-10 items-center justify-center self-end">
                 <ProjectIconPicker
                   icon={draft.icon}
                   iconColor={draft.iconColor}
+                  triggerClassName="h-10 w-10 rounded-md bg-muted/55 hover:bg-muted/70 dark:bg-muted/30 dark:hover:bg-muted/40"
+                  iconClassName="h-4.5 w-4.5"
                   onChange={(updates) =>
                     setDraft({
                       ...draft,
@@ -301,7 +303,6 @@ export const SettingsProjectsPage = () => {
                     })
                   }
                 />
-                <span className="sr-only">Proje ikonunu değiştir</span>
               </div>
             </div>
 
