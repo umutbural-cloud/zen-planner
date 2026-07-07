@@ -1,7 +1,8 @@
-import { FileClock, Info, Layers3, MessageSquareMore, MonitorSmartphone, NotebookPen, Target, Timer, Workflow } from "lucide-react";
+import { FileClock, Info, Layers3, Loader2, MessageSquareMore, MonitorSmartphone, NotebookPen, RefreshCcw, Target, Timer, Workflow } from "lucide-react";
 import { SettingsSection } from "./SettingsSection";
-
-const versionLabel = "Geliştirme sürümü";
+import { Button } from "@/components/ui/button";
+import { usePwaUpdate } from "@/components/pwa/PwaUpdateProvider";
+import { APP_VERSION, VERSION_HISTORY } from "@/lib/appVersion";
 
 const productAreas = [
   { title: "Odak", description: "Günlük planlama ve yapılacak işler", icon: Target },
@@ -30,6 +31,21 @@ const licenseNotes = [
 ];
 
 export const SettingsAboutPage = () => {
+  const { needRefresh, status, lastCheckedAt, checkForUpdate, updateNow } = usePwaUpdate();
+  const checking = status === "checking";
+  const updateAvailable = needRefresh || status === "update-available";
+  const updateButtonLabel = updateAvailable
+    ? "Güncelle"
+    : status === "checking"
+      ? "Kontrol ediliyor"
+      : status === "unsupported"
+        ? "PWA desteklenmiyor"
+        : status === "error"
+          ? "Kontrol edilemedi"
+          : status === "idle"
+            ? "Kontrol edilmedi"
+            : "Sürümünüz güncel";
+
   return (
     <div className="space-y-6">
       <SettingsSection
@@ -59,8 +75,8 @@ export const SettingsAboutPage = () => {
         <div className="divide-y divide-muted/60">
           {[
             { label: "Uygulama", value: "Zen Planner", icon: Info },
-            { label: "Sürüm", value: versionLabel, icon: Layers3 },
-            { label: "Durum", value: "Kapalı test / geliştirme", icon: FileClock },
+            { label: "Sürüm", value: APP_VERSION, icon: Layers3 },
+            { label: "Durum", value: "Kapalı test / 1.0.0 yayına hazırlık", icon: FileClock },
             { label: "Platform", value: "Web / PWA", icon: MonitorSmartphone },
           ].map((item) => {
             const Icon = item.icon;
@@ -77,6 +93,57 @@ export const SettingsAboutPage = () => {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-5 rounded-lg bg-muted/35 px-4 py-4 dark:bg-muted/30">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-medium text-foreground">PWA güncellemesi</h3>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Yeni bir PWA sürümü yayınlandıysa güncelleme burada görünür.
+              </p>
+              {lastCheckedAt && (
+                <p className="mt-1 text-xs text-muted-foreground/80">
+                  Son kontrol: {lastCheckedAt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={checking}
+                onClick={() => void checkForUpdate()}
+                className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              >
+                {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" strokeWidth={1.7} />}
+                Sürüm bilgisini kontrol et
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!updateAvailable}
+                onClick={() => void updateNow()}
+                className="h-9 px-3 text-xs"
+              >
+                {updateButtonLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          {VERSION_HISTORY.map((item) => (
+            <div key={item.version} className="rounded-lg bg-muted/35 px-4 py-3 dark:bg-muted/30">
+              <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
+                <span>{item.version}</span>
+                <span className="text-muted-foreground">—</span>
+                <span>{item.label}</span>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
+            </div>
+          ))}
         </div>
       </SettingsSection>
 
