@@ -909,7 +909,9 @@ export type Database = {
           city: string | null
           country: string
           created_at: string
+          default_pomodoro_break_minutes: number
           default_pomodoro_project_id: string | null
+          default_pomodoro_work_minutes: number
           home_focus_options: Json
           home_task_project_ids: string[] | null
           latitude: number | null
@@ -933,7 +935,9 @@ export type Database = {
           city?: string | null
           country?: string
           created_at?: string
+          default_pomodoro_break_minutes?: number
           default_pomodoro_project_id?: string | null
+          default_pomodoro_work_minutes?: number
           home_focus_options?: Json
           home_task_project_ids?: string[] | null
           latitude?: number | null
@@ -957,7 +961,9 @@ export type Database = {
           city?: string | null
           country?: string
           created_at?: string
+          default_pomodoro_break_minutes?: number
           default_pomodoro_project_id?: string | null
+          default_pomodoro_work_minutes?: number
           home_focus_options?: Json
           home_task_project_ids?: string[] | null
           latitude?: number | null

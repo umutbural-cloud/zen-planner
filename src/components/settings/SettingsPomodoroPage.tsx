@@ -5,16 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORY_COLORS, colorHex } from "@/hooks/useHabitCategories";
+import { usePomodoro } from "@/hooks/usePomodoro";
 import { usePomodoroCategories, type PomodoroCategory } from "@/hooks/usePomodoroCategories";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { normalizeCategoryName } from "@/lib/normalizeCategoryName";
 import { cn } from "@/lib/utils";
 
 const DURATION_PRESETS = [
-  { label: "25 / 5", work: 25, rest: 5, active: true },
+  { label: "25 / 5", work: 25, rest: 5 },
   { label: "50 / 10", work: 50, rest: 10 },
   { label: "90 / 15", work: 90, rest: 15 },
-  { label: "Özel", work: 25, rest: 5 },
 ];
+
+const MIN_WORK_MINUTES = 1;
+const MAX_WORK_MINUTES = 180;
+const MIN_BREAK_MINUTES = 1;
+const MAX_BREAK_MINUTES = 60;
 
 type CategoryDraft = {
   name: string;
@@ -49,17 +55,78 @@ const ColorSelect = ({
 
 export const SettingsPomodoroPage = () => {
   const { categories, loading, create, update } = usePomodoroCategories();
+  const { settings, update: updateUserSettings } = useUserSettings();
+  const { refreshDefaultDurations } = usePomodoro();
+  const [durationDraft, setDurationDraft] = useState({
+    work: settings.default_pomodoro_work_minutes,
+    rest: settings.default_pomodoro_break_minutes,
+  });
+  const [durationMode, setDurationMode] = useState<"preset" | "custom">("preset");
+  const [savingDurations, setSavingDurations] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [draft, setDraft] = useState<CategoryDraft>({ name: "", color: "gray" });
   const [isAdding, setIsAdding] = useState(false);
   const [newCategory, setNewCategory] = useState<CategoryDraft>({ name: "", color: "gray" });
 
   const editingCategory = categories.find((category) => category.id === editingCategoryId) ?? null;
+  const activePreset = DURATION_PRESETS.find((preset) => preset.work === durationDraft.work && preset.rest === durationDraft.rest);
+  const durationChanged = durationDraft.work !== settings.default_pomodoro_work_minutes ||
+    durationDraft.rest !== settings.default_pomodoro_break_minutes;
 
   useEffect(() => {
     if (!editingCategory) return;
     setDraft({ name: editingCategory.name, color: editingCategory.color || "gray" });
   }, [editingCategory]);
+
+  useEffect(() => {
+    const next = {
+      work: settings.default_pomodoro_work_minutes,
+      rest: settings.default_pomodoro_break_minutes,
+    };
+    setDurationDraft(next);
+    setDurationMode(DURATION_PRESETS.some((preset) => preset.work === next.work && preset.rest === next.rest) ? "preset" : "custom");
+  }, [settings.default_pomodoro_break_minutes, settings.default_pomodoro_work_minutes]);
+
+  const updateDurationDraft = (key: "work" | "rest", value: string) => {
+    const numeric = Number(value);
+    setDurationMode("custom");
+    setDurationDraft((current) => ({
+      ...current,
+      [key]: Number.isFinite(numeric) ? Math.round(numeric) : current[key],
+    }));
+  };
+
+  const saveDefaultDurations = async () => {
+    const work = Math.round(durationDraft.work);
+    const rest = Math.round(durationDraft.rest);
+    if (work < MIN_WORK_MINUTES || work > MAX_WORK_MINUTES) {
+      toast.error("Çalışma süresi 1 ile 180 dakika arasında olmalıdır.");
+      return;
+    }
+    if (rest < MIN_BREAK_MINUTES || rest > MAX_BREAK_MINUTES) {
+      toast.error("Dinlenme süresi 1 ile 60 dakika arasında olmalıdır.");
+      return;
+    }
+
+    try {
+      setSavingDurations(true);
+      const { error } = await updateUserSettings({
+        default_pomodoro_work_minutes: work,
+        default_pomodoro_break_minutes: rest,
+      });
+      if (error) {
+        toast.error("Varsayılan süreler güncellenemedi.");
+        return;
+      }
+
+      await refreshDefaultDurations();
+      toast.success("Varsayılan Pomodoro süreleri güncellendi.");
+    } catch {
+      toast.error("Varsayılan süreler güncellenemedi.");
+    } finally {
+      setSavingDurations(false);
+    }
+  };
 
   const openEdit = (category: PomodoroCategory) => {
     setEditingCategoryId(category.id);
@@ -110,42 +177,75 @@ export const SettingsPomodoroPage = () => {
             <button
               key={preset.label}
               type="button"
-              disabled
+              onClick={() => {
+                setDurationMode("preset");
+                setDurationDraft({ work: preset.work, rest: preset.rest });
+              }}
               className={cn(
                 "h-9 rounded-md px-3 text-sm transition-colors",
-                preset.active
+                durationMode === "preset" && activePreset?.label === preset.label
                   ? "bg-accent font-medium text-foreground dark:bg-accent/35"
                   : "bg-muted/45 text-muted-foreground dark:bg-muted/30",
-                "cursor-not-allowed opacity-80",
               )}
             >
               {preset.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setDurationMode("custom");
+            }}
+            className={cn(
+              "h-9 rounded-md px-3 text-sm transition-colors",
+              durationMode === "custom" || !activePreset
+                ? "bg-accent font-medium text-foreground dark:bg-accent/35"
+                : "bg-muted/45 text-muted-foreground dark:bg-muted/30",
+            )}
+          >
+            Özel
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <label className="block">
             <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Çalışma süresi</span>
             <Input
-              value="25 dakika"
-              disabled
+              type="number"
+              min={MIN_WORK_MINUTES}
+              max={MAX_WORK_MINUTES}
+              value={durationDraft.work}
+              onChange={(event) => updateDurationDraft("work", event.target.value)}
               className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
             />
           </label>
           <label className="block">
             <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Dinlenme süresi</span>
             <Input
-              value="5 dakika"
-              disabled
+              type="number"
+              min={MIN_BREAK_MINUTES}
+              max={MAX_BREAK_MINUTES}
+              value={durationDraft.rest}
+              onChange={(event) => updateDurationDraft("rest", event.target.value)}
               className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
             />
           </label>
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground/80">
-          Kalıcı varsayılan süre ayarı Supabase migration sonrası aktifleşecek.
-        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="max-w-xl text-xs leading-5 text-muted-foreground/80">
+            Bu ayar yeni/resetlenen Pomodoro oturumlarında uygulanır. Devam eden oturumlar etkilenmez.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void saveDefaultDurations()}
+            disabled={savingDurations || !durationChanged}
+            className="h-9 px-3 text-xs"
+          >
+            Varsayılanları Kaydet
+          </Button>
+        </div>
       </section>
 
       <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
