@@ -20,6 +20,8 @@ export type UserSettings = {
   module_labels: Record<string, string>;
   startup_page: StartupPageSetting;
   default_pomodoro_project_id: string | null;
+  default_pomodoro_work_minutes: number;
+  default_pomodoro_break_minutes: number;
   home_focus_options: DailyFocusOption[];
   home_task_project_ids: string[] | null;
 };
@@ -35,13 +37,15 @@ const DEFAULTS: UserSettings = {
   module_labels: {},
   startup_page: { type: "default" },
   default_pomodoro_project_id: null,
+  default_pomodoro_work_minutes: 25,
+  default_pomodoro_break_minutes: 5,
   home_focus_options: DEFAULT_HOME_FOCUS_OPTIONS,
   home_task_project_ids: null,
 };
 
 const CACHE_KEY = "keikaku.userSettings.v1";
 const EVENT = "keikaku:userSettings";
-const SELECT_COLUMNS = "auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,home_focus_options,home_task_project_ids";
+const SELECT_COLUMNS = "auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,default_pomodoro_work_minutes,default_pomodoro_break_minutes,home_focus_options,home_task_project_ids";
 const CACHE_FRESH_MS = 60_000;
 
 type StoredUserSettings = UserSettings & { __user_id?: string; __fetched_at?: number };
@@ -57,6 +61,8 @@ type UserSettingsRow = Pick<
   | "module_labels"
   | "startup_page"
   | "default_pomodoro_project_id"
+  | "default_pomodoro_work_minutes"
+  | "default_pomodoro_break_minutes"
   | "home_focus_options"
   | "home_task_project_ids"
 >;
@@ -76,6 +82,8 @@ const normalizeSettingsRow = (data: UserSettingsRow): UserSettings => ({
   module_labels: isStringRecord(data.module_labels) ? data.module_labels : {},
   startup_page: isStartupPageSetting(data.startup_page) ? data.startup_page : { type: "default" },
   default_pomodoro_project_id: data.default_pomodoro_project_id,
+  default_pomodoro_work_minutes: normalizePomodoroMinutes(data.default_pomodoro_work_minutes, 25, 1, 180),
+  default_pomodoro_break_minutes: normalizePomodoroMinutes(data.default_pomodoro_break_minutes, 5, 1, 60),
   home_focus_options: normalizeFocusOptions(data.home_focus_options),
   home_task_project_ids: normalizeProjectIds(data.home_task_project_ids),
 });
@@ -201,6 +209,11 @@ const normalizeProjectIds = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) return null;
   const ids = value.filter((id): id is string => typeof id === "string" && id.length > 0);
   return ids.length > 0 ? Array.from(new Set(ids)) : null;
+};
+
+const normalizePomodoroMinutes = (value: unknown, fallback: number, min: number, max: number) => {
+  const next = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : fallback;
+  return next >= min && next <= max ? next : fallback;
 };
 
 type UserSettingsContextValue = {
