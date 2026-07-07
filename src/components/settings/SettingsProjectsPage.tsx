@@ -278,7 +278,7 @@ export const SettingsProjectsPage = () => {
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
               <label className="block">
                 <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Proje adı</span>
                 <Input
@@ -289,29 +289,19 @@ export const SettingsProjectsPage = () => {
                 />
               </label>
 
-              <div className="block">
-                <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Proje ikonu</span>
-                <div className="flex items-center gap-3 rounded-md bg-muted/35 px-3 py-3">
-                  <ProjectIconPicker
-                    icon={draft.icon}
-                    iconColor={draft.iconColor}
-                    onChange={(updates) =>
-                      setDraft({
-                        ...draft,
-                        icon: updates.icon === undefined ? draft.icon : updates.icon,
-                        iconColor: updates.icon_color === undefined ? draft.iconColor : updates.icon_color,
-                      })
-                    }
-                  />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground">
-                      {draft.icon ? draft.icon : "folder"}
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      İkona tıklayarak renk ve ikon seç.
-                    </div>
-                  </div>
-                </div>
+              <div className="flex items-start justify-end pt-6">
+                <ProjectIconPicker
+                  icon={draft.icon}
+                  iconColor={draft.iconColor}
+                  onChange={(updates) =>
+                    setDraft({
+                      ...draft,
+                      icon: updates.icon === undefined ? draft.icon : updates.icon,
+                      iconColor: updates.icon_color === undefined ? draft.iconColor : updates.icon_color,
+                    })
+                  }
+                />
+                <span className="sr-only">Proje ikonunu değiştir</span>
               </div>
             </div>
 
