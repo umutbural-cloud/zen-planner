@@ -15,6 +15,16 @@ const fallbackFullName = (email?: string, fullName?: unknown) => {
 
 const emailLooksValid = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
+const isEmailPasswordUser = (user: ReturnType<typeof useAuth>["user"]) => {
+  if (!user?.email) return false;
+  const provider = typeof user.app_metadata?.provider === "string" ? user.app_metadata.provider : null;
+  const identityProviders = user.identities?.map((identity) => identity.provider).filter(Boolean) ?? [];
+  const providers = new Set([provider, ...identityProviders].filter((item): item is string => typeof item === "string"));
+
+  if (providers.size === 0) return false;
+  return providers.has("email");
+};
+
 export const SettingsAccountSecurityPage = () => {
   const { user } = useAuth();
   const [fullName, setFullName] = useState(fallbackFullName(user?.email, user?.user_metadata?.full_name));
@@ -38,7 +48,7 @@ export const SettingsAccountSecurityPage = () => {
 
   const trimmedFullName = fullName.trim();
   const trimmedEmail = email.trim();
-  const passwordSupported = Boolean(user?.email);
+  const passwordSupported = isEmailPasswordUser(user);
 
   const handleFullName = async () => {
     if (!trimmedFullName) {
@@ -87,12 +97,12 @@ export const SettingsAccountSecurityPage = () => {
     }
 
     setSavingPassword(true);
-    const { error: reauthError } = await supabase.auth.signInWithPassword({
+    const { data: reauthData, error: reauthError } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: currentPassword,
     });
 
-    if (reauthError) {
+    if (reauthError || reauthData.user?.id !== user.id) {
       setSavingPassword(false);
       toast.error("Mevcut şifre doğrulanamadı.");
       return;

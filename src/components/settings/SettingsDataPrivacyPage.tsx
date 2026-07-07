@@ -51,12 +51,13 @@ export const SettingsDataPrivacyPage = () => {
               <Trash2 className="h-4 w-4" />
             </div>
             <div className="space-y-2">
-              <p className="text-sm leading-6 text-muted-foreground">Bu sayfa yeni silme işlemi başlatmaz.</p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Bu alan mevcut silme davranışını açıklar; yeni bir silme işlemi başlatmaz.
+              </p>
               <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
                 <li>Geri yükleme ayrı bir işlemdir.</li>
                 <li>Kalıcı silme ayrıca onay gerektirir.</li>
                 <li>Bazı kayıt türleri için soft-delete desteği fazlara ayrılmıştır.</li>
-                <li>Bu sayfa yeni silme işlemi başlatmaz.</li>
               </ul>
             </div>
           </div>

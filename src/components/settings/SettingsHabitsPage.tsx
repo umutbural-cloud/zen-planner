@@ -63,19 +63,28 @@ export const SettingsHabitsPage = () => {
 
   const updateAutoMode = async (value: boolean) => {
     setTodAutoMode(value);
-    await updateUserSettings({ auto_prayer_times: value });
+    const { error } = await updateUserSettings({ auto_prayer_times: value });
+    if (error) {
+      setTodAutoMode(!value);
+      toast.error("Otomatik vakit sistemi güncellenemedi.");
+      return;
+    }
     if (value && !userSettings.city && userSettings.latitude == null) {
       toast("Konum veya şehir seçin.");
     }
   };
 
   const selectCity = async (name: string, lat: number, lng: number) => {
-    await updateUserSettings({
+    const { error } = await updateUserSettings({
       city: name,
       country: "Turkey",
       latitude: lat,
       longitude: lng,
     });
+    if (error) {
+      toast.error("Şehir güncellenemedi.");
+      return;
+    }
     setCitySearch("");
     toast.success(`${name} seçildi`);
   };
@@ -83,16 +92,21 @@ export const SettingsHabitsPage = () => {
   const refreshLocation = async () => {
     const pos = await requestGeo();
     if (pos) {
-      await updateUserSettings({
+      const { error } = await updateUserSettings({
         latitude: pos.latitude,
         longitude: pos.longitude,
         location_permission: true,
         city: null,
       });
+      if (error) {
+        toast.error("Konum güncellenemedi.");
+        return;
+      }
       toast.success("Konum güncellendi");
       return;
     }
-    await updateUserSettings({ location_permission: false });
+    const { error } = await updateUserSettings({ location_permission: false });
+    if (error) toast.error("Konum güncellenemedi.");
   };
 
   return (

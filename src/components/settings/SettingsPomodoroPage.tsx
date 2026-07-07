@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CATEGORY_COLORS, colorHex } from "@/hooks/useHabitCategories";
 import { usePomodoroCategories, type PomodoroCategory } from "@/hooks/usePomodoroCategories";
+import { normalizeCategoryName } from "@/lib/normalizeCategoryName";
 import { cn } from "@/lib/utils";
 
 const DURATION_PRESETS = [
@@ -72,8 +73,12 @@ export const SettingsPomodoroPage = () => {
       toast.error("Kategori adı boş olamaz.");
       return;
     }
+    const normalized = normalizeCategoryName(trimmed);
+    if (categories.some((category) => category.id !== editingCategory.id && normalizeCategoryName(category.name) === normalized)) {
+      toast.error("Bu kategori zaten var.");
+      return;
+    }
     await update(editingCategory.id, { name: trimmed, color: draft.color });
-    setEditingCategoryId(null);
   };
 
   const createCategory = async () => {
@@ -82,9 +87,12 @@ export const SettingsPomodoroPage = () => {
       toast.error("Kategori adı boş olamaz.");
       return;
     }
+    const normalized = normalizeCategoryName(trimmed);
+    if (categories.some((category) => normalizeCategoryName(category.name) === normalized)) {
+      toast.error("Bu kategori zaten var.");
+      return;
+    }
     await create(trimmed, newCategory.color);
-    setNewCategory({ name: "", color: "gray" });
-    setIsAdding(false);
   };
 
   return (

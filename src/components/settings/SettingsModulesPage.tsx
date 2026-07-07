@@ -178,6 +178,7 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
             const isConfigurable = isSidebarItemKey(row.preferenceKey) && row.preferenceKey !== "retreat";
             const visible = getVisible(row);
             const label = getLabel(row);
+            const disabledReason = "Bu alan çekirdek modül olduğu için bu fazda kapatılamaz.";
 
             return (
               <div
@@ -190,12 +191,20 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
                 <Switch
                   checked={visible}
                   disabled={!isConfigurable}
+                  title={!isConfigurable ? disabledReason : undefined}
                   onCheckedChange={(checked) => {
                     if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
                   }}
                   aria-label={`${row.title} görünürlüğü`}
                 />
-                <ModuleName row={row} />
+                <div>
+                  <ModuleName row={row} />
+                  {!isConfigurable && (
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground/80">
+                      {disabledReason}
+                    </p>
+                  )}
+                </div>
                 <LabelInput
                   row={row}
                   disabled={!isConfigurable || !visible}
