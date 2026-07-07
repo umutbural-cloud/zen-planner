@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from "react";
-import { Loader2, MapPin, RotateCcw, Search, Sunrise } from "lucide-react";
+import { Loader2, MapPin, PencilLine, Plus, RotateCcw, Search, Sunrise } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useHabitTodayDefault } from "@/hooks/useHabitSettings";
-import { useHabitCategories, colorHex } from "@/hooks/useHabitCategories";
+import { CATEGORY_COLORS, useHabitCategories, colorHex } from "@/hooks/useHabitCategories";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { usePrayerTimes } from "@/hooks/usePrayerTimes";
 import { useUserSettings } from "@/hooks/useUserSettings";
@@ -14,8 +15,14 @@ import {
   DEFAULT_TIME_OF_DAY_LABELS,
   useTimeOfDayRanges,
 } from "@/lib/timeOfDay";
+import { normalizeCategoryName } from "@/lib/normalizeCategoryName";
 import { searchTurkeyCities, TURKEY_CITIES } from "@/lib/turkeyCities";
 import { cn } from "@/lib/utils";
+
+type HabitCategoryDraft = {
+  name: string;
+  color: string;
+};
 
 const ChoiceButton = ({
   active,
@@ -55,11 +62,23 @@ export const SettingsHabitsPage = () => {
   const { settings: userSettings, update: updateUserSettings } = useUserSettings();
   const { request: requestGeo, loading: geoLoading } = useUserLocation();
   const prayerQuery = usePrayerTimes();
-  const { categories, loading: categoriesLoading } = useHabitCategories();
+  const { categories, loading: categoriesLoading, createCategory, updateCategory } = useHabitCategories();
   const [citySearch, setCitySearch] = useState("");
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState<HabitCategoryDraft>({ name: "", color: "gray" });
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<HabitCategoryDraft>({ name: "", color: "gray" });
 
   const cityResults = searchTurkeyCities(citySearch).slice(0, 30);
   const enabledCount = ALL_TIME_OF_DAY_KEYS.length - todDisabled.length;
+
+  const isDuplicateCategoryName = (name: string, excludeId?: string) => {
+    const normalized = normalizeCategoryName(name.trim());
+    return categories.some((category) =>
+      category.id !== excludeId &&
+      normalizeCategoryName(category.name) === normalized,
+    );
+  };
 
   const updateAutoMode = async (value: boolean) => {
     setTodAutoMode(value);
@@ -108,6 +127,80 @@ export const SettingsHabitsPage = () => {
     const { error } = await updateUserSettings({ location_permission: false });
     if (error) toast.error("Konum güncellenemedi.");
   };
+
+  const resetCategoryCreate = () => {
+    setIsAddingCategory(false);
+    setNewCategory({ name: "", color: "gray" });
+  };
+
+  const openCategoryEdit = (id: string, name: string, color: string | null) => {
+    setEditingCategoryId(id);
+    setEditingCategory({ name, color: color || "gray" });
+  };
+
+  const cancelCategoryEdit = () => {
+    setEditingCategoryId(null);
+    setEditingCategory({ name: "", color: "gray" });
+  };
+
+  const saveNewCategory = async () => {
+    const trimmed = newCategory.name.trim();
+    if (!trimmed) {
+      toast.error("Kategori adı boş olamaz.");
+      return;
+    }
+    if (isDuplicateCategoryName(trimmed)) {
+      toast.error("Bu kategori zaten var.");
+      return;
+    }
+    const created = await createCategory(trimmed, newCategory.color || "gray");
+    if (!created) return;
+    toast.success("Kategori eklendi.");
+    resetCategoryCreate();
+  };
+
+  const saveCategoryEdit = async () => {
+    if (!editingCategoryId) return;
+    const trimmed = editingCategory.name.trim();
+    if (!trimmed) {
+      toast.error("Kategori adı boş olamaz.");
+      return;
+    }
+    if (isDuplicateCategoryName(trimmed, editingCategoryId)) {
+      toast.error("Bu kategori zaten var.");
+      return;
+    }
+    await updateCategory(editingCategoryId, {
+      name: trimmed,
+      color: editingCategory.color || "gray",
+    });
+    toast.success("Kategori güncellendi.");
+    cancelCategoryEdit();
+  };
+
+  const ColorSelect = ({
+    value,
+    onChange,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+  }) => (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-72">
+        {CATEGORY_COLORS.map((color) => (
+          <SelectItem key={color.key} value={color.key}>
+            <span className="inline-flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
+              {color.label}
+            </span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
     <div className="space-y-5">
@@ -281,7 +374,7 @@ export const SettingsHabitsPage = () => {
               value={citySearch}
               onChange={(event) => setCitySearch(event.target.value)}
               placeholder="Şehir ara..."
-              className="h-10 rounded-md border-transparent bg-muted/55 pl-9 text-sm font-light shadow-none dark:bg-muted/30"
+              className="h-10 rounded-md border-transparent bg-muted/55 pl-10 text-sm font-light shadow-none dark:bg-muted/30"
             />
           </div>
 
@@ -312,12 +405,53 @@ export const SettingsHabitsPage = () => {
       </section>
 
       <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
-        <div className="mb-5">
-          <h2 className="text-base font-medium tracking-normal text-foreground">Alışkanlık kategorileri</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Kategori görünürlüğü ve varsayılan sıralamayı düzenle.
-          </p>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-medium tracking-normal text-foreground">Alışkanlık kategorileri</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Alışkanlıklarını gruplamak için kategori adı ve rengini düzenle.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsAddingCategory((current) => !current)}
+            className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
+            Yeni Kategori
+          </Button>
         </div>
+
+        {isAddingCategory && (
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)_220px_120px] gap-3 rounded-md bg-muted/35 px-3 py-3">
+            <Input
+              value={newCategory.name}
+              onChange={(event) => setNewCategory((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Kategori adı"
+              className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+            />
+            <ColorSelect
+              value={newCategory.color}
+              onChange={(value) => setNewCategory((current) => ({ ...current, color: value }))}
+            />
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" onClick={() => void saveNewCategory()} className="h-9 px-3 text-xs">
+                Kaydet
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={resetCategoryCreate}
+                className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              >
+                Vazgeç
+              </Button>
+            </div>
+          </div>
+        )}
 
         {categoriesLoading ? (
           <div className="rounded-md bg-muted/35 px-4 py-5 text-center text-sm text-muted-foreground">
@@ -329,33 +463,83 @@ export const SettingsHabitsPage = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {categories.map((category) => (
-              <div key={category.id} className="flex items-center justify-between gap-4 rounded-md bg-muted/35 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="h-3 w-3 rounded-full" style={{ background: colorHex(category.color) }} />
-                  <span className="text-sm font-medium text-foreground">{category.name}</span>
+            {categories.map((category) => {
+              const isEditing = editingCategoryId === category.id;
+              return (
+                <div
+                  key={category.id}
+                  className="grid grid-cols-[minmax(0,1fr)_180px_auto] items-center gap-3 rounded-md bg-muted/35 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    {isEditing ? (
+                      <Input
+                        value={editingCategory.name}
+                        onChange={(event) => setEditingCategory((current) => ({ ...current, name: event.target.value }))}
+                        placeholder="Kategori adı"
+                        className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="h-3 w-3 rounded-full" style={{ background: colorHex(category.color) }} />
+                        <span className="truncate text-sm font-medium text-foreground">{category.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    {isEditing ? (
+                      <ColorSelect
+                        value={editingCategory.color}
+                        onChange={(value) => setEditingCategory((current) => ({ ...current, color: value }))}
+                      />
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="h-3 w-3 rounded-full" style={{ background: colorHex(category.color) }} />
+                        <span className="truncate text-sm text-muted-foreground">
+                          {CATEGORY_COLORS.find((color) => color.key === category.color)?.label ?? category.color}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {isEditing ? (
+                    <div className="flex items-center justify-end gap-2">
+                      <Button type="button" size="sm" onClick={() => void saveCategoryEdit()} className="h-8 px-2 text-xs">
+                        Kaydet
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={cancelCategoryEdit}
+                        className="h-8 px-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      >
+                        Vazgeç
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Kategoriyi düzenle"
+                        title="Kategoriyi düzenle"
+                        onClick={() => openCategoryEdit(category.id, category.name, category.color)}
+                        className="h-8 w-8 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      >
+                        <PencilLine className="h-3.5 w-3.5" strokeWidth={1.7} />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">Aktif</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled
-                    title="Kategori arşivleme soft-delete fazında ele alınacak."
-                    aria-label="Kategori arşivleme soft-delete fazında ele alınacak."
-                    className="h-8 px-2 text-xs text-muted-foreground"
-                  >
-                    Arşivle
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         <p className="mt-4 text-xs text-muted-foreground/80">
-          Kategori arşivleme ve varsayılan sıralama sonraki fazda güvenli şekilde ele alınacak.
+          Kategori silme/arşivleme sonraki güvenli fazda ele alınacak.
         </p>
       </section>
     </div>
