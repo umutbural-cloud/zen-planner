@@ -14,7 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { ProjectIconPicker } from "@/components/AppSidebar";
 import { useProjects, type Project, type ViewKey } from "@/hooks/useProjects";
+import { colorHex } from "@/hooks/useHabitCategories";
+import { getHabitIcon } from "@/lib/habitIcons";
 import { cn } from "@/lib/utils";
 
 const VIEW_OPTIONS: { key: ViewKey; label: string }[] = [
@@ -36,12 +39,16 @@ const VIEW_LABELS: Record<ViewKey, string> = {
 type ProjectDraft = {
   name: string;
   emoji: string;
+  icon: string | null;
+  iconColor: string | null;
   enabledViews: ViewKey[];
 };
 
 const makeDraft = (project: Project): ProjectDraft => ({
   name: project.name,
   emoji: project.emoji || "📁",
+  icon: project.icon ?? null,
+  iconColor: project.icon_color ?? null,
   enabledViews: project.enabled_views?.length ? project.enabled_views : ["table", "notes"],
 });
 
@@ -51,11 +58,16 @@ const uniqueViews = (views: ViewKey[]) => Array.from(new Set(views)).filter((vie
 
 const arraysEqual = (a: ViewKey[], b: ViewKey[]) => a.length === b.length && a.every((value, index) => value === b[index]);
 
-const ProjectIcon = ({ project }: { project: Project }) => (
-  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-base">
-    {project.emoji || "📁"}
-  </span>
-);
+const ProjectIcon = ({ project }: { project: Project }) => {
+  const Icon = project.icon ? getHabitIcon(project.icon) : null;
+  const tint = project.icon_color ? colorHex(project.icon_color) : undefined;
+
+  return (
+    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-base text-muted-foreground">
+      {Icon ? <Icon className="h-4 w-4" strokeWidth={1.8} style={tint ? { color: tint } : undefined} /> : project.emoji || "📁"}
+    </span>
+  );
+};
 
 export const SettingsProjectsPage = () => {
   const { projects, loading, updateProject, deleteProject } = useProjects();
@@ -83,6 +95,8 @@ export const SettingsProjectsPage = () => {
   const hasChanges = Boolean(selectedProject && draft && (
     draft.name.trim() !== selectedProject.name ||
     draft.emoji.trim() !== (selectedProject.emoji || "") ||
+    draft.icon !== (selectedProject.icon ?? null) ||
+    draft.iconColor !== (selectedProject.icon_color ?? null) ||
     !arraysEqual(uniqueViews(draft.enabledViews), selectedProject.enabled_views)
   ));
 
@@ -118,9 +132,11 @@ export const SettingsProjectsPage = () => {
       return;
     }
 
-    const updates: Partial<Pick<Project, "name" | "emoji" | "enabled_views">> = {};
+    const updates: Partial<Pick<Project, "name" | "emoji" | "icon" | "icon_color" | "enabled_views">> = {};
     if (nextName !== selectedProject.name) updates.name = nextName;
     if (nextEmoji !== (selectedProject.emoji || "")) updates.emoji = nextEmoji;
+    if (draft.icon !== (selectedProject.icon ?? null)) updates.icon = draft.icon;
+    if (draft.iconColor !== (selectedProject.icon_color ?? null)) updates.icon_color = draft.iconColor;
     if (!arraysEqual(nextViews, selectedProject.enabled_views)) updates.enabled_views = nextViews;
 
     if (Object.keys(updates).length === 0) return;
@@ -165,7 +181,7 @@ export const SettingsProjectsPage = () => {
           <h2 className="text-base font-medium tracking-normal text-foreground">Proje Listesi</h2>
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_220px_90px_190px] gap-4 px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+        <div className="grid grid-cols-[minmax(0,1fr)_220px_90px_88px] gap-4 px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
           <span>Proje</span>
           <span>Görünümler</span>
           <span>Durum</span>
@@ -190,7 +206,7 @@ export const SettingsProjectsPage = () => {
                 <div
                   key={project.id}
                   className={cn(
-                    "grid grid-cols-[minmax(0,1fr)_220px_90px_190px] items-center gap-4 rounded-md px-3 py-4 transition-colors",
+                    "grid grid-cols-[minmax(0,1fr)_220px_90px_88px] items-center gap-4 rounded-md px-3 py-4 transition-colors",
                     selected ? "bg-muted/45" : "hover:bg-muted/30",
                   )}
                 >
@@ -222,10 +238,11 @@ export const SettingsProjectsPage = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => selectProject(project)}
-                      className="h-8 px-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      aria-label="Projeyi düzenle"
+                      title="Projeyi düzenle"
                     >
                       <Edit3 className="h-3.5 w-3.5" strokeWidth={1.7} />
-                      Düzenle
                     </Button>
                     <Button
                       type="button"
@@ -234,10 +251,10 @@ export const SettingsProjectsPage = () => {
                       disabled={project.is_default}
                       onClick={() => setProjectToTrash(project)}
                       title={project.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Çöp Kutusuna Taşı"}
-                      className="h-8 px-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground"
+                      aria-label={project.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Projeyi çöp kutusuna taşı"}
+                      className="h-8 w-8 p-0 text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground"
                     >
                       <Trash2 className="h-3.5 w-3.5" strokeWidth={1.7} />
-                      Çöp Kutusuna Taşı
                     </Button>
                   </div>
                 </div>
@@ -272,15 +289,30 @@ export const SettingsProjectsPage = () => {
                 />
               </label>
 
-              <label className="block">
+              <div className="block">
                 <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Proje ikonu</span>
-                <Input
-                  value={draft.emoji}
-                  onChange={(event) => setDraft({ ...draft, emoji: event.target.value })}
-                  placeholder="📁"
-                  className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
-                />
-              </label>
+                <div className="flex items-center gap-3 rounded-md bg-muted/35 px-3 py-3">
+                  <ProjectIconPicker
+                    icon={draft.icon}
+                    iconColor={draft.iconColor}
+                    onChange={(updates) =>
+                      setDraft({
+                        ...draft,
+                        icon: updates.icon === undefined ? draft.icon : updates.icon,
+                        iconColor: updates.icon_color === undefined ? draft.iconColor : updates.icon_color,
+                      })
+                    }
+                  />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-foreground">
+                      {draft.icon ? draft.icon : "folder"}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      İkona tıklayarak renk ve ikon seç.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>
