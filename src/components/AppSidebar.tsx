@@ -89,10 +89,10 @@ export const ProjectIconPicker = ({
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className={`shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-sm hover:bg-accent/40 transition-colors ${triggerClassName || ""}`}
+          className={`shrink-0 inline-flex items-center justify-center transition-colors ${triggerClassName || "w-5 h-5 rounded-sm hover:bg-accent/40"}`}
           title="İkon değiştir"
         >
-          <Current className={`h-4 w-4 ${iconClassName || ""}`} strokeWidth={1.5} style={{ color: tint }} />
+          <Current className={iconClassName || "h-4 w-4"} strokeWidth={1.5} style={{ color: tint }} />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-2 max-h-[60vh] overflow-y-auto" align="start" onClick={(e) => e.stopPropagation()}>
