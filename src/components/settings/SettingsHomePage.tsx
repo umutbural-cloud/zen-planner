@@ -165,9 +165,11 @@ export const SettingsHomePage = () => {
                 >
                   <SelectTrigger
                     aria-label="Odak rengini değiştir"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border-transparent bg-white/75 p-0 text-muted-foreground shadow-none dark:bg-muted/30 [&>svg]:hidden"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-muted/20 dark:hover:bg-muted/20 [&>svg]:hidden"
                   >
-                    <ChevronDown className="h-4 w-4" strokeWidth={1.8} />
+                    <span className="flex items-center justify-center">
+                      <ChevronDown className="h-5 w-5 opacity-100" strokeWidth={1.8} />
+                    </span>
                     <span className="sr-only">Odak rengini değiştir</span>
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
