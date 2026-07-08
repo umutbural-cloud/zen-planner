@@ -272,11 +272,11 @@ export const SettingsHabitsPage = () => {
               <div
                 key={key}
                 className={cn(
-                  "rounded-lg border border-muted/50 bg-muted/25 px-3 py-3 md:grid md:grid-cols-[140px_minmax(0,1fr)_120px_92px_80px] md:items-center md:gap-3 md:rounded-md md:border-0 md:bg-muted/35",
+                  "mx-auto flex w-[296px] flex-col items-stretch gap-1 rounded-lg border border-muted/50 bg-muted/25 px-3 py-2 md:w-auto md:grid md:grid-cols-[140px_minmax(0,1fr)_120px_92px_80px] md:items-center md:gap-3 md:rounded-md md:border-0 md:bg-muted/35 md:px-3 md:py-3",
                   !isEnabled && "opacity-55",
                 )}
               >
-                <div className="flex items-start gap-3 md:block md:gap-0">
+                <div className="flex items-start gap-3">
                   <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-muted-foreground">
                     <Sunrise className="h-4 w-4" />
                   </div>
@@ -285,32 +285,30 @@ export const SettingsHabitsPage = () => {
                     <div className="mt-1 text-xs text-muted-foreground">{isEnabled ? option?.range ?? "—" : "Kapalı"}</div>
                   </div>
                 </div>
-                <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 md:mt-0 md:grid-cols-none">
+                <div className="flex items-center gap-3 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-3">
                   <Input
                     value={todLabels[key]}
                     onChange={(event) => renameTod(key, event.target.value)}
                     disabled={!isEnabled}
                     placeholder={DEFAULT_TIME_OF_DAY_LABELS[key].label}
-                    className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+                    className="h-10 min-w-0 flex-1 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
                   />
                   <Input
                     type="time"
                     value={todStarts[key]}
                     onChange={(event) => updateTod(key, event.target.value)}
                     disabled={!isEnabled || todAuto}
-                    className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+                    className="h-10 w-[104px] rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30 md:w-auto"
                   />
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-3 md:mt-0 md:justify-start">
-                  <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-end gap-3 md:justify-start">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground md:gap-2">
                     <Switch
                       checked={isEnabled}
                       disabled={isEnabled && enabledCount <= 1}
                       onCheckedChange={(value) => setTodEnabled(key, value)}
                     />
-                    <span>{isEnabled ? "Aktif" : "Pasif"}</span>
                   </label>
-                  <span className="text-xs text-muted-foreground">{todAuto ? "Otomatik" : "Elle"}</span>
                 </div>
               </div>
             );
