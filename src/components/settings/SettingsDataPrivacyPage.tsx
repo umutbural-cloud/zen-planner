@@ -26,16 +26,17 @@ const futureItems = [
 
 export const SettingsDataPrivacyPage = () => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <SettingsSection
         title="Veri aktarımı"
         description="Zen Planner verilerini yedekle veya daha önce aldığın yedeği içe aktar."
+        className="space-y-4 [&>div>h2]:text-base [&>div>p]:text-[0.85rem] [&>div>p]:leading-relaxed md:space-y-5 md:[&>div>p]:text-sm md:[&>div>p]:leading-6"
       >
-        <div className="space-y-5">
-          <div className="rounded-lg bg-muted/35 px-4 py-4">
+        <div className="space-y-3 md:space-y-5">
+          <div className="rounded-lg bg-transparent px-0 py-0 md:bg-muted/35 md:px-4 md:py-4">
             <DataPortabilityPanel />
           </div>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-[0.85rem] leading-relaxed text-muted-foreground md:text-sm md:leading-6">
             İçe aktarma işleminden önce dosya içeriği doğrulanır.
           </p>
         </div>
@@ -44,17 +45,18 @@ export const SettingsDataPrivacyPage = () => {
       <SettingsSection
         title="Çöp kutusu ve silme davranışı"
         description="Silinen görevler, projeler ve desteklenen kayıtlar önce çöp kutusuna taşınır."
+        className="space-y-4 [&>div>h2]:text-base [&>div>p]:text-[0.85rem] [&>div>p]:leading-relaxed md:space-y-5 md:[&>div>p]:text-sm md:[&>div>p]:leading-6"
       >
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 rounded-lg bg-muted/35 px-4 py-4">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-white text-muted-foreground dark:bg-muted/30">
+        <div className="space-y-2 md:space-y-3">
+          <div className="flex items-start gap-3 rounded-lg bg-transparent px-0 py-0 md:rounded-lg md:bg-muted/35 md:px-4 md:py-4">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/45 text-muted-foreground dark:bg-muted/30 md:h-9 md:w-9 md:bg-white">
               <Trash2 className="h-4 w-4" />
             </div>
             <div className="space-y-2">
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-[0.85rem] leading-relaxed text-muted-foreground md:text-sm md:leading-6">
                 Bu alan mevcut silme davranışını açıklar; yeni bir silme işlemi başlatmaz.
               </p>
-              <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
+              <ul className="space-y-1.5 text-[0.85rem] leading-relaxed text-muted-foreground md:space-y-2 md:text-sm md:leading-6">
                 <li>Geri yükleme ayrı bir işlemdir.</li>
                 <li>Kalıcı silme ayrıca onay gerektirir.</li>
                 <li>Bazı kayıt türleri için soft-delete desteği fazlara ayrılmıştır.</li>
@@ -67,6 +69,7 @@ export const SettingsDataPrivacyPage = () => {
       <SettingsSection
         title="Gizlilik yaklaşımı"
         description="Kişisel içeriklerin uygulamanın temel çalışma akışı dışında görüntülenmez veya analiz edilmez."
+        className="space-y-4 [&>div>h2]:text-base [&>div>p]:text-[0.85rem] [&>div>p]:leading-relaxed md:space-y-5 md:[&>div>p]:text-sm md:[&>div>p]:leading-6"
       >
         <div className="divide-y divide-muted/60">
           {privacyPrinciples.map((item) => (
@@ -76,7 +79,7 @@ export const SettingsDataPrivacyPage = () => {
               </div>
               <div>
                 <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                <p className="mt-1 text-[0.85rem] leading-relaxed text-muted-foreground md:text-sm md:leading-6">{item.description}</p>
               </div>
             </div>
           ))}
@@ -86,6 +89,7 @@ export const SettingsDataPrivacyPage = () => {
       <SettingsSection
         title="Sonraki fazlarda"
         description="Veri taşınabilirliği ve gizlilik deneyiminde genişletilecek alanlar."
+        className="space-y-4 [&>div>h2]:text-base [&>div>p]:text-[0.85rem] [&>div>p]:leading-relaxed md:space-y-5 md:[&>div>p]:text-sm md:[&>div>p]:leading-6"
       >
         <div className="divide-y divide-muted/60">
           {futureItems.map((item) => (
