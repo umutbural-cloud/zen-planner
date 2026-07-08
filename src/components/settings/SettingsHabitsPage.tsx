@@ -272,7 +272,7 @@ export const SettingsHabitsPage = () => {
               <div
                 key={key}
                 className={cn(
-                  "mx-auto flex w-[296px] flex-col items-stretch gap-1 rounded-lg border border-muted/50 bg-muted/25 px-3 py-2 md:w-auto md:grid md:grid-cols-[140px_minmax(0,1fr)_120px_92px_80px] md:items-center md:gap-3 md:rounded-md md:border-0 md:bg-muted/35 md:px-3 md:py-3",
+                  "relative mx-auto flex w-[296px] max-w-full flex-col items-stretch gap-1 rounded-lg border border-muted/50 bg-muted/25 px-3 py-2 pr-14 md:w-auto md:max-w-none md:grid md:grid-cols-[140px_minmax(0,1fr)_120px_92px_80px] md:items-center md:gap-3 md:rounded-md md:border-0 md:bg-muted/35 md:px-3 md:py-3 md:pr-3",
                   !isEnabled && "opacity-55",
                 )}
               >
@@ -301,7 +301,7 @@ export const SettingsHabitsPage = () => {
                     className="h-10 w-[104px] rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30 md:w-auto"
                   />
                 </div>
-                <div className="flex items-center justify-end gap-3 md:justify-start">
+                <div className="absolute right-3 top-3 flex items-center md:static md:justify-end md:gap-3">
                   <label className="flex items-center gap-2 text-sm text-muted-foreground md:gap-2">
                     <Switch
                       checked={isEnabled}
