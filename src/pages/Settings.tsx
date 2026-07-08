@@ -143,7 +143,7 @@ const SettingsPage = () => {
 
   return (
     <SettingsLayout activeSection={activeSection} onSelectSection={setActiveSection}>
-      <div className="mb-8">
+      <div className={cn("mb-8", activeSection === "home" && "hidden md:block")}>
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
         <p className="mt-2 max-w-2xl text-[1rem] leading-7 text-muted-foreground md:text-sm md:leading-6">{copy.description}</p>
       </div>

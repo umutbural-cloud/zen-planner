@@ -105,22 +105,22 @@ export const SettingsHomePage = () => {
   };
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
+    <div className="space-y-4 md:space-y-5">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <h2 className="text-base font-medium tracking-normal text-foreground">Günün Odağı</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+            <p className="mt-1 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
               Ana sayfadaki odak seçiminde görünen seçenekleri düzenle.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center">
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={resetFocusOptions}
-              className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              className="h-10 w-full px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground sm:w-auto"
             >
               <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.7} />
               Varsayılana dön
@@ -130,7 +130,7 @@ export const SettingsHomePage = () => {
               variant="ghost"
               size="sm"
               onClick={addFocusOption}
-              className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              className="h-10 w-full px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground sm:w-auto"
             >
               <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
               Odak ekle
@@ -138,9 +138,9 @@ export const SettingsHomePage = () => {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {focusOptions.map((option, index) => (
-            <div key={option.id} className="grid grid-cols-[minmax(0,1fr)_180px_40px] items-center gap-3 rounded-md bg-muted/35 px-3 py-3">
+            <div key={option.id} className="grid grid-cols-1 gap-3 rounded-lg bg-muted/35 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_180px_40px] sm:items-center">
               <Input
                 value={focusDrafts[option.id] ?? option.label}
                 onChange={(event) => setFocusDrafts((prev) => ({ ...prev, [option.id]: event.target.value }))}
@@ -149,14 +149,14 @@ export const SettingsHomePage = () => {
                   if (event.key === "Enter") event.currentTarget.blur();
                 }}
                 placeholder="Odak adı"
-                className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+                className="h-11 rounded-md border-transparent bg-white/75 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:text-sm"
                 aria-label="Odak adı"
               />
               <Select
                 value={option.color || "stone"}
                 onValueChange={(color) => updateFocusOption(index, { color })}
               >
-                <SelectTrigger className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30">
+                <SelectTrigger className="h-11 rounded-md border-transparent bg-white/75 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -176,7 +176,7 @@ export const SettingsHomePage = () => {
                 size="icon"
                 onClick={() => removeFocusOption(index)}
                 disabled={focusOptions.length <= 1}
-                className="h-9 w-9 text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground"
+                className="h-11 w-11 justify-self-end text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground md:h-9 md:w-9"
                 aria-label="Odak seçeneğini sil"
               >
                 <Trash2 className="h-4 w-4" strokeWidth={1.7} />
@@ -186,20 +186,20 @@ export const SettingsHomePage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Ana sayfada gösterilecek projeler</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="mt-1 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
             Ana sayfadaki görev ve yapılıyor alanları hangi projelerden beslensin?
           </p>
         </div>
 
-        <div className="mb-4 inline-flex rounded-md bg-muted/45 p-1 dark:bg-muted/30">
+        <div className="mb-4 grid w-full grid-cols-2 gap-1 rounded-lg bg-muted/45 p-1 dark:bg-muted/30 md:inline-flex md:w-auto md:rounded-md">
           <button
             type="button"
             onClick={() => void updateHomeTaskProjects(null)}
             className={cn(
-              "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "h-10 min-w-0 rounded-md px-2 text-[0.8rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-9 md:px-3 md:text-sm",
               allProjectsMode
                 ? "bg-white font-medium text-foreground dark:bg-muted/40"
                 : "font-light text-muted-foreground hover:text-foreground",
@@ -211,19 +211,20 @@ export const SettingsHomePage = () => {
             type="button"
             onClick={() => setSelectedProjectsModeOpen(true)}
             className={cn(
-              "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "h-10 min-w-0 rounded-md px-2 text-[0.8rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-9 md:px-3 md:text-sm",
               showSelectedProjectsMode
                 ? "bg-white font-medium text-foreground dark:bg-muted/40"
                 : "font-light text-muted-foreground hover:text-foreground",
             )}
           >
-            Sadece seçili projeler
+            <span className="md:hidden">Seçili projeler</span>
+            <span className="hidden md:inline">Sadece seçili projeler</span>
           </button>
         </div>
 
         <div className="divide-y divide-muted/70">
           {workspaceProjects.length === 0 ? (
-            <div className="rounded-md bg-muted/35 px-4 py-5 text-center text-sm text-muted-foreground">
+            <div className="rounded-lg bg-muted/35 px-4 py-5 text-center text-[1rem] text-muted-foreground md:rounded-md md:text-sm">
               Gösterilecek proje yok.
             </div>
           ) : (
@@ -232,7 +233,7 @@ export const SettingsHomePage = () => {
               return (
                 <label
                   key={project.id}
-                  className="flex cursor-pointer items-center gap-3 px-1 py-3 text-sm transition-colors hover:bg-muted/30"
+                  className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-[1rem] transition-colors hover:bg-muted/30 md:min-h-0 md:rounded-none md:px-1 md:py-3 md:text-sm"
                 >
                   <Checkbox
                     checked={checked}
@@ -240,21 +241,21 @@ export const SettingsHomePage = () => {
                     className="shrink-0"
                   />
                   <span className="shrink-0 text-base">{project.emoji}</span>
-                  <span className="min-w-0 truncate font-light text-foreground">{project.name}</span>
+                  <span className="min-w-0 flex-1 truncate font-light text-foreground">{project.name}</span>
                 </label>
               );
             })
           )}
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground/80">
+        <p className="mt-4 text-xs leading-5 text-muted-foreground/80">
           Hiç seçim yapılmazsa tüm projeler gösterilir.
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <h2 className="text-base font-medium tracking-normal text-foreground">Ana sayfa bölümleri</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        <p className="mt-2 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
           Günün Odağı, Pomodoro özeti, alışkanlık özeti ve çalışma geçmişi gibi alanların görünürlüğü sonraki fazda yönetilecek.
         </p>
       </section>
