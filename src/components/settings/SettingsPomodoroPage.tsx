@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Plus, PencilLine } from "lucide-react";
+import { PencilLine, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CATEGORY_COLORS, colorHex } from "@/hooks/useHabitCategories";
 import { usePomodoro } from "@/hooks/usePomodoro";
 import { usePomodoroCategories, type PomodoroCategory } from "@/hooks/usePomodoroCategories";
@@ -12,9 +13,9 @@ import { normalizeCategoryName } from "@/lib/normalizeCategoryName";
 import { cn } from "@/lib/utils";
 
 const DURATION_PRESETS = [
-  { label: "25 / 5", work: 25, rest: 5 },
-  { label: "50 / 10", work: 50, rest: 10 },
-  { label: "90 / 15", work: 90, rest: 15 },
+  { label: "25/5", work: 25, rest: 5 },
+  { label: "50/10", work: 50, rest: 10 },
+  { label: "90/15", work: 90, rest: 15 },
 ];
 
 const MIN_WORK_MINUTES = 1;
@@ -26,6 +27,8 @@ type CategoryDraft = {
   name: string;
   color: string;
 };
+
+const CATEGORY_COLOR_KEYS = CATEGORY_COLORS.map((color) => color.key);
 
 const ColorSelect = ({
   value,
@@ -53,8 +56,37 @@ const ColorSelect = ({
   </Select>
 );
 
+const ColorSwatchPicker = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) => (
+  <div className="grid grid-cols-6 gap-2">
+    {CATEGORY_COLOR_KEYS.map((key) => {
+      const selected = value === key;
+      return (
+        <button
+          key={key}
+          type="button"
+          aria-label={CATEGORY_COLORS.find((color) => color.key === key)?.label ?? key}
+          aria-pressed={selected}
+          onClick={() => onChange(key)}
+          className={cn(
+            "flex h-9 items-center justify-center rounded-full border transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            selected ? "border-foreground/40 ring-1 ring-foreground/20" : "border-transparent",
+          )}
+        >
+          <span className="h-4 w-4 rounded-full" style={{ background: colorHex(key) }} />
+        </button>
+      );
+    })}
+  </div>
+);
+
 export const SettingsPomodoroPage = () => {
-  const { categories, loading, create, update } = usePomodoroCategories();
+  const { categories, loading, create, update, remove } = usePomodoroCategories();
   const { settings, update: updateUserSettings } = useUserSettings();
   const { refreshDefaultDurations } = usePomodoro();
   const [durationDraft, setDurationDraft] = useState({
@@ -146,6 +178,7 @@ export const SettingsPomodoroPage = () => {
       return;
     }
     await update(editingCategory.id, { name: trimmed, color: draft.color });
+    setEditingCategoryId(null);
   };
 
   const createCategory = async () => {
@@ -172,7 +205,7 @@ export const SettingsPomodoroPage = () => {
           </p>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 hidden flex-wrap gap-2 md:flex">
           {DURATION_PRESETS.map((preset) => (
             <button
               key={preset.label}
@@ -207,9 +240,44 @@ export const SettingsPomodoroPage = () => {
           </button>
         </div>
 
+        <div className="-mx-6 mb-4 flex gap-2 overflow-x-auto px-6 pb-2 md:hidden">
+          {DURATION_PRESETS.map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => {
+                setDurationMode("preset");
+                setDurationDraft({ work: preset.work, rest: preset.rest });
+              }}
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors",
+                durationMode === "preset" && activePreset?.label === preset.label
+                  ? "bg-accent font-medium text-foreground dark:bg-accent/35"
+                  : "bg-muted/45 text-muted-foreground dark:bg-muted/30",
+              )}
+            >
+              {preset.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setDurationMode("custom");
+            }}
+            className={cn(
+              "shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors",
+              durationMode === "custom" || !activePreset
+                ? "bg-accent font-medium text-foreground dark:bg-accent/35"
+                : "bg-muted/45 text-muted-foreground dark:bg-muted/30",
+            )}
+          >
+            Özel
+          </button>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <label className="block">
-            <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Çalışma süresi</span>
+            <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70 md:text-xs">Çalışma</span>
             <Input
               type="number"
               min={MIN_WORK_MINUTES}
@@ -220,7 +288,7 @@ export const SettingsPomodoroPage = () => {
             />
           </label>
           <label className="block">
-            <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Dinlenme süresi</span>
+            <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70 md:text-xs">Dinlenme</span>
             <Input
               type="number"
               min={MIN_BREAK_MINUTES}
@@ -300,14 +368,14 @@ export const SettingsPomodoroPage = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-[minmax(0,1fr)_160px_90px_180px] gap-4 px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+        <div className="hidden grid-cols-[minmax(0,1fr)_160px_90px_180px] gap-4 px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70 md:grid">
           <span>Kategori</span>
           <span>Renk</span>
           <span>Durum</span>
           <span>Aksiyonlar</span>
         </div>
 
-        <div className="divide-y divide-muted/70">
+        <div className="space-y-2 md:divide-y md:divide-muted/70 md:space-y-0">
           {loading ? (
             <div className="rounded-md bg-muted/35 px-4 py-5 text-center text-sm text-muted-foreground">
               Kategoriler yükleniyor...
@@ -317,81 +385,64 @@ export const SettingsPomodoroPage = () => {
               Henüz çalışma kategorisi yok.
             </div>
           ) : (
-            categories.map((category) => {
-              const editing = editingCategoryId === category.id;
-              return (
-                <div key={category.id} className="grid grid-cols-[minmax(0,1fr)_160px_90px_180px] items-center gap-4 px-3 py-4">
-                  <div className="min-w-0">
-                    {editing ? (
-                      <Input
-                        value={draft.name}
-                        onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-                        placeholder="Kategori adı"
-                        className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
-                      />
-                    ) : (
-                      <span className="block truncate text-sm font-medium text-foreground">{category.name}</span>
-                    )}
+            categories.map((category) => (
+                <div
+                  key={category.id}
+                  className="rounded-lg border border-muted/50 bg-muted/25 px-3 py-3 md:grid md:grid-cols-[minmax(0,1fr)_160px_90px_180px] md:items-center md:gap-4 md:rounded-none md:border-0 md:bg-transparent md:px-3 md:py-4"
+                >
+                  <div className="flex min-w-0 items-center gap-3 md:block">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground md:block">
+                      {category.name}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <span className="h-3 w-3 rounded-full" style={{ background: colorHex(editing ? draft.color : category.color) }} />
-                    {editing ? (
-                      <ColorSelect value={draft.color} onChange={(value) => setDraft((current) => ({ ...current, color: value }))} />
-                    ) : (
-                      <span className="text-sm font-light text-muted-foreground">
-                        {CATEGORY_COLORS.find((color) => color.key === category.color)?.label ?? category.color}
-                      </span>
-                    )}
+                  <div className="hidden md:flex md:items-center md:gap-3">
+                    <span className="h-3 w-3 rounded-full" style={{ background: colorHex(category.color) }} />
+                    <span className="truncate text-sm text-muted-foreground">
+                      {CATEGORY_COLORS.find((color) => color.key === category.color)?.label ?? category.color}
+                    </span>
                   </div>
 
-                  <span className="text-sm font-light text-muted-foreground">Aktif</span>
+                  <span className="hidden text-sm font-light text-muted-foreground md:inline-flex">Aktif</span>
 
-                  <div className="flex items-center gap-2">
-                    {editing ? (
-                      <>
-                        <Button type="button" size="sm" onClick={() => void saveCategory()} className="h-8 px-2 text-xs">
-                          Kaydet
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingCategoryId(null)}
-                          className="h-8 px-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                        >
-                          Vazgeç
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEdit(category)}
-                          className="h-8 px-2 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                        >
-                          <PencilLine className="h-3.5 w-3.5" strokeWidth={1.7} />
-                          Düzenle
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled
-                          title="Kategori arşivleme soft-delete migration sonrası aktifleşecek."
-                          aria-label="Kategori arşivleme soft-delete migration sonrası aktifleşecek."
-                          className="h-8 px-2 text-xs text-muted-foreground"
-                        >
-                          Arşivle
-                        </Button>
-                      </>
-                    )}
+                  <div className="ml-auto flex items-center gap-1 md:gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openEdit(category)}
+                      aria-label="Kategoriyi düzenle"
+                      title="Kategoriyi düzenle"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    >
+                      <PencilLine className="h-3.5 w-3.5" strokeWidth={1.7} />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => void remove(category.id)}
+                      aria-label="Kategoriyi sil"
+                      title="Kategoriyi sil"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-accent/50 hover:text-destructive md:hidden"
+                    >
+                      <X className="h-3.5 w-3.5" strokeWidth={1.7} />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled
+                      title="Kategori arşivleme soft-delete migration sonrası aktifleşecek."
+                      aria-label="Kategori arşivleme soft-delete migration sonrası aktifleşecek."
+                      className="hidden h-8 px-2 text-xs text-muted-foreground md:inline-flex"
+                    >
+                      Arşivle
+                    </Button>
                   </div>
                 </div>
-              );
-            })
+              ))
           )}
         </div>
 
@@ -406,6 +457,60 @@ export const SettingsPomodoroPage = () => {
           Otomatik dinlenmeye geçme, oturum bitince bildirim gönderme ve oturum sonunda not isteme seçenekleri sonraki fazda yönetilecek.
         </p>
       </section>
+
+      <Sheet open={Boolean(editingCategory)} onOpenChange={(open) => !open && setEditingCategoryId(null)}>
+        <SheetContent
+          side="bottom"
+          className="w-full max-w-none rounded-t-2xl border-t border-border/60 p-0 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-0 shadow-[0_-12px_32px_rgba(0,0,0,0.18)] md:left-1/2 md:top-1/2 md:h-auto md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:pb-6 md:pt-0"
+        >
+          <SheetHeader className="border-b border-border/60 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] text-left md:px-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <SheetTitle className="text-base font-medium tracking-normal text-foreground md:text-lg">Kategoriyi Düzenle</SheetTitle>
+                <SheetDescription className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Kategori adı ve rengini güncelle.
+                </SheetDescription>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCategoryId(null)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Kapat"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </SheetHeader>
+
+          {editingCategory && (
+            <div className="space-y-4 px-4 pt-4 md:px-6">
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Kategori adı</span>
+                <Input
+                  value={draft.name}
+                  onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Kategori adı"
+                  className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
+                />
+              </label>
+
+              <div>
+                <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Renk</span>
+                <ColorSwatchPicker
+                  value={draft.color}
+                  onChange={(value) => setDraft((current) => ({ ...current, color: value }))}
+                />
+              </div>
+
+              <div className="pt-1">
+                <Button type="button" onClick={() => void saveCategory()} className="h-10 w-full px-3 text-sm">
+                  Kaydet
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
