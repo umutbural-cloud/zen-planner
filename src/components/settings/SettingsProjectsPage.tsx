@@ -211,47 +211,33 @@ export const SettingsProjectsPage = () => {
                     >
                       <ProjectIcon project={project} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-medium text-foreground">{project.name}</span>
+                        <span
+                          className="block text-base font-medium leading-6 text-foreground"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {project.name}
+                        </span>
                         <span className="mt-1 block text-xs leading-5 text-muted-foreground">{views.length} aktif görünüm</span>
                       </span>
                     </button>
 
-                    <span className="shrink-0 rounded-full bg-muted/55 px-2 py-1 text-[11px] font-medium text-muted-foreground">
-                      {selected ? "Seçili" : "Aktif"}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {views.map((view) => (
-                      <span key={view} className="rounded-md bg-muted/55 px-2 py-1 text-[11px] font-light text-muted-foreground">
-                        {VIEW_LABELS[view]}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-end gap-2">
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => selectProject(project)}
-                      className="h-9 w-9 p-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       aria-label="Projeyi düzenle"
                       title="Projeyi düzenle"
                     >
                       <Edit3 className="h-3.5 w-3.5" strokeWidth={1.7} />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={project.is_default}
-                      onClick={() => setProjectToTrash(project)}
-                      title={project.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Çöp Kutusuna Taşı"}
-                      aria-label={project.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Projeyi çöp kutusuna taşı"}
-                      className="h-9 w-9 p-0 text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.7} />
                     </Button>
                   </div>
                 </div>
@@ -411,6 +397,18 @@ export const SettingsProjectsPage = () => {
                   </label>
                 ))}
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={selectedProject.is_default}
+                onClick={() => setProjectToTrash(selectedProject)}
+                title={selectedProject.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Projeyi tamamen sil"}
+                aria-label={selectedProject.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Projeyi tamamen sil"}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100 focus-visible:ring-red-300 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-950/30 min-[390px]:col-span-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Projeyi Tamamen Sil
+              </Button>
               {viewError && <p className="mt-2 text-xs text-muted-foreground">{viewError}</p>}
             </div>
 
