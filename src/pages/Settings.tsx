@@ -47,7 +47,7 @@ const ChoiceButton = ({
 );
 
 const SettingRow = ({ label, description, children }: { label: string; description: string; children: ReactNode }) => (
-  <div className="grid grid-cols-1 gap-4 rounded-xl border border-border/60 bg-card px-4 py-4 shadow-none md:grid-cols-[minmax(0,1fr)_240px] md:items-center md:gap-8 md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-5">
+  <div className="grid grid-cols-1 gap-4 rounded-xl border border-border/60 bg-white px-4 py-4 shadow-none dark:bg-card md:grid-cols-[minmax(0,1fr)_240px] md:items-center md:gap-8 md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-5">
     <div className="min-w-0">
       <h3 className="text-sm font-medium text-foreground">{label}</h3>
       <p className="mt-1 text-[1rem] leading-7 text-muted-foreground md:text-sm md:leading-6">{description}</p>
