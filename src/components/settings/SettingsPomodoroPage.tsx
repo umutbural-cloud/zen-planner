@@ -388,7 +388,7 @@ export const SettingsPomodoroPage = () => {
             categories.map((category) => (
                 <div
                   key={category.id}
-                  className="rounded-lg border border-muted/50 bg-muted/25 px-3 py-3 md:grid md:grid-cols-[minmax(0,1fr)_160px_90px_180px] md:items-center md:gap-4 md:rounded-none md:border-0 md:bg-transparent md:px-3 md:py-4"
+                  className="relative rounded-lg border border-muted/50 bg-muted/25 px-3 py-3 pr-16 md:grid md:grid-cols-[minmax(0,1fr)_160px_90px_180px] md:items-center md:gap-4 md:rounded-none md:border-0 md:bg-transparent md:px-3 md:py-4 md:pr-3"
                 >
                   <div className="flex min-w-0 items-center gap-3 md:block">
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
@@ -406,7 +406,7 @@ export const SettingsPomodoroPage = () => {
 
                   <span className="hidden text-sm font-light text-muted-foreground md:inline-flex">Aktif</span>
 
-                  <div className="ml-auto flex items-center gap-1 md:gap-2">
+                  <div className="absolute right-2 top-2 z-10 flex items-center gap-1 md:static md:ml-auto md:gap-2">
                     <Button
                       type="button"
                       variant="ghost"
@@ -414,7 +414,7 @@ export const SettingsPomodoroPage = () => {
                       onClick={() => openEdit(category)}
                       aria-label="Kategoriyi düzenle"
                       title="Kategoriyi düzenle"
-                      className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      className="h-7 w-7 min-h-0 shrink-0 rounded-md bg-transparent p-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground md:h-8 md:w-8"
                     >
                       <PencilLine className="h-3.5 w-3.5" strokeWidth={1.7} />
                     </Button>
@@ -425,7 +425,7 @@ export const SettingsPomodoroPage = () => {
                       onClick={() => void remove(category.id)}
                       aria-label="Kategoriyi sil"
                       title="Kategoriyi sil"
-                      className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-accent/50 hover:text-destructive md:hidden"
+                      className="h-7 w-7 min-h-0 shrink-0 rounded-md bg-transparent p-0 text-muted-foreground hover:bg-accent/50 hover:text-destructive md:h-8 md:w-8"
                     >
                       <X className="h-3.5 w-3.5" strokeWidth={1.7} />
                     </Button>
@@ -474,10 +474,10 @@ export const SettingsPomodoroPage = () => {
               <button
                 type="button"
                 onClick={() => setEditingCategoryId(null)}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 aria-label="Kapat"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </SheetHeader>
