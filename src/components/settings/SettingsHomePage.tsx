@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -140,47 +140,102 @@ export const SettingsHomePage = () => {
 
         <div className="space-y-3">
           {focusOptions.map((option, index) => (
-            <div key={option.id} className="grid grid-cols-1 gap-3 rounded-lg bg-muted/35 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_180px_40px] sm:items-center">
-              <Input
-                value={focusDrafts[option.id] ?? option.label}
-                onChange={(event) => setFocusDrafts((prev) => ({ ...prev, [option.id]: event.target.value }))}
-                onBlur={() => commitFocusLabel(index)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") event.currentTarget.blur();
-                }}
-                placeholder="Odak adı"
-                className="h-11 rounded-md border-transparent bg-white/75 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:text-sm"
-                aria-label="Odak adı"
-              />
-              <Select
-                value={option.color || "stone"}
-                onValueChange={(color) => updateFocusOption(index, { color })}
-              >
-                <SelectTrigger className="h-11 rounded-md border-transparent bg-white/75 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {CATEGORY_COLORS.map((color) => (
-                    <SelectItem key={color.key} value={color.key}>
-                      <span className="inline-flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
-                        {color.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => removeFocusOption(index)}
-                disabled={focusOptions.length <= 1}
-                className="h-11 w-11 justify-self-end text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground md:h-9 md:w-9"
-                aria-label="Odak seçeneğini sil"
-              >
-                <Trash2 className="h-4 w-4" strokeWidth={1.7} />
-              </Button>
+            <div key={option.id} className="rounded-lg bg-muted/35 p-3 md:rounded-md md:px-3 md:py-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_44px_44px] items-center gap-2 md:hidden">
+                <div className="relative min-w-0">
+                  <span
+                    className="pointer-events-none absolute left-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full"
+                    style={{ background: colorHex(option.color || "stone") }}
+                  />
+                  <Input
+                    value={focusDrafts[option.id] ?? option.label}
+                    onChange={(event) => setFocusDrafts((prev) => ({ ...prev, [option.id]: event.target.value }))}
+                    onBlur={() => commitFocusLabel(index)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                    }}
+                    placeholder="Odak adı"
+                    className="h-11 w-full min-w-0 rounded-md border-transparent bg-white/75 pl-8 text-xs font-light shadow-none dark:bg-muted/30"
+                    aria-label="Odak adı"
+                  />
+                </div>
+                <Select
+                  value={option.color || "stone"}
+                  onValueChange={(color) => updateFocusOption(index, { color })}
+                >
+                  <SelectTrigger
+                    aria-label="Odak rengini değiştir"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border-transparent bg-white/75 p-0 text-muted-foreground shadow-none dark:bg-muted/30 [&>svg]:hidden"
+                  >
+                    <ChevronDown className="h-4 w-4" strokeWidth={1.8} />
+                    <span className="sr-only">Odak rengini değiştir</span>
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CATEGORY_COLORS.map((color) => (
+                      <SelectItem key={color.key} value={color.key}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
+                          {color.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeFocusOption(index)}
+                  disabled={focusOptions.length <= 1}
+                  className="h-11 w-11 shrink-0 text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground"
+                  aria-label="Odak seçeneğini sil"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={1.7} />
+                </Button>
+              </div>
+
+              <div className="hidden items-center gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_180px_40px]">
+                <Input
+                  value={focusDrafts[option.id] ?? option.label}
+                  onChange={(event) => setFocusDrafts((prev) => ({ ...prev, [option.id]: event.target.value }))}
+                  onBlur={() => commitFocusLabel(index)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                  }}
+                  placeholder="Odak adı"
+                  className="h-11 rounded-md border-transparent bg-white/75 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:text-sm"
+                  aria-label="Odak adı"
+                />
+                <Select
+                  value={option.color || "stone"}
+                  onValueChange={(color) => updateFocusOption(index, { color })}
+                >
+                  <SelectTrigger className="h-11 rounded-md border-transparent bg-white/75 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {CATEGORY_COLORS.map((color) => (
+                      <SelectItem key={color.key} value={color.key}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: colorHex(color.key) }} />
+                          {color.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeFocusOption(index)}
+                  disabled={focusOptions.length <= 1}
+                  className="h-9 w-9 text-muted-foreground hover:bg-accent/50 hover:text-destructive disabled:hover:text-muted-foreground"
+                  aria-label="Odak seçeneğini sil"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={1.7} />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
