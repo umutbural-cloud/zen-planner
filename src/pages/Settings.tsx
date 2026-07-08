@@ -64,51 +64,53 @@ const ExperienceContent = () => {
   const startupValue = startup.type === "module" ? startup.value : "home";
 
   return (
-    <div className="space-y-3 md:divide-y md:divide-muted/70 md:space-y-0">
-      <SettingRow
-        label="Açılış Sayfası"
-        description="Zen Planner'ı açtığında ilk olarak hangi modülün yükleneceğini seç."
-      >
-        <Select
-          value={startupValue}
-          onValueChange={(value) => setStartup({ type: "module", value: value as "home" | "pomodoro" | "workHistory" | "journal" | "habits" })}
+    <div className="space-y-3 md:space-y-0 md:rounded-lg md:border md:border-border/60 md:bg-white md:px-6 md:py-5 md:shadow-none dark:md:bg-card">
+      <div className="space-y-3 md:divide-y md:divide-muted/70 md:space-y-0">
+        <SettingRow
+          label="Açılış Sayfası"
+          description="Zen Planner'ı açtığında ilk olarak hangi modülün yükleneceğini seç."
         >
-          <SelectTrigger className="h-11 w-full rounded-lg border-transparent bg-muted/55 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:rounded-md md:text-sm">
-            <SelectValue placeholder="Ana Sayfa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="home">Ana Sayfa</SelectItem>
-            <SelectItem value="pomodoro">Pomodoro</SelectItem>
-            <SelectItem value="workHistory">Çalışma Geçmişi</SelectItem>
-            <SelectItem value="journal">Günlük</SelectItem>
-            <SelectItem value="habits">Alışkanlıklar</SelectItem>
-          </SelectContent>
-        </Select>
-      </SettingRow>
+          <Select
+            value={startupValue}
+            onValueChange={(value) => setStartup({ type: "module", value: value as "home" | "pomodoro" | "workHistory" | "journal" | "habits" })}
+          >
+            <SelectTrigger className="h-11 w-full rounded-lg border-transparent bg-muted/55 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:rounded-md md:text-sm">
+              <SelectValue placeholder="Ana Sayfa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="home">Ana Sayfa</SelectItem>
+              <SelectItem value="pomodoro">Pomodoro</SelectItem>
+              <SelectItem value="workHistory">Çalışma Geçmişi</SelectItem>
+              <SelectItem value="journal">Günlük</SelectItem>
+              <SelectItem value="habits">Alışkanlıklar</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
 
-      <SettingRow label="Tema" description="Uygulamanın genel görünümünü aydınlık veya karanlık olarak seç.">
-        <div className="grid grid-cols-2 gap-2">
-          {(["light", "dark"] as Theme[]).map((item) => (
-            <ChoiceButton key={item} active={theme === item} onClick={() => setTheme(item)}>
-              {item === "light" ? "Aydınlık" : "Karanlık"}
-            </ChoiceButton>
-          ))}
-        </div>
-      </SettingRow>
+        <SettingRow label="Tema" description="Uygulamanın genel görünümünü aydınlık veya karanlık olarak seç.">
+          <div className="grid grid-cols-2 gap-2">
+            {(["light", "dark"] as Theme[]).map((item) => (
+              <ChoiceButton key={item} active={theme === item} onClick={() => setTheme(item)}>
+                {item === "light" ? "Aydınlık" : "Karanlık"}
+              </ChoiceButton>
+            ))}
+          </div>
+        </SettingRow>
 
-      <SettingRow label="Arayüz Boyutu" description="Metin ve arayüz ölçeğini okuma rahatlığına göre ayarla.">
-        <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
-          {([
-            ["normal", "Standart"],
-            ["large", "Büyük"],
-            ["xlarge", "Çok Büyük"],
-          ] as [UiScale, string][]).map(([value, label]) => (
-            <ChoiceButton key={value} active={scale === value} onClick={() => setScale(value)}>
-              {label}
-            </ChoiceButton>
-          ))}
-        </div>
-      </SettingRow>
+        <SettingRow label="Arayüz Boyutu" description="Metin ve arayüz ölçeğini okuma rahatlığına göre ayarla.">
+          <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
+            {([
+              ["normal", "Standart"],
+              ["large", "Büyük"],
+              ["xlarge", "Çok Büyük"],
+            ] as [UiScale, string][]).map(([value, label]) => (
+              <ChoiceButton key={value} active={scale === value} onClick={() => setScale(value)}>
+                {label}
+              </ChoiceButton>
+            ))}
+          </div>
+        </SettingRow>
+      </div>
     </div>
   );
 };
