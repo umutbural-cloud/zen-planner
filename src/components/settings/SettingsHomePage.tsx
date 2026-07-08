@@ -246,7 +246,7 @@ export const SettingsHomePage = () => {
       <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Ana sayfada gösterilecek projeler</h2>
-          <p className="mt-1 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground md:text-sm">
             Ana sayfadaki görev ve yapılıyor alanları hangi projelerden beslensin?
           </p>
         </div>
@@ -312,7 +312,7 @@ export const SettingsHomePage = () => {
 
       <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <h2 className="text-base font-medium tracking-normal text-foreground">Ana sayfa bölümleri</h2>
-        <p className="mt-2 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
+        <p className="mt-2 max-w-2xl text-xs leading-5 text-muted-foreground md:text-sm">
           Günün Odağı, Pomodoro özeti, alışkanlık özeti ve çalışma geçmişi gibi alanların görünürlüğü sonraki fazda yönetilecek.
         </p>
       </section>
