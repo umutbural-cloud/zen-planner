@@ -22,6 +22,7 @@ type Ctx = {
   complete: () => void;
   reset: () => void;
   skipBreak: () => void;
+  refreshDefaultDurations: () => Promise<void>;
   isLoading: boolean;
   isSyncing: boolean;
   syncError: string | null;
@@ -41,6 +42,10 @@ type NavigatorWithWakeLock = Navigator & {
 
 type ActiveStateRow = Database["public"]["Tables"]["pomodoro_active_state"]["Row"];
 type ActiveStateInsert = Database["public"]["Tables"]["pomodoro_active_state"]["Insert"];
+type DefaultPomodoroDurationsRow = Pick<
+  Database["public"]["Tables"]["user_settings"]["Row"],
+  "default_pomodoro_work_minutes" | "default_pomodoro_break_minutes"
+>;
 type PomodoroSessionInsert = Database["public"]["Tables"]["pomodoro_sessions"]["Insert"];
 type ApplyActiveStateOptions = {
   resetOnNull?: boolean;
@@ -50,6 +55,11 @@ const PomodoroContext = createContext<Ctx | null>(null);
 
 const DEFAULT_WORK = 25 * 60;
 const DEFAULT_BREAK = 5 * 60;
+
+const normalizeDefaultMinutes = (value: unknown, fallback: number, min: number, max: number) => {
+  const next = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : fallback;
+  return next >= min && next <= max ? next : fallback;
+};
 
 function notify(title: string, body: string) {
   try {
@@ -178,7 +188,9 @@ function createPomodoroSessionToken() {
 export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [workDurationSec, setWorkDurationSec] = useState(DEFAULT_WORK);
-  const [breakDurationSec] = useState(DEFAULT_BREAK);
+  const [breakDurationSec, setBreakDurationSec] = useState(DEFAULT_BREAK);
+  const [defaultWorkDurationSec, setDefaultWorkDurationSec] = useState(DEFAULT_WORK);
+  const [defaultBreakDurationSec, setDefaultBreakDurationSec] = useState(DEFAULT_BREAK);
   const [durationSec, setDurationSec] = useState(DEFAULT_WORK);
   const [remainingSec, setRemainingSec] = useState(DEFAULT_WORK);
   const [phase, setPhase] = useState<PomodoroPhase>("idle");
@@ -211,6 +223,9 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const durationRef = useRef(durationSec);
   const workDurRef = useRef(workDurationSec);
   const breakDurRef = useRef(breakDurationSec);
+  const defaultWorkDurRef = useRef(defaultWorkDurationSec);
+  const defaultBreakDurRef = useRef(defaultBreakDurationSec);
+  const manualDurationOverrideRef = useRef(false);
   const endsAtRef = useRef<number | null>(endsAt);
   const pausedRemainingRef = useRef<number | null>(pausedRemainingSec);
   const accumulatedElapsedRef = useRef(accumulatedElapsedSec);
@@ -222,6 +237,8 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { durationRef.current = durationSec; }, [durationSec]);
   useEffect(() => { workDurRef.current = workDurationSec; }, [workDurationSec]);
   useEffect(() => { breakDurRef.current = breakDurationSec; }, [breakDurationSec]);
+  useEffect(() => { defaultWorkDurRef.current = defaultWorkDurationSec; }, [defaultWorkDurationSec]);
+  useEffect(() => { defaultBreakDurRef.current = defaultBreakDurationSec; }, [defaultBreakDurationSec]);
   useEffect(() => { endsAtRef.current = endsAt; }, [endsAt]);
   useEffect(() => { pausedRemainingRef.current = pausedRemainingSec; }, [pausedRemainingSec]);
   useEffect(() => { accumulatedElapsedRef.current = accumulatedElapsedSec; }, [accumulatedElapsedSec]);
@@ -289,6 +306,50 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
 
   const adjustedNow = useCallback(() => Date.now() + clockOffsetMsRef.current, []);
 
+  const applyDefaultDurations = useCallback((workSeconds: number, breakSeconds: number) => {
+    defaultWorkDurRef.current = workSeconds;
+    defaultBreakDurRef.current = breakSeconds;
+    setDefaultWorkDurationSec(workSeconds);
+    setDefaultBreakDurationSec(breakSeconds);
+
+    if (
+      phaseRef.current === "idle" &&
+      kindRef.current === "work" &&
+      !manualDurationOverrideRef.current
+    ) {
+      setWorkDurationSec(workSeconds);
+      setBreakDurationSec(breakSeconds);
+      setDurationSec(workSeconds);
+      setRemainingSec(workSeconds);
+      workDurRef.current = workSeconds;
+      breakDurRef.current = breakSeconds;
+      durationRef.current = workSeconds;
+    }
+  }, []);
+
+  const refreshDefaultDurations = useCallback(async () => {
+    if (!user) {
+      applyDefaultDurations(DEFAULT_WORK, DEFAULT_BREAK);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("user_settings")
+      .select("default_pomodoro_work_minutes,default_pomodoro_break_minutes")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[pomodoro] Default duration sync failed", error);
+      return;
+    }
+
+    const settings = data as DefaultPomodoroDurationsRow | null;
+    const workMinutes = normalizeDefaultMinutes(settings?.default_pomodoro_work_minutes, 25, 1, 180);
+    const breakMinutes = normalizeDefaultMinutes(settings?.default_pomodoro_break_minutes, 5, 1, 60);
+    applyDefaultDurations(workMinutes * 60, breakMinutes * 60);
+  }, [applyDefaultDurations, user]);
+
   const resetLocalState = useCallback(() => {
     clearTimer();
     clearFinishScheduler();
@@ -296,11 +357,15 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     completedSessionIdRef.current = null;
     finishingRef.current = false;
     releaseWakeLock();
+    manualDurationOverrideRef.current = false;
+    const defaultWork = defaultWorkDurRef.current;
+    const defaultBreak = defaultBreakDurRef.current;
     setPhase("idle");
     setKind("work");
-    setDurationSec(DEFAULT_WORK);
-    setRemainingSec(DEFAULT_WORK);
-    setWorkDurationSec(DEFAULT_WORK);
+    setDurationSec(defaultWork);
+    setRemainingSec(defaultWork);
+    setWorkDurationSec(defaultWork);
+    setBreakDurationSec(defaultBreak);
     setStartedAt(null);
     setEndsAt(null);
     endsAtRef.current = null;
@@ -351,6 +416,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     setKind(row.kind);
     setPhase(row.phase as PomodoroPhase);
     setWorkDurationSec(row.work_duration_seconds);
+    setBreakDurationSec(row.break_duration_seconds);
     setDurationSec(row.duration_seconds);
     setRemainingSec(nextRemaining);
     setStartedAt(row.started_at ? new Date(row.started_at) : null);
@@ -552,7 +618,9 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const syncVisibleState = () => {
       if (!finishIfDue()) tick();
-      void fetchActiveState("revalidate");
+      void fetchActiveState("revalidate").finally(() => {
+        void refreshDefaultDurations();
+      });
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") {
@@ -572,7 +640,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener("focus", syncVisibleState);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [fetchActiveState, finishIfDue, requestWakeLock, tick]);
+  }, [fetchActiveState, finishIfDue, refreshDefaultDurations, requestWakeLock, tick]);
 
   useEffect(() => {
     setSyncError(null);
@@ -580,21 +648,26 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userId) {
       hydratedUserIdRef.current = null;
+      void refreshDefaultDurations();
       resetLocalState();
       setIsLoading(false);
       return;
     }
 
     if (hydratedUserIdRef.current === userId) {
-      void fetchActiveState("revalidate");
+      void fetchActiveState("revalidate").finally(() => {
+        void refreshDefaultDurations();
+      });
       return;
     }
 
     hydratedUserIdRef.current = userId;
     setIsLoading(true);
     resetLocalState();
-    void fetchActiveState("load");
-  }, [fetchActiveState, resetLocalState, user?.id]);
+    void fetchActiveState("load").finally(() => {
+      void refreshDefaultDurations();
+    });
+  }, [fetchActiveState, refreshDefaultDurations, resetLocalState, user?.id]);
 
   useEffect(() => {
     if (phase === "running") {
@@ -651,6 +724,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const setDuration = (sec: number) => {
     if (phase === "running" || phase === "paused") return;
     const v = Math.max(10, Math.min(sec, 180 * 60));
+    manualDurationOverrideRef.current = true;
     void withSync(async () => {
       if (!user) return;
       const nextWorkDuration = kind === "work" ? v : workDurationSec;
@@ -777,13 +851,16 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const reset = () => {
     void withSync(async () => {
       if (!user) return;
+      manualDurationOverrideRef.current = false;
+      const defaultWork = defaultWorkDurRef.current;
+      const defaultBreak = defaultBreakDurRef.current;
       await writeActiveState({
         user_id: user.id,
         phase: "idle",
         kind: "work",
-        duration_seconds: workDurationSec,
-        work_duration_seconds: workDurationSec,
-        break_duration_seconds: breakDurationSec,
+        duration_seconds: defaultWork,
+        work_duration_seconds: defaultWork,
+        break_duration_seconds: defaultBreak,
         started_at: null,
         ends_at: null,
         paused_remaining_seconds: null,
@@ -802,13 +879,16 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     if (kind !== "break") return;
     void withSync(async () => {
       if (!user) return;
+      manualDurationOverrideRef.current = false;
+      const defaultWork = defaultWorkDurRef.current;
+      const defaultBreak = defaultBreakDurRef.current;
       await writeActiveState({
         user_id: user.id,
         phase: "idle",
         kind: "work",
-        duration_seconds: workDurationSec,
-        work_duration_seconds: workDurationSec,
-        break_duration_seconds: breakDurationSec,
+        duration_seconds: defaultWork,
+        work_duration_seconds: defaultWork,
+        break_duration_seconds: defaultBreak,
         started_at: null,
         ends_at: null,
         paused_remaining_seconds: null,
@@ -829,7 +909,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       value={{
         durationSec, remainingSec, phase, kind, startedAt,
         workDurationSec, breakDurationSec,
-        setDuration, start, pause, resume, complete, reset, skipBreak,
+        setDuration, start, pause, resume, complete, reset, skipBreak, refreshDefaultDurations,
         isLoading, isSyncing, syncError, lastSyncedAt,
       }}
     >

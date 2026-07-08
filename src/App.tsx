@@ -19,6 +19,7 @@ import AppShell from "@/components/AppShell";
 import { ChunkLoadHandler } from "@/components/pwa/ChunkLoadHandler";
 import { PwaInstallPrompt } from "@/components/pwa/PwaInstallPrompt";
 import { PwaUpdatePrompt } from "@/components/pwa/PwaUpdatePrompt";
+import { PwaUpdateProvider } from "@/components/pwa/PwaUpdateProvider";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -26,6 +27,7 @@ import Pomodoro from "./pages/Pomodoro";
 import WorkHistory from "./pages/WorkHistory";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -112,38 +114,41 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <PwaUpdatePrompt />
-      <PwaInstallPrompt />
-      <ChunkLoadHandler />
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true,
-        }}
-      >
-        <ErrorBoundary>
-          <UndoProvider>
-            <PomodoroProvider>
-              <PageStateProvider>
-              <UiScaleSync />
-              <Routes>
-                <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route element={<ProtectedRoute><UserSettingsProvider><AppShell /></UserSettingsProvider></ProtectedRoute>}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/habits" element={<Index />} />
-                  <Route path="/journal" element={<Index />} />
-                  <Route path="/pomodoro" element={<Pomodoro />} />
-                  <Route path="/work-history" element={<WorkHistory />} />
-                </Route>
-                <Route path="/admin/*" element={<Admin />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-              </PageStateProvider>
-            </PomodoroProvider>
-          </UndoProvider>
-        </ErrorBoundary>
-      </BrowserRouter>
+      <PwaUpdateProvider>
+        <PwaUpdatePrompt />
+        <PwaInstallPrompt />
+        <ChunkLoadHandler />
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <ErrorBoundary>
+            <UndoProvider>
+              <PomodoroProvider>
+                <PageStateProvider>
+                <UiScaleSync />
+                <Routes>
+                  <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route element={<ProtectedRoute><UserSettingsProvider><AppShell /></UserSettingsProvider></ProtectedRoute>}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/habits" element={<Index />} />
+                    <Route path="/journal" element={<Index />} />
+                    <Route path="/pomodoro" element={<Pomodoro />} />
+                    <Route path="/work-history" element={<WorkHistory />} />
+                  </Route>
+                  <Route path="/settings" element={<ProtectedRoute><UserSettingsProvider><Settings /></UserSettingsProvider></ProtectedRoute>} />
+                  <Route path="/admin/*" element={<Admin />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                </PageStateProvider>
+              </PomodoroProvider>
+            </UndoProvider>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </PwaUpdateProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

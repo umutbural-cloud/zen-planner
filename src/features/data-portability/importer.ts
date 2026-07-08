@@ -54,7 +54,8 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
 };
 
 const USER_SETTINGS_COLUMNS = new Set([
-  "auto_prayer_times", "calculation_method", "city", "country", "default_pomodoro_project_id",
+  "auto_prayer_times", "calculation_method", "city", "country", "default_pomodoro_break_minutes",
+  "default_pomodoro_project_id", "default_pomodoro_work_minutes",
   "latitude", "location_permission", "longitude", "module_labels", "notify_habits",
   "notify_pomodoro", "notify_tasks", "quiet_hours_end", "quiet_hours_start", "startup_page",
   "timezone", "ui_scale", "home_focus_options", "home_task_project_ids", "user_id",
@@ -62,6 +63,12 @@ const USER_SETTINGS_COLUMNS = new Set([
 
 const isImportedDefaultProject = (row: Record<string, unknown>) =>
   row.deleted_at == null && (row.is_default === true || row.name === "Yapılacaklar Listesi");
+
+const normalizeImportedMinutes = (value: unknown, min: number, max: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const next = Math.round(value);
+  return next >= min && next <= max ? next : null;
+};
 
 const naturalKeyFor = (table: string, row: Record<string, unknown>) => {
   if (
@@ -364,6 +371,20 @@ export async function importUserData(
       rest.startup_page = mappedProjectId ? { type: "project", value: mappedProjectId } : { type: "default" };
     } else if (!isStartupPage(rest.startup_page)) {
       rest.startup_page = { type: "default" };
+    }
+
+    const importedWorkMinutes = normalizeImportedMinutes(rest.default_pomodoro_work_minutes, 1, 180);
+    if (importedWorkMinutes == null) {
+      delete rest.default_pomodoro_work_minutes;
+    } else {
+      rest.default_pomodoro_work_minutes = importedWorkMinutes;
+    }
+
+    const importedBreakMinutes = normalizeImportedMinutes(rest.default_pomodoro_break_minutes, 1, 60);
+    if (importedBreakMinutes == null) {
+      delete rest.default_pomodoro_break_minutes;
+    } else {
+      rest.default_pomodoro_break_minutes = importedBreakMinutes;
     }
 
     await supabase
