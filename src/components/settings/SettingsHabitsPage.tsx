@@ -28,16 +28,19 @@ const ChoiceButton = ({
   active,
   children,
   onClick,
+  className,
 }: {
   active: boolean;
   children: ReactNode;
   onClick: () => void;
+  className?: string;
 }) => (
   <button
     type="button"
     onClick={onClick}
     className={cn(
       "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      className,
       active ? "bg-white font-medium text-foreground dark:bg-muted/40" : "font-light text-muted-foreground hover:text-foreground",
     )}
   >
@@ -204,7 +207,7 @@ export const SettingsHabitsPage = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <div className="mb-4">
           <h2 className="text-base font-medium tracking-normal text-foreground">Bugün varsayılan filtresi</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -212,19 +215,33 @@ export const SettingsHabitsPage = () => {
           </p>
         </div>
 
-        <div className="inline-flex rounded-md bg-muted/45 p-1 dark:bg-muted/30">
-          <ChoiceButton active={habitDefault === "time"} onClick={() => setHabitDefault("time")}>
+        <div className="flex w-full max-w-full rounded-lg bg-muted/45 p-1 dark:bg-muted/30 md:w-auto md:max-w-none">
+          <ChoiceButton active={habitDefault === "time"} onClick={() => setHabitDefault("time")} className="flex-1">
             Günün Saati
           </ChoiceButton>
-          <ChoiceButton active={habitDefault === "all"} onClick={() => setHabitDefault("all")}>
+          <ChoiceButton active={habitDefault === "all"} onClick={() => setHabitDefault("all")} className="flex-1">
             Tümü
           </ChoiceButton>
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
+        <div className="mb-5 md:hidden">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-medium tracking-normal text-foreground">Gün dilimleri</h2>
+            {todAuto && (
+              <span className="rounded bg-accent/60 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                Otomatik
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            Alışkanlıklarını günün hangi bölümlerinde takip edeceğini düzenle.
+          </p>
+        </div>
+
         <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
+          <div className="hidden md:block">
             <div className="flex items-center gap-2">
               <h2 className="text-base font-medium tracking-normal text-foreground">Gün dilimleri</h2>
               {todAuto && (
@@ -249,7 +266,7 @@ export const SettingsHabitsPage = () => {
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 md:space-y-2">
           {ALL_TIME_OF_DAY_KEYS.map((key) => {
             const isEnabled = !todDisabled.includes(key);
             const option = todOptions.find((item) => item.key === key);
@@ -258,57 +275,64 @@ export const SettingsHabitsPage = () => {
               <div
                 key={key}
                 className={cn(
-                  "grid grid-cols-[140px_minmax(0,1fr)_120px_92px_80px] items-center gap-3 rounded-md bg-muted/35 px-3 py-3",
+                  "relative mx-auto flex w-[296px] max-w-full flex-col items-stretch gap-1 rounded-lg border border-muted/50 bg-muted/25 px-3 py-2 pr-14 md:w-auto md:max-w-none md:grid md:grid-cols-[140px_minmax(0,1fr)_120px_92px_80px] md:items-center md:gap-3 md:rounded-md md:border-0 md:bg-muted/35 md:px-3 md:py-3 md:pr-3",
                   !isEnabled && "opacity-55",
                 )}
               >
-                <div>
-                  <div className="text-sm font-medium text-foreground">{DEFAULT_TIME_OF_DAY_LABELS[key].label}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{isEnabled ? option?.range ?? "—" : "Kapalı"}</div>
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-muted-foreground">
+                    <Sunrise className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-foreground">{DEFAULT_TIME_OF_DAY_LABELS[key].label}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{isEnabled ? option?.range ?? "—" : "Kapalı"}</div>
+                  </div>
                 </div>
-                <Input
-                  value={todLabels[key]}
-                  onChange={(event) => renameTod(key, event.target.value)}
-                  disabled={!isEnabled}
-                  placeholder={DEFAULT_TIME_OF_DAY_LABELS[key].label}
-                  className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
-                />
-                <Input
-                  type="time"
-                  value={todStarts[key]}
-                  onChange={(event) => updateTod(key, event.target.value)}
-                  disabled={!isEnabled || todAuto}
-                  className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
-                />
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Switch
-                    checked={isEnabled}
-                    disabled={isEnabled && enabledCount <= 1}
-                    onCheckedChange={(value) => setTodEnabled(key, value)}
+                <div className="flex items-center gap-3 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-3">
+                  <Input
+                    value={todLabels[key]}
+                    onChange={(event) => renameTod(key, event.target.value)}
+                    disabled={!isEnabled}
+                    placeholder={DEFAULT_TIME_OF_DAY_LABELS[key].label}
+                    className="h-10 min-w-0 flex-1 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
                   />
-                  <span>{isEnabled ? "Aktif" : "Pasif"}</span>
-                </label>
-                <span className="text-xs text-muted-foreground">{todAuto ? "Otomatik" : "Elle"}</span>
+                  <Input
+                    type="time"
+                    value={todStarts[key]}
+                    onChange={(event) => updateTod(key, event.target.value)}
+                    disabled={!isEnabled || todAuto}
+                    className="h-10 w-[104px] rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30 md:w-auto"
+                  />
+                </div>
+                <div className="absolute right-3 top-3 flex items-center md:static md:justify-end md:gap-3">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground md:gap-2">
+                    <Switch
+                      checked={isEnabled}
+                      disabled={isEnabled && enabledCount <= 1}
+                      onCheckedChange={(value) => setTodEnabled(key, value)}
+                    />
+                  </label>
+                </div>
               </div>
             );
           })}
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
-        <div className="mb-5">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
+        <div className="mb-5 md:hidden">
           <div className="flex items-start gap-2">
             <Sunrise className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
               <h2 className="text-base font-medium tracking-normal text-foreground">Güneşin konumuna göre belirle</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
                 Gün dilimlerinin başlangıç saatlerini şehir veya konuma göre otomatik ayarla.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="mb-4 flex items-center justify-between gap-4 rounded-md bg-muted/35 px-4 py-3">
+        <div className="mb-4 hidden items-center justify-between gap-4 rounded-md bg-muted/35 px-4 py-3 md:flex">
           <div>
             <div className="text-sm font-medium text-foreground">Otomatik vakit sistemi</div>
             <div className="mt-1 text-xs text-muted-foreground">
@@ -320,6 +344,50 @@ export const SettingsHabitsPage = () => {
             </div>
           </div>
           <Switch checked={todAuto} onCheckedChange={(value) => void updateAutoMode(value)} />
+        </div>
+
+        <div className="mb-4 rounded-lg border border-muted/50 bg-muted/25 px-4 py-4 md:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-foreground">Otomatik vakit sistemi</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {userSettings.city
+                  ? userSettings.city
+                  : userSettings.latitude != null
+                    ? `${userSettings.latitude.toFixed(2)}°, ${userSettings.longitude?.toFixed(2)}°`
+                    : "Konum belirtilmedi"}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => void prayerQuery.refetch()}
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                aria-label="Vakitleri yenile"
+                title="Vakitleri yenile"
+              >
+                <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.7} />
+              </Button>
+              <Switch checked={todAuto} onCheckedChange={(value) => void updateAutoMode(value)} />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
+              Şehir / konum
+            </label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={citySearch}
+                onChange={(event) => setCitySearch(event.target.value)}
+                placeholder="Şehir ara..."
+                className="h-10 rounded-md border-transparent bg-white/75 pl-10 text-sm font-light shadow-none dark:bg-muted/30"
+              />
+            </div>
+          </div>
         </div>
 
         {prayerQuery.error && (
@@ -339,7 +407,7 @@ export const SettingsHabitsPage = () => {
           </div>
         )}
 
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4 hidden flex-wrap items-center gap-2 md:flex">
           <Button
             type="button"
             variant="outline"
@@ -364,7 +432,7 @@ export const SettingsHabitsPage = () => {
           {prayerQuery.isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         </div>
 
-        <div>
+        <div className="hidden md:block">
           <label className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">
             Şehir seç
           </label>
@@ -404,9 +472,30 @@ export const SettingsHabitsPage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
+        <div className="mb-4 md:hidden">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-medium tracking-normal text-foreground">Alışkanlık kategorileri</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Alışkanlıklarını gruplamak için kategori adı ve rengini düzenle.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddingCategory((current) => !current)}
+              className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
+              Yeni Kategori
+            </Button>
+          </div>
+        </div>
+
         <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
+          <div className="hidden md:block">
             <h2 className="text-base font-medium tracking-normal text-foreground">Alışkanlık kategorileri</h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
               Alışkanlıklarını gruplamak için kategori adı ve rengini düzenle.
@@ -417,15 +506,75 @@ export const SettingsHabitsPage = () => {
             variant="ghost"
             size="sm"
             onClick={() => setIsAddingCategory((current) => !current)}
-            className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            className="hidden h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground md:inline-flex"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
             Yeni Kategori
           </Button>
         </div>
 
+        <div className="mb-4 space-y-3 md:hidden">
+          {isAddingCategory && (
+            <div className="space-y-3 rounded-lg border border-muted/50 bg-muted/25 px-3 py-3">
+              <Input
+                value={newCategory.name}
+                onChange={(event) => setNewCategory((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Kategori adı"
+                className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+              />
+              <ColorSelect
+                value={newCategory.color}
+                onChange={(value) => setNewCategory((current) => ({ ...current, color: value }))}
+              />
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" onClick={() => void saveNewCategory()} className="h-9 px-3 text-xs">
+                  Kaydet
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetCategoryCreate}
+                  className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                >
+                  Vazgeç
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {editingCategoryId && (
+            <div className="space-y-3 rounded-lg border border-muted/50 bg-muted/25 px-3 py-3">
+              <Input
+                value={editingCategory.name}
+                onChange={(event) => setEditingCategory((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Kategori adı"
+                className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+              />
+              <ColorSelect
+                value={editingCategory.color}
+                onChange={(value) => setEditingCategory((current) => ({ ...current, color: value }))}
+              />
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" onClick={() => void saveCategoryEdit()} className="h-9 px-3 text-xs">
+                  Kaydet
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelCategoryEdit}
+                  className="h-9 px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                >
+                  Vazgeç
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {isAddingCategory && (
-          <div className="mb-4 grid grid-cols-[minmax(0,1fr)_220px_120px] gap-3 rounded-md bg-muted/35 px-3 py-3">
+          <div className="mb-4 hidden grid-cols-[minmax(0,1fr)_220px_120px] gap-3 rounded-md bg-muted/35 px-3 py-3 md:grid md:grid-cols-[minmax(0,1fr)_220px_120px]">
             <Input
               value={newCategory.name}
               onChange={(event) => setNewCategory((current) => ({ ...current, name: event.target.value }))}
@@ -462,28 +611,66 @@ export const SettingsHabitsPage = () => {
             Henüz alışkanlık kategorisi yok.
           </div>
         ) : (
-          <div className="space-y-2">
+          <>
+            <div className="flex flex-wrap gap-2 md:hidden">
+              {categories.map((category) => {
+                const isEditing = editingCategoryId === category.id;
+                return (
+                  <div
+                    key={category.id}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border border-muted/50 bg-muted/25 pl-3 pr-2 py-2",
+                      isEditing && "ring-1 ring-ring",
+                    )}
+                  >
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
+                    <span className="max-w-[9rem] truncate text-sm font-medium text-foreground">{category.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Kategoriyi düzenle"
+                      title="Kategoriyi düzenle"
+                      onClick={() => openCategoryEdit(category.id, category.name, category.color)}
+                      className="h-7 w-7 shrink-0 rounded-full bg-transparent p-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    >
+                      <PencilLine className="h-3.5 w-3.5" strokeWidth={1.7} />
+                    </Button>
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setIsAddingCategory((current) => !current)}
+                className="inline-flex items-center gap-2 rounded-full border border-dashed border-muted-foreground/30 bg-transparent px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/35 hover:text-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
+                Yeni Kategori
+              </button>
+            </div>
+
+          <div className="hidden md:block md:space-y-2">
             {categories.map((category) => {
               const isEditing = editingCategoryId === category.id;
               return (
                 <div
                   key={category.id}
-                  className="grid grid-cols-[minmax(0,1fr)_180px_auto] items-center gap-3 rounded-md bg-muted/35 px-4 py-3"
+                  className="rounded-lg border border-muted/50 bg-muted/25 px-3 py-3 md:grid md:grid-cols-[minmax(0,1fr)_180px_auto] md:items-center md:gap-3 md:rounded-md md:border-0 md:bg-muted/35 md:px-4 md:py-3"
                 >
-                  <div className="min-w-0">
-                    {isEditing ? (
-                      <Input
-                        value={editingCategory.name}
-                        onChange={(event) => setEditingCategory((current) => ({ ...current, name: event.target.value }))}
-                        placeholder="Kategori adı"
-                        className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <span className="h-3 w-3 rounded-full" style={{ background: colorHex(category.color) }} />
-                        <span className="truncate text-sm font-medium text-foreground">{category.name}</span>
-                      </div>
-                    )}
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: colorHex(category.color) }} />
+                    <div className="min-w-0">
+                      {isEditing ? (
+                        <Input
+                          value={editingCategory.name}
+                          onChange={(event) => setEditingCategory((current) => ({ ...current, name: event.target.value }))}
+                          placeholder="Kategori adı"
+                          className="h-10 rounded-md border-transparent bg-white/75 text-sm font-light shadow-none dark:bg-muted/30"
+                        />
+                      ) : (
+                        <span className="block truncate text-sm font-medium text-foreground">{category.name}</span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="min-w-0">
@@ -492,14 +679,7 @@ export const SettingsHabitsPage = () => {
                         value={editingCategory.color}
                         onChange={(value) => setEditingCategory((current) => ({ ...current, color: value }))}
                       />
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <span className="h-3 w-3 rounded-full" style={{ background: colorHex(category.color) }} />
-                        <span className="truncate text-sm text-muted-foreground">
-                          {CATEGORY_COLORS.find((color) => color.key === category.color)?.label ?? category.color}
-                        </span>
-                      </div>
-                    )}
+                    ) : null}
                   </div>
 
                   {isEditing ? (
@@ -536,6 +716,7 @@ export const SettingsHabitsPage = () => {
               );
             })}
           </div>
+          </>
         )}
 
         <p className="mt-4 text-xs text-muted-foreground/80">

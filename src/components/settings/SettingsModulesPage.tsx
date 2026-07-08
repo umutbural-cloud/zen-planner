@@ -35,7 +35,7 @@ const ModuleName = ({ row }: { row: ModuleVisibilityRow }) => {
       </span>
       <div className="min-w-0">
         <h3 className="text-sm font-medium tracking-normal text-foreground">{row.title}</h3>
-        <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">{row.description}</p>
+        <p className="mt-1 max-w-xl text-[1rem] leading-6 text-muted-foreground md:text-xs md:leading-5">{row.description}</p>
       </div>
     </div>
   );
@@ -48,6 +48,7 @@ const LabelInput = ({
   onChange,
   onCommit,
   onReset,
+  className,
 }: {
   row: ModuleVisibilityRow;
   disabled: boolean;
@@ -55,13 +56,17 @@ const LabelInput = ({
   onChange: (value: string) => void;
   onCommit: () => void;
   onReset: () => void;
+  className?: string;
 }) => {
   if (!isSidebarItemKey(row.preferenceKey) || row.preferenceKey === "retreat") {
     return (
       <Input
         value={row.title}
         disabled
-        className="h-10 rounded-md border-transparent bg-muted/45 text-sm font-light shadow-none dark:bg-muted/30"
+        className={cn(
+          "h-10 rounded-md border-transparent bg-muted/45 text-[1rem] font-light shadow-none dark:bg-muted/30 md:text-sm",
+          className,
+        )}
       />
     );
   }
@@ -79,7 +84,10 @@ const LabelInput = ({
         }}
         disabled={disabled}
         placeholder={SIDEBAR_ITEM_LABELS[row.preferenceKey]}
-        className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30"
+        className={cn(
+          "h-10 rounded-md border-transparent bg-muted/55 text-[1rem] font-light shadow-none dark:bg-muted/30 md:text-sm",
+          className,
+        )}
       />
       {hasCustomLabel && (
         <Button
@@ -112,14 +120,14 @@ const LinkedRow = ({
   <button
     type="button"
     onClick={onClick}
-    className="flex w-full items-center gap-4 rounded-md px-3 py-3 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    className="flex w-full items-center gap-4 rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:rounded-md"
   >
     <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-muted-foreground">
       <Icon className="h-4 w-4" strokeWidth={1.7} />
     </span>
     <span className="min-w-0 flex-1">
       <span className="block text-sm font-medium text-foreground">{title}</span>
-      <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>
+      <span className="mt-1 block text-[1rem] leading-6 text-muted-foreground md:text-xs md:leading-5">{description}</span>
     </span>
     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.7} />
   </button>
@@ -137,7 +145,9 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
 
   const getLabel = (row: ModuleVisibilityRow) => {
     if (!isSidebarItemKey(row.preferenceKey) || row.preferenceKey === "retreat") return row.title;
-    return drafts[row.preferenceKey] ?? moduleLabel(row.preferenceKey);
+    const savedLabel = moduleLabel(row.preferenceKey)?.trim();
+    const customLabel = drafts[row.preferenceKey]?.trim();
+    return customLabel || savedLabel || row.title;
   };
 
   const commitLabel = (key: SidebarItemKey) => {
@@ -151,10 +161,10 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
   };
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+    <div className="space-y-4 md:space-y-5">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <h2 className="text-base font-medium tracking-normal text-foreground">Modül görünürlüğü</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        <p className="mt-2 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
           Bir modülü kapattığında ana menüden gizlenir. Verilerin silinmez.
         </p>
         <p className="mt-3 text-xs text-muted-foreground/80">
@@ -162,18 +172,18 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Aktif Modüller</h2>
         </div>
 
-        <div className="grid grid-cols-[72px_minmax(0,1fr)_260px] gap-4 px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70">
+        <div className="hidden grid-cols-[72px_minmax(0,1fr)_260px] gap-4 px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground/70 md:grid">
           <span>Aktif</span>
           <span>Modül</span>
           <span>Tercih Edilen Ad</span>
         </div>
 
-        <div className="divide-y divide-muted/70">
+        <div className="space-y-3 md:divide-y md:divide-muted/70 md:space-y-0">
           {MODULE_VISIBILITY_ROWS.map((row) => {
             const isConfigurable = isSidebarItemKey(row.preferenceKey) && row.preferenceKey !== "retreat";
             const visible = getVisible(row);
@@ -181,52 +191,89 @@ export const SettingsModulesPage = ({ onSelectSection }: SettingsModulesPageProp
             const disabledReason = "Bu alan çekirdek modül olduğu için bu fazda kapatılamaz.";
 
             return (
-              <div
-                key={row.id}
-                className={cn(
-                  "grid grid-cols-[72px_minmax(0,1fr)_260px] items-center gap-4 px-3 py-4 transition-opacity",
-                  !visible && "opacity-55",
-                )}
-              >
-                <Switch
-                  checked={visible}
-                  disabled={!isConfigurable}
-                  title={!isConfigurable ? disabledReason : undefined}
-                  onCheckedChange={(checked) => {
-                    if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
-                  }}
-                  aria-label={`${row.title} görünürlüğü`}
-                />
-                <div>
-                  <ModuleName row={row} />
-                  {!isConfigurable && (
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground/80">
-                      {disabledReason}
-                    </p>
-                  )}
+              <div key={row.id} className={cn("rounded-lg bg-muted/25 px-3 py-4 transition-opacity md:rounded-none md:bg-transparent md:px-3 md:py-4", !visible && "opacity-55")}>
+                <div className="flex items-start justify-between gap-3 md:hidden">
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted/55 text-muted-foreground">
+                      <row.icon className="h-4 w-4" strokeWidth={1.7} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-medium tracking-normal text-foreground">{row.title}</h3>
+                      <p className="mt-1 text-[1rem] leading-6 text-muted-foreground">{row.description}</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={visible}
+                    disabled={!isConfigurable}
+                    title={!isConfigurable ? disabledReason : undefined}
+                    onCheckedChange={(checked) => {
+                      if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
+                    }}
+                    aria-label={`${row.title} görünürlüğü`}
+                    className="shrink-0 self-start"
+                  />
                 </div>
-                <LabelInput
-                  row={row}
-                  disabled={!isConfigurable || !visible}
-                  value={label}
-                  onChange={(value) => {
-                    if (!isConfigurable || !row.preferenceKey) return;
-                    setDrafts((prev) => ({ ...prev, [row.preferenceKey]: value }));
-                  }}
-                  onCommit={() => {
-                    if (isConfigurable && row.preferenceKey) commitLabel(row.preferenceKey);
-                  }}
-                  onReset={() => {
-                    if (isConfigurable && row.preferenceKey) resetLabel(row.preferenceKey);
-                  }}
-                />
+
+                <div className="hidden md:grid md:grid-cols-[72px_minmax(0,1fr)_260px] md:items-center md:gap-4">
+                  <Switch
+                    checked={visible}
+                    disabled={!isConfigurable}
+                    title={!isConfigurable ? disabledReason : undefined}
+                    onCheckedChange={(checked) => {
+                      if (isConfigurable && row.preferenceKey) setItem(row.preferenceKey, checked);
+                    }}
+                    aria-label={`${row.title} görünürlüğü`}
+                  />
+                  <div className="min-w-0">
+                    <ModuleName row={row} />
+                    {!isConfigurable && (
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground/80">
+                        {disabledReason}
+                      </p>
+                    )}
+                  </div>
+                  <LabelInput
+                    row={row}
+                    disabled={!isConfigurable || !visible}
+                    value={label}
+                    onChange={(value) => {
+                      if (!isConfigurable || !row.preferenceKey) return;
+                      setDrafts((prev) => ({ ...prev, [row.preferenceKey]: value }));
+                    }}
+                    onCommit={() => {
+                      if (isConfigurable && row.preferenceKey) commitLabel(row.preferenceKey);
+                    }}
+                    onReset={() => {
+                      if (isConfigurable && row.preferenceKey) resetLabel(row.preferenceKey);
+                    }}
+                  />
+                </div>
+
+                <div className="mt-4 md:hidden">
+                  <LabelInput
+                    row={row}
+                    disabled={!isConfigurable || !visible}
+                    value={label}
+                    onChange={(value) => {
+                      if (!isConfigurable || !row.preferenceKey) return;
+                      setDrafts((prev) => ({ ...prev, [row.preferenceKey]: value }));
+                    }}
+                    onCommit={() => {
+                      if (isConfigurable && row.preferenceKey) commitLabel(row.preferenceKey);
+                    }}
+                    onReset={() => {
+                      if (isConfigurable && row.preferenceKey) resetLabel(row.preferenceKey);
+                    }}
+                    className="w-full"
+                  />
+                </div>
               </div>
             );
           })}
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
         <div className="mb-4">
           <h2 className="text-base font-medium tracking-normal text-foreground">Modül Ayarları</h2>
         </div>

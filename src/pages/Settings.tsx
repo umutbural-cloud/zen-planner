@@ -34,8 +34,9 @@ const ChoiceButton = ({
   <button
     type="button"
     onClick={onClick}
+    aria-pressed={active}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      "inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg px-3 text-center text-[1rem] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-10 md:min-h-10 md:rounded-md md:px-4 md:text-sm",
       active
         ? "bg-accent font-medium text-foreground dark:bg-accent/35"
         : "bg-muted/55 font-light text-muted-foreground hover:bg-accent/50 hover:text-foreground dark:bg-muted/30 dark:hover:bg-accent/30",
@@ -46,12 +47,12 @@ const ChoiceButton = ({
 );
 
 const SettingRow = ({ label, description, children }: { label: string; description: string; children: ReactNode }) => (
-  <div className="grid grid-cols-[minmax(0,1fr)_240px] items-center gap-8 py-5">
-    <div>
+  <div className="grid grid-cols-1 gap-4 rounded-xl border border-border/60 bg-white px-4 py-4 shadow-none dark:bg-card md:grid-cols-[minmax(0,1fr)_240px] md:items-center md:gap-8 md:rounded-none md:border-0 md:bg-transparent md:px-0 md:py-5">
+    <div className="min-w-0">
       <h3 className="text-sm font-medium text-foreground">{label}</h3>
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+      <p className="mt-1 text-[1rem] leading-7 text-muted-foreground md:text-sm md:leading-6">{description}</p>
     </div>
-    <div>{children}</div>
+    <div className="min-w-0">{children}</div>
   </div>
 );
 
@@ -63,51 +64,53 @@ const ExperienceContent = () => {
   const startupValue = startup.type === "module" ? startup.value : "home";
 
   return (
-    <div className="divide-y divide-muted/70">
-      <SettingRow
-        label="Açılış Sayfası"
-        description="Zen Planner'ı açtığında ilk olarak hangi modülün yükleneceğini seç."
-      >
-        <Select
-          value={startupValue}
-          onValueChange={(value) => setStartup({ type: "module", value: value as "home" | "pomodoro" | "workHistory" | "journal" | "habits" })}
+    <div className="space-y-3 md:space-y-0 md:rounded-lg md:border md:border-border/60 md:bg-white md:px-6 md:py-5 md:shadow-none dark:md:bg-card">
+      <div className="space-y-3 md:divide-y md:divide-muted/70 md:space-y-0">
+        <SettingRow
+          label="Açılış Sayfası"
+          description="Zen Planner'ı açtığında ilk olarak hangi modülün yükleneceğini seç."
         >
-          <SelectTrigger className="h-10 rounded-md border-transparent bg-muted/55 text-sm font-light shadow-none dark:bg-muted/30">
-            <SelectValue placeholder="Ana Sayfa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="home">Ana Sayfa</SelectItem>
-            <SelectItem value="pomodoro">Pomodoro</SelectItem>
-            <SelectItem value="workHistory">Çalışma Geçmişi</SelectItem>
-            <SelectItem value="journal">Günlük</SelectItem>
-            <SelectItem value="habits">Alışkanlıklar</SelectItem>
-          </SelectContent>
-        </Select>
-      </SettingRow>
+          <Select
+            value={startupValue}
+            onValueChange={(value) => setStartup({ type: "module", value: value as "home" | "pomodoro" | "workHistory" | "journal" | "habits" })}
+          >
+            <SelectTrigger className="h-11 w-full rounded-lg border-transparent bg-muted/55 text-[1rem] font-light shadow-none dark:bg-muted/30 md:h-10 md:rounded-md md:text-sm">
+              <SelectValue placeholder="Ana Sayfa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="home">Ana Sayfa</SelectItem>
+              <SelectItem value="pomodoro">Pomodoro</SelectItem>
+              <SelectItem value="workHistory">Çalışma Geçmişi</SelectItem>
+              <SelectItem value="journal">Günlük</SelectItem>
+              <SelectItem value="habits">Alışkanlıklar</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingRow>
 
-      <SettingRow label="Tema" description="Uygulamanın genel görünümünü aydınlık veya karanlık olarak seç.">
-        <div className="grid grid-cols-2 gap-2">
-          {(["light", "dark"] as Theme[]).map((item) => (
-            <ChoiceButton key={item} active={theme === item} onClick={() => setTheme(item)}>
-              {item === "light" ? "Aydınlık" : "Karanlık"}
-            </ChoiceButton>
-          ))}
-        </div>
-      </SettingRow>
+        <SettingRow label="Tema" description="Uygulamanın genel görünümünü aydınlık veya karanlık olarak seç.">
+          <div className="grid grid-cols-2 gap-2">
+            {(["light", "dark"] as Theme[]).map((item) => (
+              <ChoiceButton key={item} active={theme === item} onClick={() => setTheme(item)}>
+                {item === "light" ? "Aydınlık" : "Karanlık"}
+              </ChoiceButton>
+            ))}
+          </div>
+        </SettingRow>
 
-      <SettingRow label="Arayüz Boyutu" description="Metin ve arayüz ölçeğini okuma rahatlığına göre ayarla.">
-        <div className="grid grid-cols-3 gap-2">
-          {([
-            ["normal", "Normal"],
-            ["large", "Büyük"],
-            ["xlarge", "Çok Büyük"],
-          ] as [UiScale, string][]).map(([value, label]) => (
-            <ChoiceButton key={value} active={scale === value} onClick={() => setScale(value)}>
-              {label}
-            </ChoiceButton>
-          ))}
-        </div>
-      </SettingRow>
+        <SettingRow label="Arayüz Boyutu" description="Metin ve arayüz ölçeğini okuma rahatlığına göre ayarla.">
+          <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-3">
+            {([
+              ["normal", "Standart"],
+              ["large", "Büyük"],
+              ["xlarge", "Çok Büyük"],
+            ] as [UiScale, string][]).map(([value, label]) => (
+              <ChoiceButton key={value} active={scale === value} onClick={() => setScale(value)}>
+                {label}
+              </ChoiceButton>
+            ))}
+          </div>
+        </SettingRow>
+      </div>
     </div>
   );
 };
@@ -115,7 +118,7 @@ const ExperienceContent = () => {
 const PlaceholderContent = ({ lines }: { lines: string[] }) => (
   <div className="space-y-3">
     {lines.map((line) => (
-      <div key={line} className="rounded-lg bg-muted/45 px-4 py-3 text-sm text-muted-foreground">
+      <div key={line} className="rounded-lg bg-muted/45 px-4 py-3 text-[1rem] text-muted-foreground md:text-sm">
         {line}
       </div>
     ))}
@@ -142,11 +145,11 @@ const SettingsPage = () => {
 
   return (
     <SettingsLayout activeSection={activeSection} onSelectSection={setActiveSection}>
-      <div className="mb-8">
+      <div className={cn("mb-8", activeSection === "home" && "hidden md:block")}>
         <h1 className="text-3xl font-medium tracking-normal text-foreground">{copy.title}</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{copy.description}</p>
+        <p className="mt-2 max-w-2xl text-[1rem] leading-7 text-muted-foreground md:text-sm md:leading-6">{copy.description}</p>
       </div>
-      {activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" || activeSection === "notifications" || activeSection === "data-privacy" || activeSection === "account-security" || activeSection === "about" ? (
+      {activeSection === "experience" || activeSection === "modules" || activeSection === "home" || activeSection === "tasks-projects" || activeSection === "pomodoro-focus" || activeSection === "habits" || activeSection === "notifications" || activeSection === "data-privacy" || activeSection === "account-security" || activeSection === "about" ? (
         renderSectionContent(activeSection, setActiveSection)
       ) : (
         <SettingsSection title={copy.title} description={copy.description}>

@@ -45,7 +45,7 @@ export const SettingsSidebar = ({ activeSection, onSelect }: SettingsSidebarProp
   const navigate = useNavigate();
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col bg-white px-4 py-6 dark:bg-card">
+    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col bg-white px-4 py-6 dark:bg-card md:flex">
       <div className="mb-7">
         <p className="mb-4 px-1 text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground/70">
           ZEN PLANNER

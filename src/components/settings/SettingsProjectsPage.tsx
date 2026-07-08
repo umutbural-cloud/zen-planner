@@ -169,14 +169,85 @@ export const SettingsProjectsPage = () => {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="hidden rounded-lg bg-white px-6 py-5 dark:bg-card md:block">
         <h2 className="text-base font-medium tracking-normal text-foreground">Proje silme güvenlidir</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
           Projeler kalıcı olarak silinmez; çöp kutusuna taşınır. Geri yükleme ayrı bir işlem olarak ele alınır.
         </p>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:hidden">
+        <div className="mb-4">
+          <h2 className="text-base font-medium tracking-normal text-foreground">Proje Listesi</h2>
+        </div>
+
+        <div className="space-y-3">
+          {loading ? (
+            <div className="rounded-lg bg-muted/35 px-4 py-5 text-center text-sm text-muted-foreground">
+              Projeler yükleniyor...
+            </div>
+          ) : workspaceProjects.length === 0 ? (
+            <div className="rounded-lg bg-muted/35 px-4 py-5 text-center text-sm text-muted-foreground">
+              Gösterilecek proje yok.
+            </div>
+          ) : (
+            workspaceProjects.map((project) => {
+              const selected = selectedProjectId === project.id;
+              const views = project.enabled_views?.length ? project.enabled_views : ["table", "notes"];
+
+              return (
+                <div
+                  key={project.id}
+                  className={cn(
+                    "rounded-lg bg-muted/35 p-3 transition-colors",
+                    selected ? "bg-muted/45" : "hover:bg-muted/30",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => selectProject(project)}
+                      className="flex min-w-0 flex-1 items-start gap-3 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <ProjectIcon project={project} />
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className="block text-base font-medium leading-6 text-foreground"
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {project.name}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{views.length} aktif görünüm</span>
+                      </span>
+                    </button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => selectProject(project)}
+                      className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                      aria-label="Projeyi düzenle"
+                      title="Projeyi düzenle"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" strokeWidth={1.7} />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <section className="hidden rounded-lg bg-white px-6 py-5 dark:bg-card md:block">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Proje Listesi</h2>
         </div>
@@ -264,7 +335,101 @@ export const SettingsProjectsPage = () => {
         </div>
       </section>
 
-      <section className="rounded-lg bg-white px-6 py-5 dark:bg-card">
+      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:hidden">
+        <div className="mb-4">
+          <h2 className="text-base font-medium tracking-normal text-foreground">Proje Düzenleme</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+            Seçili projenin temel ayarlarını ve görünür görünümlerini yapılandır.
+          </p>
+        </div>
+
+        {!selectedProject || !draft ? (
+          <div className="rounded-md bg-muted/35 px-4 py-5 text-center text-sm text-muted-foreground">
+            Düzenlemek için listeden bir proje seç.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-[minmax(0,1fr)_56px] gap-3">
+              <label className="block min-w-0">
+                <span className="mb-2 block text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Proje adı</span>
+                <Input
+                  value={draft.name}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                  placeholder="Proje adı"
+                  className="h-11 rounded-md border-transparent bg-muted/55 text-[1rem] font-light shadow-none dark:bg-muted/30"
+                />
+              </label>
+
+              <div className="self-end">
+                <ProjectIconPicker
+                  icon={draft.icon}
+                  iconColor={draft.iconColor}
+                  triggerClassName="h-11 w-14 rounded-md bg-muted/55 hover:bg-muted/70 dark:bg-muted/30 dark:hover:bg-muted/40"
+                  iconClassName="h-4.5 w-4.5"
+                  popoverSide="left"
+                  popoverAlign="start"
+                  popoverSideOffset={12}
+                  popoverCollisionPadding={16}
+                  onChange={(updates) =>
+                    setDraft({
+                      ...draft,
+                      icon: updates.icon === undefined ? draft.icon : updates.icon,
+                      iconColor: updates.icon_color === undefined ? draft.iconColor : updates.icon_color,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground/70">Görünür görünümler</div>
+              <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
+                {VIEW_OPTIONS.map((view) => (
+                  <label
+                    key={view.key}
+                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md bg-muted/35 px-3 py-3 text-[1rem] text-foreground"
+                  >
+                    <Checkbox
+                      checked={draft.enabledViews.includes(view.key)}
+                      onCheckedChange={(checked) => toggleView(view.key, checked === true)}
+                    />
+                    <span>{view.label}</span>
+                  </label>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={selectedProject.is_default}
+                onClick={() => setProjectToTrash(selectedProject)}
+                title={selectedProject.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Projeyi tamamen sil"}
+                aria-label={selectedProject.is_default ? "Varsayılan proje çöp kutusuna taşınamaz." : "Projeyi tamamen sil"}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100 focus-visible:ring-red-300 dark:border-red-900/60 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-950/30 min-[390px]:col-span-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Projeyi Tamamen Sil
+              </Button>
+              {viewError && <p className="mt-2 text-xs text-muted-foreground">{viewError}</p>}
+            </div>
+
+            <div className="flex flex-col gap-3 pt-1">
+              <p className="max-w-xl text-xs leading-5 text-muted-foreground">
+                Ad, ikon ve görünüm değişiklikleri kalıcıdır. Proje silme işlemi soft-delete olarak yapılır.
+              </p>
+              <Button
+                type="button"
+                onClick={saveProject}
+                disabled={!hasChanges || saving}
+                className="h-10 w-full shrink-0 px-3 text-xs"
+              >
+                Değişiklikleri Kaydet
+              </Button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="hidden rounded-lg bg-white px-6 py-5 dark:bg-card md:block">
         <div className="mb-5">
           <h2 className="text-base font-medium tracking-normal text-foreground">Proje Düzenleme</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
