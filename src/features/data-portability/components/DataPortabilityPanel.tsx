@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { useDataPortability } from "../hooks/useDataPortability";
 import { ImportPreviewDialog } from "./ImportPreviewDialog";
 
+type DataPortabilityPanelProps = {
+  showIntroCopy?: boolean;
+};
+
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-export const DataPortabilityPanel = () => {
+export const DataPortabilityPanel = ({ showIntroCopy = true }: DataPortabilityPanelProps) => {
   const {
     exporting, importing, progress, pending,
     exportNow, previewImport, confirmImport, cancelImport,
@@ -51,13 +55,17 @@ export const DataPortabilityPanel = () => {
 
   return (
     <div className="space-y-3">
-      <div className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
-        <FileJson className="h-3 w-3" /> Verilerim
-      </div>
-      <div className="text-[10px] text-muted-foreground tracking-wide leading-relaxed">
-        Bilgi merkezi dışındaki proje, görev, heybe, alışkanlık ve odak geçmişinizi JSON olarak
-        indirin; başka bir hesaba veya ortama taşıyabilirsiniz. Sadece size ait veriler aktarılır.
-      </div>
+      {showIntroCopy && (
+        <>
+          <div className="text-[10px] text-muted-foreground tracking-[0.15em] uppercase flex items-center gap-1.5">
+            <FileJson className="h-3 w-3" /> Verilerim
+          </div>
+          <div className="text-[10px] text-muted-foreground tracking-wide leading-relaxed">
+            Bilgi merkezi dışındaki proje, görev, heybe, alışkanlık ve odak geçmişinizi JSON olarak
+            indirin; başka bir hesaba veya ortama taşıyabilirsiniz. Sadece size ait veriler aktarılır.
+          </div>
+        </>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2 pt-1">
         <Button

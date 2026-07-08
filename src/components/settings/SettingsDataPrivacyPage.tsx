@@ -35,8 +35,8 @@ export const SettingsDataPrivacyPage = () => {
           <p className="text-[0.85rem] leading-relaxed text-muted-foreground md:text-sm md:leading-6">
             Bilgi merkezi dışındaki proje, görev, heybe, alışkanlık ve odak geçmişinizi JSON olarak indirin; başka bir hesaba veya ortama taşıyabilirsiniz. Sadece size ait veriler aktarılır.
           </p>
-          <div className="rounded-lg bg-transparent px-0 py-0 [&>div>div:first-child]:hidden [&>div>div:nth-child(2)]:hidden md:bg-muted/35 md:px-4 md:py-4">
-            <DataPortabilityPanel />
+          <div className="rounded-lg bg-transparent px-0 py-0 md:bg-muted/35 md:px-4 md:py-4">
+            <DataPortabilityPanel showIntroCopy={false} />
           </div>
           <p className="text-[0.85rem] leading-relaxed text-muted-foreground md:text-sm md:leading-6">
             İçe aktarma işleminden önce dosya içeriği doğrulanır.
