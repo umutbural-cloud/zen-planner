@@ -464,22 +464,10 @@ export const SettingsPomodoroPage = () => {
           className="w-full max-w-none rounded-t-2xl border-t border-border/60 p-0 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-0 shadow-[0_-12px_32px_rgba(0,0,0,0.18)] md:left-1/2 md:top-1/2 md:h-auto md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:pb-6 md:pt-0"
         >
           <SheetHeader className="border-b border-border/60 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] text-left md:px-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="text-base font-medium tracking-normal text-foreground md:text-lg">Kategoriyi Düzenle</SheetTitle>
-                <SheetDescription className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Kategori adı ve rengini güncelle.
-                </SheetDescription>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingCategoryId(null)}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Kapat"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+            <SheetTitle className="text-base font-medium tracking-normal text-foreground md:text-lg">Kategoriyi Düzenle</SheetTitle>
+            <SheetDescription className="mt-1 text-xs leading-5 text-muted-foreground">
+              Kategori adı ve rengini güncelle.
+            </SheetDescription>
           </SheetHeader>
 
           {editingCategory && (
