@@ -28,16 +28,19 @@ const ChoiceButton = ({
   active,
   children,
   onClick,
+  className,
 }: {
   active: boolean;
   children: ReactNode;
   onClick: () => void;
+  className?: string;
 }) => (
   <button
     type="button"
     onClick={onClick}
     className={cn(
       "h-9 rounded px-3 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      className,
       active ? "bg-white font-medium text-foreground dark:bg-muted/40" : "font-light text-muted-foreground hover:text-foreground",
     )}
   >
@@ -212,11 +215,11 @@ export const SettingsHabitsPage = () => {
           </p>
         </div>
 
-        <div className="inline-flex w-full rounded-lg bg-muted/45 p-1 dark:bg-muted/30 md:w-auto">
-          <ChoiceButton active={habitDefault === "time"} onClick={() => setHabitDefault("time")}>
+        <div className="flex w-full max-w-full rounded-lg bg-muted/45 p-1 dark:bg-muted/30 md:w-auto md:max-w-none">
+          <ChoiceButton active={habitDefault === "time"} onClick={() => setHabitDefault("time")} className="flex-1">
             Günün Saati
           </ChoiceButton>
-          <ChoiceButton active={habitDefault === "all"} onClick={() => setHabitDefault("all")}>
+          <ChoiceButton active={habitDefault === "all"} onClick={() => setHabitDefault("all")} className="flex-1">
             Tümü
           </ChoiceButton>
         </div>
