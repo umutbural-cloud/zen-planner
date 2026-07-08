@@ -28,11 +28,13 @@ export const SettingsDataPrivacyPage = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <SettingsSection
-        title="Veri aktarımı"
-        description="Zen Planner verilerini yedekle veya daha önce aldığın yedeği içe aktar."
+        title="Verilerim"
         className="space-y-4 [&>div>h2]:text-base [&>div>p]:text-[0.85rem] [&>div>p]:leading-relaxed md:space-y-5 md:[&>div>p]:text-sm md:[&>div>p]:leading-6"
       >
         <div className="space-y-3 md:space-y-5">
+          <p className="text-[0.85rem] leading-relaxed text-muted-foreground md:text-sm md:leading-6">
+            Bilgi merkezi dışındaki proje, görev, heybe, alışkanlık ve odak geçmişinizi JSON olarak indirin; başka bir hesaba veya ortama taşıyabilirsiniz. Sadece size ait veriler aktarılır.
+          </p>
           <div className="rounded-lg bg-transparent px-0 py-0 md:bg-muted/35 md:px-4 md:py-4">
             <DataPortabilityPanel />
           </div>
@@ -44,7 +46,6 @@ export const SettingsDataPrivacyPage = () => {
 
       <SettingsSection
         title="Çöp kutusu ve silme davranışı"
-        description="Silinen görevler, projeler ve desteklenen kayıtlar önce çöp kutusuna taşınır."
         className="space-y-4 [&>div>h2]:text-base [&>div>p]:text-[0.85rem] [&>div>p]:leading-relaxed md:space-y-5 md:[&>div>p]:text-sm md:[&>div>p]:leading-6"
       >
         <div className="space-y-2 md:space-y-3">
