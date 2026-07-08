@@ -106,37 +106,36 @@ export const SettingsHomePage = () => {
 
   return (
     <div className="space-y-4 md:space-y-5">
-      <section className="rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <section className="relative rounded-lg bg-white px-4 py-4 dark:bg-card md:px-6 md:py-5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={resetFocusOptions}
+          aria-label="Varsayılanlara dön"
+          className="absolute right-4 top-4 h-8 w-8 bg-transparent text-muted-foreground shadow-none hover:bg-muted/50 md:static md:mr-2 md:h-10 md:w-10"
+        >
+          <RotateCcw className="h-4 w-4" strokeWidth={1.7} />
+        </Button>
+
+        <div className="mb-4 pr-10 md:mb-5 md:pr-0">
           <div className="min-w-0">
             <h2 className="text-base font-medium tracking-normal text-foreground">Günün Odağı</h2>
             <p className="mt-1 max-w-2xl text-[1rem] leading-6 text-muted-foreground md:text-sm">
               Ana sayfadaki odak seçiminde görünen seçenekleri düzenle.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-nowrap sm:items-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={resetFocusOptions}
-              className="h-10 w-full px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground sm:w-auto"
-            >
-              <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.7} />
-              Varsayılana dön
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={addFocusOption}
-              className="h-10 w-full px-3 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground sm:w-auto"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
-              Odak ekle
-            </Button>
-          </div>
         </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={addFocusOption}
+          className="mb-4 flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/25 bg-muted/20 px-4 text-sm font-medium text-foreground shadow-none transition-colors hover:bg-muted/35 hover:text-foreground md:mb-5 md:h-10 md:w-auto md:border-solid md:border-transparent md:bg-transparent md:px-3 md:text-xs md:font-normal md:text-muted-foreground md:hover:bg-accent/50 md:hover:text-foreground"
+        >
+          <Plus className="h-4 w-4" strokeWidth={1.7} />
+          Odak ekle
+        </Button>
 
         <div className="space-y-3">
           {focusOptions.map((option, index) => (
