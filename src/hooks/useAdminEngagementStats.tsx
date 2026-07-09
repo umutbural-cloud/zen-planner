@@ -4,10 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 type EngagementSeriesItem = {
   snapshot_date: string;
   meaningful_active_7d_count: number | null;
+  meaningful_active_7d_count_suppressed?: boolean;
   task_completion_activity_7d: number | null;
+  task_completion_activity_7d_suppressed?: boolean;
   manual_pomodoro_sessions_7d: number | null;
+  manual_pomodoro_sessions_7d_suppressed?: boolean;
   habit_completion_activity_7d: number | null;
+  habit_completion_activity_7d_suppressed?: boolean;
   meaningful_streak_3d_count: number | null;
+  meaningful_streak_3d_count_suppressed?: boolean;
   suppressed?: boolean;
 };
 
@@ -149,13 +154,49 @@ const parseSeriesItem = (value: unknown): EngagementSeriesItem | null => {
 
   if (!fields.every((key) => isNumberOrNull(value[key]))) return null;
 
+  const suppressionFields = [
+    "meaningful_active_7d_count_suppressed",
+    "task_completion_activity_7d_suppressed",
+    "manual_pomodoro_sessions_7d_suppressed",
+    "habit_completion_activity_7d_suppressed",
+    "meaningful_streak_3d_count_suppressed",
+  ] as const;
+
+  if (
+    suppressionFields.some(
+      (key) => typeof value[key] !== "boolean" && typeof value[key] !== "undefined",
+    )
+  ) {
+    return null;
+  }
+
   return {
     snapshot_date: value.snapshot_date,
     meaningful_active_7d_count: value.meaningful_active_7d_count as number | null,
+    meaningful_active_7d_count_suppressed:
+      typeof value.meaningful_active_7d_count_suppressed === "boolean"
+        ? value.meaningful_active_7d_count_suppressed
+        : undefined,
     task_completion_activity_7d: value.task_completion_activity_7d as number | null,
+    task_completion_activity_7d_suppressed:
+      typeof value.task_completion_activity_7d_suppressed === "boolean"
+        ? value.task_completion_activity_7d_suppressed
+        : undefined,
     manual_pomodoro_sessions_7d: value.manual_pomodoro_sessions_7d as number | null,
+    manual_pomodoro_sessions_7d_suppressed:
+      typeof value.manual_pomodoro_sessions_7d_suppressed === "boolean"
+        ? value.manual_pomodoro_sessions_7d_suppressed
+        : undefined,
     habit_completion_activity_7d: value.habit_completion_activity_7d as number | null,
+    habit_completion_activity_7d_suppressed:
+      typeof value.habit_completion_activity_7d_suppressed === "boolean"
+        ? value.habit_completion_activity_7d_suppressed
+        : undefined,
     meaningful_streak_3d_count: value.meaningful_streak_3d_count as number | null,
+    meaningful_streak_3d_count_suppressed:
+      typeof value.meaningful_streak_3d_count_suppressed === "boolean"
+        ? value.meaningful_streak_3d_count_suppressed
+        : undefined,
     suppressed: typeof value.suppressed === "boolean" ? value.suppressed : undefined,
   };
 };
@@ -184,12 +225,18 @@ const parseDashboardResponse = (data: unknown): EngagementDashboardResponse => {
   }
 
   const latest = data.latest === null ? null : parseLatest(data.latest);
-  const series = Array.isArray(data.series) ? data.series.map(parseSeriesItem).filter((item): item is EngagementSeriesItem => item !== null) : null;
-  const releaseEvents = Array.isArray(data.release_events)
-    ? data.release_events.map(parseReleaseEvent).filter((item): item is EngagementReleaseEvent => item !== null)
-    : null;
+  const series = Array.isArray(data.series) ? data.series.map(parseSeriesItem) : null;
+  const releaseEvents = Array.isArray(data.release_events) ? data.release_events.map(parseReleaseEvent) : null;
 
   if (!series || !releaseEvents) {
+    throw new Error("Engagement response shape is invalid.");
+  }
+
+  if (series.some((item) => item === null)) {
+    throw new Error("Engagement response shape is invalid.");
+  }
+
+  if (releaseEvents.some((item) => item === null)) {
     throw new Error("Engagement response shape is invalid.");
   }
 
@@ -199,8 +246,8 @@ const parseDashboardResponse = (data: unknown): EngagementDashboardResponse => {
 
   return {
     latest,
-    series,
-    release_events: releaseEvents,
+    series: series as EngagementSeriesItem[],
+    release_events: releaseEvents as EngagementReleaseEvent[],
   };
 };
 
@@ -252,6 +299,7 @@ export const useAdminEngagementStats = (enabled: boolean, daysBack = 30) => {
       if (!mountedRef.current || requestIdRef.current !== requestId) return;
 
       if (rpcError) {
+        setData({ latest: null, series: [], release_events: [] });
         setIsLoading(false);
         setError(new Error("Engagement metrikleri alınamadı."));
         return;
@@ -261,6 +309,7 @@ export const useAdminEngagementStats = (enabled: boolean, daysBack = 30) => {
         const parsed = parseDashboardResponse(response);
         setData(parsed);
       } catch (parseError) {
+        setData({ latest: null, series: [], release_events: [] });
         setError(parseError instanceof Error ? parseError : new Error("Engagement response is invalid."));
       } finally {
         if (mountedRef.current && requestIdRef.current === requestId) {

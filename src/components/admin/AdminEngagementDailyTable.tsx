@@ -3,10 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 type Row = {
   snapshot_date: string;
   meaningful_active_7d_count: number | null;
+  meaningful_active_7d_count_suppressed?: boolean;
   task_completion_activity_7d: number | null;
+  task_completion_activity_7d_suppressed?: boolean;
   manual_pomodoro_sessions_7d: number | null;
+  manual_pomodoro_sessions_7d_suppressed?: boolean;
   habit_completion_activity_7d: number | null;
+  habit_completion_activity_7d_suppressed?: boolean;
   meaningful_streak_3d_count: number | null;
+  meaningful_streak_3d_count_suppressed?: boolean;
   suppressed?: boolean;
 };
 
@@ -42,16 +47,40 @@ export const AdminEngagementDailyTable = ({ series }: AdminEngagementDailyTableP
           </thead>
           <tbody>
             {series.map((row) => {
-              const suppressed = row.suppressed === true || row.meaningful_active_7d_count === null;
+              const cellSuppressed = {
+                meaningfulActive: row.suppressed === true || row.meaningful_active_7d_count_suppressed === true,
+                taskActivity: row.suppressed === true || row.task_completion_activity_7d_suppressed === true,
+                pomodoro: row.suppressed === true || row.manual_pomodoro_sessions_7d_suppressed === true,
+                habitActivity: row.suppressed === true || row.habit_completion_activity_7d_suppressed === true,
+                streak: row.suppressed === true || row.meaningful_streak_3d_count_suppressed === true,
+              };
+              const hasPartialSuppression =
+                !row.suppressed &&
+                [
+                  cellSuppressed.meaningfulActive,
+                  cellSuppressed.taskActivity,
+                  cellSuppressed.pomodoro,
+                  cellSuppressed.habitActivity,
+                  cellSuppressed.streak,
+                ].some(Boolean);
+              const rowStatus = row.suppressed === true ? "Yetersiz veri" : hasPartialSuppression ? "Kısmi" : "Tam";
               return (
                 <tr key={row.snapshot_date} className="border-b border-border/40 last:border-b-0">
                   <td className="py-3 pr-4 text-foreground">{row.snapshot_date}</td>
-                  <td className="py-3 pr-4 text-muted-foreground">{renderValue(row.meaningful_active_7d_count, suppressed)}</td>
-                  <td className="py-3 pr-4 text-muted-foreground">{renderValue(row.task_completion_activity_7d, suppressed)}</td>
-                  <td className="py-3 pr-4 text-muted-foreground">{renderValue(row.manual_pomodoro_sessions_7d, suppressed)}</td>
-                  <td className="py-3 pr-4 text-muted-foreground">{renderValue(row.habit_completion_activity_7d, suppressed)}</td>
-                  <td className="py-3 pr-4 text-muted-foreground">{renderValue(row.meaningful_streak_3d_count, suppressed)}</td>
-                  <td className="py-3 pr-4 text-muted-foreground">{suppressed ? "Yetersiz veri" : "Hazır"}</td>
+                  <td className="py-3 pr-4 text-muted-foreground">
+                    {renderValue(row.meaningful_active_7d_count, cellSuppressed.meaningfulActive)}
+                  </td>
+                  <td className="py-3 pr-4 text-muted-foreground">
+                    {renderValue(row.task_completion_activity_7d, cellSuppressed.taskActivity)}
+                  </td>
+                  <td className="py-3 pr-4 text-muted-foreground">
+                    {renderValue(row.manual_pomodoro_sessions_7d, cellSuppressed.pomodoro)}
+                  </td>
+                  <td className="py-3 pr-4 text-muted-foreground">
+                    {renderValue(row.habit_completion_activity_7d, cellSuppressed.habitActivity)}
+                  </td>
+                  <td className="py-3 pr-4 text-muted-foreground">{renderValue(row.meaningful_streak_3d_count, cellSuppressed.streak)}</td>
+                  <td className="py-3 pr-4 text-muted-foreground">{rowStatus}</td>
                 </tr>
               );
             })}
