@@ -22,6 +22,7 @@ import {
   type AdminSoftDeleteTarget,
 } from "@/components/admin/AdminMemberSoftDeleteActionModal";
 import { AdminDeletedMembersSection } from "@/components/admin/AdminDeletedMembersSection";
+import { AdminEngagementSection } from "@/components/admin/AdminEngagementSection";
 import { AdminMembersTable } from "@/components/admin/AdminMembersTable";
 import { AdminSortableHeader } from "@/components/admin/AdminSortableHeader";
 import { formatLastSeenWindow } from "@/components/admin/adminDateDisplay";
@@ -35,6 +36,7 @@ import { useAdminMemberDetail } from "@/hooks/useAdminMemberDetail";
 import { type AdminMember, useAdminMembers } from "@/hooks/useAdminMembers";
 import { useAdminMemberActions } from "@/hooks/useAdminMemberActions";
 import { useAdminMemberSoftDeleteActions } from "@/hooks/useAdminMemberSoftDeleteActions";
+import { useAdminEngagementStats } from "@/hooks/useAdminEngagementStats";
 import { useAdminMemberStats } from "@/hooks/useAdminMemberStats";
 
 const adminNavigationItems = [
@@ -84,6 +86,7 @@ const Admin = () => {
     { initialAccountStatus: "deleted" },
   );
   const adminMemberStats = useAdminMemberStats(status === "admin" && (isHomeRoute || isStatsRoute));
+  const adminEngagementStats = useAdminEngagementStats(status === "admin" && isStatsRoute);
   const memberDetail = useAdminMemberDetail(status === "admin" && isUsersRoute && selectedUserId !== null, selectedUserId);
   const memberActions = useAdminMemberActions();
   const accountStatusActions = useAdminAccountStatusActions();
@@ -339,7 +342,10 @@ const Admin = () => {
 
             <Routes>
               <Route index element={<AdminHomePage members={adminHomeMembers} stats={adminMemberStats} />} />
-              <Route path="stats" element={<AdminStatsPage stats={adminMemberStats} />} />
+              <Route
+                path="stats"
+                element={<AdminStatsPage stats={adminMemberStats} engagement={adminEngagementStats} />}
+              />
               <Route
                 path="users"
                 element={
@@ -452,9 +458,10 @@ const AdminSidebar = () => (
 
 type AdminStatsPageProps = {
   stats: ReturnType<typeof useAdminMemberStats>;
+  engagement: ReturnType<typeof useAdminEngagementStats>;
 };
 
-const AdminStatsPage = ({ stats }: AdminStatsPageProps) => {
+const AdminStatsPage = ({ stats, engagement }: AdminStatsPageProps) => {
   return (
     <div className="space-y-4">
       <Card className="rounded-none border-border/70 shadow-none">
@@ -563,6 +570,15 @@ const AdminStatsPage = ({ stats }: AdminStatsPageProps) => {
           </CardContent>
         </Card>
       </div>
+
+      <AdminEngagementSection
+        latest={engagement.latest}
+        series={engagement.series}
+        releaseEvents={engagement.releaseEvents}
+        isLoading={engagement.isLoading}
+        error={engagement.error}
+        onRetry={engagement.refetch}
+      />
     </div>
   );
 };
