@@ -1,18 +1,16 @@
 import { Card, CardContent } from "@/components/ui/card";
 
 type OverviewCardProps = {
-  title: string;
   value: string;
   period: string;
   description: string;
   muted?: boolean;
 };
 
-const OverviewCard = ({ title, value, period, description, muted = false }: OverviewCardProps) => (
+const OverviewCard = ({ value, period, description, muted = false }: OverviewCardProps) => (
   <Card className="rounded-none border-border/70 shadow-none">
     <CardContent className="flex h-full flex-col px-4 py-5">
       <div className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{title}</p>
         <p className={`text-3xl font-medium tracking-tight ${muted ? "text-muted-foreground" : "text-foreground"}`}>
           {value}
         </p>
@@ -77,56 +75,48 @@ export const AdminEngagementOverviewCards = ({ latest }: AdminEngagementOverview
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <OverviewCard
-        title="Görülen Kullanıcı"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.presence_active_day_count, false)}
         period="Son gün"
         description="Uygulamada görünen kullanıcı."
         muted={suppressed}
       />
       <OverviewCard
-        title="Aktif Kullanıcı"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.meaningful_active_day_count, false)}
         period="Son gün"
         description="Anlamlı aktivite yapan kullanıcı."
         muted={suppressed}
       />
       <OverviewCard
-        title="Aktif Kullanıcı"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.meaningful_active_7d_count, false)}
         period="Son 7 gün"
         description="Son 7 günde aktif kullanıcı."
         muted={suppressed}
       />
       <OverviewCard
-        title="Görev Hacmi"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.task_completion_activity_7d, false)}
         period="Son 7 gün"
         description="Tamamlanan görev sayısı."
         muted={suppressed}
       />
       <OverviewCard
-        title="Pomodoro Sayısı"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.manual_pomodoro_sessions_7d, false)}
         period="Son 7 gün"
         description="Manual timer çalışma oturumu."
         muted={suppressed}
       />
       <OverviewCard
-        title="Alışkanlık Hacmi"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.habit_completion_activity_7d, false)}
         period="Son 7 gün"
         description="Tamamlanan alışkanlık sayısı."
         muted={suppressed}
       />
       <OverviewCard
-        title="3+ Seri"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.meaningful_streak_3d_count, false)}
         period="Son 7 gün"
         description="En az 3 gün üst üste aktif."
         muted={suppressed}
       />
       <OverviewCard
-        title="Ayar Güncelleme"
         value={suppressed ? "Yetersiz veri" : renderValue(latest?.settings_adoption_proxy_7d_count, false)}
         period="Son 7 gün"
         description="Ayar kaydı güncellenen kullanıcı."
