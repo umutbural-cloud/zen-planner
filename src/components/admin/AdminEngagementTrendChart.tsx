@@ -16,11 +16,11 @@ const metricKeyLabel: Array<{
   key: keyof Omit<TrendPoint, "snapshot_date" | "suppressed">;
   label: string;
 }> = [
-  { key: "meaningful_active_7d_count", label: "Meaningful active" },
-  { key: "task_completion_activity_7d", label: "Task activity" },
+  { key: "meaningful_active_7d_count", label: "Aktif kullanıcı" },
+  { key: "task_completion_activity_7d", label: "Görev" },
   { key: "manual_pomodoro_sessions_7d", label: "Pomodoro" },
-  { key: "habit_completion_activity_7d", label: "Habit activity" },
-  { key: "meaningful_streak_3d_count", label: "3+ streak" },
+  { key: "habit_completion_activity_7d", label: "Alışkanlık" },
+  { key: "meaningful_streak_3d_count", label: "3+ seri" },
 ];
 
 const toBarWidth = (value: number | null, max: number) => {

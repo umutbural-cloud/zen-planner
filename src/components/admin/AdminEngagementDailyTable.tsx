@@ -55,10 +55,10 @@ type RowStatus = "Tam" | "Kısmi" | "Yetersiz veri";
 
 const sortLabels: Record<SortKey, string> = {
   snapshot_date: "Tarih",
-  total_meaningful_activity_day: "Toplam anlamlı aktivite",
-  meaningful_active_day_count: "Anlamlı aktif kullanıcı",
+  total_meaningful_activity_day: "Toplam",
+  meaningful_active_day_count: "Kullanıcı",
   task_completion_activity_day: "Görev",
-  manual_pomodoro_sessions_day: "Manual Pomodoro",
+  manual_pomodoro_sessions_day: "Pomodoro",
   manual_pomodoro_minutes_day: "Pomodoro dk",
   habit_completion_activity_day: "Alışkanlık",
   meaningful_streak_3d_count: "3+ streak",

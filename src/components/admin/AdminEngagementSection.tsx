@@ -54,16 +54,6 @@ export const AdminEngagementSection = ({
 }: AdminEngagementSectionProps) => {
   return (
     <div className="space-y-4">
-      <Card className="rounded-none border-border/70 shadow-none">
-        <CardContent className="px-5 py-4">
-          <p className="text-sm leading-6 text-muted-foreground">
-            Bu bölüm kişisel içerikleri göstermez. Task, manual timer pomodoro ve habit completion kayıtlarından yalnızca
-            aggregate kullanım metadataları hesaplanır. Günlük snapshotlar tamamlanmış Europe/Istanbul takvim günleri için
-            üretilir.
-          </p>
-        </CardContent>
-      </Card>
-
       {error ? (
         <AdminEngagementEmptyState error onRetry={onRetry} />
       ) : isLoading && !latest ? (
@@ -89,7 +79,6 @@ export const AdminEngagementSection = ({
               <Card className="rounded-none border-border/70 shadow-none">
                 <CardHeader className="space-y-1 p-5">
                   <CardTitle className="text-base font-medium tracking-wide">Son 7 gün trend</CardTitle>
-                  <p className="text-sm text-muted-foreground">Null noktalar 0 çizilmez. Gizli değerler atlanır.</p>
                 </CardHeader>
                 <CardContent className="px-5 pb-5 pt-0">
                   <AdminEngagementTrendChart series={series} />
