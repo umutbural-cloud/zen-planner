@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 
 type EngagementSeriesItem = {
   snapshot_date: string;
+  meaningful_active_day_count: number | null;
+  meaningful_active_day_count_suppressed?: boolean;
+  task_completion_activity_day: number | null;
+  task_completion_activity_day_suppressed?: boolean;
+  manual_pomodoro_sessions_day: number | null;
+  manual_pomodoro_sessions_day_suppressed?: boolean;
+  manual_pomodoro_minutes_day: number | null;
+  manual_pomodoro_minutes_day_suppressed?: boolean;
+  habit_completion_activity_day: number | null;
+  habit_completion_activity_day_suppressed?: boolean;
+  total_meaningful_activity_day: number | null;
+  total_meaningful_activity_day_suppressed?: boolean;
   meaningful_active_7d_count: number | null;
   meaningful_active_7d_count_suppressed?: boolean;
   task_completion_activity_7d: number | null;
@@ -145,6 +157,12 @@ const parseSeriesItem = (value: unknown): EngagementSeriesItem | null => {
   if (typeof value.suppressed !== "boolean" && typeof value.suppressed !== "undefined") return null;
 
   const fields = [
+    "meaningful_active_day_count",
+    "task_completion_activity_day",
+    "manual_pomodoro_sessions_day",
+    "manual_pomodoro_minutes_day",
+    "habit_completion_activity_day",
+    "total_meaningful_activity_day",
     "meaningful_active_7d_count",
     "task_completion_activity_7d",
     "manual_pomodoro_sessions_7d",
@@ -155,6 +173,12 @@ const parseSeriesItem = (value: unknown): EngagementSeriesItem | null => {
   if (!fields.every((key) => isNumberOrNull(value[key]))) return null;
 
   const suppressionFields = [
+    "meaningful_active_day_count_suppressed",
+    "task_completion_activity_day_suppressed",
+    "manual_pomodoro_sessions_day_suppressed",
+    "manual_pomodoro_minutes_day_suppressed",
+    "habit_completion_activity_day_suppressed",
+    "total_meaningful_activity_day_suppressed",
     "meaningful_active_7d_count_suppressed",
     "task_completion_activity_7d_suppressed",
     "manual_pomodoro_sessions_7d_suppressed",
@@ -172,6 +196,36 @@ const parseSeriesItem = (value: unknown): EngagementSeriesItem | null => {
 
   return {
     snapshot_date: value.snapshot_date,
+    meaningful_active_day_count: value.meaningful_active_day_count as number | null,
+    meaningful_active_day_count_suppressed:
+      typeof value.meaningful_active_day_count_suppressed === "boolean"
+        ? value.meaningful_active_day_count_suppressed
+        : undefined,
+    task_completion_activity_day: value.task_completion_activity_day as number | null,
+    task_completion_activity_day_suppressed:
+      typeof value.task_completion_activity_day_suppressed === "boolean"
+        ? value.task_completion_activity_day_suppressed
+        : undefined,
+    manual_pomodoro_sessions_day: value.manual_pomodoro_sessions_day as number | null,
+    manual_pomodoro_sessions_day_suppressed:
+      typeof value.manual_pomodoro_sessions_day_suppressed === "boolean"
+        ? value.manual_pomodoro_sessions_day_suppressed
+        : undefined,
+    manual_pomodoro_minutes_day: value.manual_pomodoro_minutes_day as number | null,
+    manual_pomodoro_minutes_day_suppressed:
+      typeof value.manual_pomodoro_minutes_day_suppressed === "boolean"
+        ? value.manual_pomodoro_minutes_day_suppressed
+        : undefined,
+    habit_completion_activity_day: value.habit_completion_activity_day as number | null,
+    habit_completion_activity_day_suppressed:
+      typeof value.habit_completion_activity_day_suppressed === "boolean"
+        ? value.habit_completion_activity_day_suppressed
+        : undefined,
+    total_meaningful_activity_day: value.total_meaningful_activity_day as number | null,
+    total_meaningful_activity_day_suppressed:
+      typeof value.total_meaningful_activity_day_suppressed === "boolean"
+        ? value.total_meaningful_activity_day_suppressed
+        : undefined,
     meaningful_active_7d_count: value.meaningful_active_7d_count as number | null,
     meaningful_active_7d_count_suppressed:
       typeof value.meaningful_active_7d_count_suppressed === "boolean"
