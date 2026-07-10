@@ -41,17 +41,9 @@ type SortKey =
   | "manual_pomodoro_sessions_day"
   | "manual_pomodoro_minutes_day"
   | "habit_completion_activity_day"
-  | "meaningful_streak_3d_count"
-  | "status";
+  | "meaningful_streak_3d_count";
 
 type SortDirection = "asc" | "desc";
-
-type CellState = {
-  value: number | null;
-  suppressed: boolean;
-};
-
-type RowStatus = "Tam" | "Kısmi" | "Yetersiz veri";
 
 const sortLabels: Record<SortKey, string> = {
   snapshot_date: "Tarih",
@@ -62,80 +54,31 @@ const sortLabels: Record<SortKey, string> = {
   manual_pomodoro_minutes_day: "Pomodoro dk",
   habit_completion_activity_day: "Alışkanlık",
   meaningful_streak_3d_count: "3+ streak",
-  status: "Durum",
 };
 
-const renderValue = (value: number | null | undefined, suppressed?: boolean) => {
-  if (suppressed) return "Gizlendi";
-  if (value === null || typeof value === "undefined") return "Gizlendi";
-  return value.toLocaleString("tr-TR");
-};
+const toDisplayNumber = (value: number | null | undefined) =>
+  typeof value === "number" && Number.isFinite(value) ? value : 0;
 
-const getCells = (row: Row): Record<Exclude<SortKey, "snapshot_date" | "status">, CellState> => ({
-  total_meaningful_activity_day: {
-    value: row.total_meaningful_activity_day ?? null,
-    suppressed: row.suppressed === true || row.total_meaningful_activity_day_suppressed === true,
-  },
-  meaningful_active_day_count: {
-    value: row.meaningful_active_day_count ?? null,
-    suppressed: row.suppressed === true || row.meaningful_active_day_count_suppressed === true,
-  },
-  task_completion_activity_day: {
-    value: row.task_completion_activity_day ?? null,
-    suppressed: row.suppressed === true || row.task_completion_activity_day_suppressed === true,
-  },
-  manual_pomodoro_sessions_day: {
-    value: row.manual_pomodoro_sessions_day ?? null,
-    suppressed: row.suppressed === true || row.manual_pomodoro_sessions_day_suppressed === true,
-  },
-  manual_pomodoro_minutes_day: {
-    value: row.manual_pomodoro_minutes_day ?? null,
-    suppressed: row.suppressed === true || row.manual_pomodoro_minutes_day_suppressed === true,
-  },
-  habit_completion_activity_day: {
-    value: row.habit_completion_activity_day ?? null,
-    suppressed: row.suppressed === true || row.habit_completion_activity_day_suppressed === true,
-  },
-  meaningful_streak_3d_count: {
-    value: row.meaningful_streak_3d_count,
-    suppressed: row.suppressed === true || row.meaningful_streak_3d_count_suppressed === true,
-  },
+const renderValue = (value: number | null | undefined) => toDisplayNumber(value).toLocaleString("tr-TR");
+
+const getCells = (row: Row): Record<Exclude<SortKey, "snapshot_date">, number> => ({
+  total_meaningful_activity_day: toDisplayNumber(row.total_meaningful_activity_day),
+  meaningful_active_day_count: toDisplayNumber(row.meaningful_active_day_count),
+  task_completion_activity_day: toDisplayNumber(row.task_completion_activity_day),
+  manual_pomodoro_sessions_day: toDisplayNumber(row.manual_pomodoro_sessions_day),
+  manual_pomodoro_minutes_day: toDisplayNumber(row.manual_pomodoro_minutes_day),
+  habit_completion_activity_day: toDisplayNumber(row.habit_completion_activity_day),
+  meaningful_streak_3d_count: toDisplayNumber(row.meaningful_streak_3d_count),
 });
 
-const getRowStatus = (row: Row): RowStatus => {
-  if (row.suppressed === true) return "Yetersiz veri";
-  const cells = getCells(row);
-  return Object.values(cells).some((cell) => cell.suppressed || cell.value === null) ? "Kısmi" : "Tam";
-};
-
-const getSortableValue = (row: Row, key: SortKey): number | string | null => {
+const getSortableValue = (row: Row, key: SortKey): number | string => {
   if (key === "snapshot_date") return row.snapshot_date;
-  if (key === "status") return getRowStatus(row);
-
-  const cell = getCells(row)[key];
-  if (cell.suppressed || cell.value === null) return null;
-  return cell.value;
+  return getCells(row)[key];
 };
 
 const compareRows = (a: Row, b: Row, key: SortKey, direction: SortDirection) => {
   const aValue = getSortableValue(a, key);
   const bValue = getSortableValue(b, key);
-  const aMissing = aValue === null;
-  const bMissing = bValue === null;
-
-  if (aMissing && bMissing) return b.snapshot_date.localeCompare(a.snapshot_date);
-  if (aMissing) return 1;
-  if (bMissing) return -1;
-
-  if (key === "status") {
-    const statusRank: Record<RowStatus, number> = {
-      Tam: 0,
-      Kısmi: 1,
-      "Yetersiz veri": 2,
-    };
-    const comparison = statusRank[aValue as RowStatus] - statusRank[bValue as RowStatus];
-    return direction === "asc" ? comparison : -comparison;
-  }
 
   const comparison =
     typeof aValue === "number" && typeof bValue === "number"
@@ -208,38 +151,35 @@ export const AdminEngagementDailyTable = ({ series }: AdminEngagementDailyTableP
                 {renderHeader("manual_pomodoro_minutes_day")}
                 {renderHeader("habit_completion_activity_day")}
                 {renderHeader("meaningful_streak_3d_count")}
-                {renderHeader("status")}
               </tr>
             </thead>
             <tbody>
               {sortedSeries.map((row) => {
                 const cells = getCells(row);
-                const rowStatus = getRowStatus(row);
                 return (
                   <tr key={row.snapshot_date} className="border-b border-border/40 last:border-b-0">
                     <td className="py-3 pr-4 text-foreground">{row.snapshot_date}</td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.total_meaningful_activity_day.value, cells.total_meaningful_activity_day.suppressed)}
+                      {renderValue(cells.total_meaningful_activity_day)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.meaningful_active_day_count.value, cells.meaningful_active_day_count.suppressed)}
+                      {renderValue(cells.meaningful_active_day_count)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.task_completion_activity_day.value, cells.task_completion_activity_day.suppressed)}
+                      {renderValue(cells.task_completion_activity_day)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.manual_pomodoro_sessions_day.value, cells.manual_pomodoro_sessions_day.suppressed)}
+                      {renderValue(cells.manual_pomodoro_sessions_day)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.manual_pomodoro_minutes_day.value, cells.manual_pomodoro_minutes_day.suppressed)}
+                      {renderValue(cells.manual_pomodoro_minutes_day)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.habit_completion_activity_day.value, cells.habit_completion_activity_day.suppressed)}
+                      {renderValue(cells.habit_completion_activity_day)}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {renderValue(cells.meaningful_streak_3d_count.value, cells.meaningful_streak_3d_count.suppressed)}
+                      {renderValue(cells.meaningful_streak_3d_count)}
                     </td>
-                    <td className="py-3 pr-4 text-muted-foreground">{rowStatus}</td>
                   </tr>
                 );
               })}
