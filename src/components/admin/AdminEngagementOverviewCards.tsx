@@ -9,7 +9,7 @@ type OverviewCardProps = {
 
 const OverviewCard = ({ value, period, description, muted = false }: OverviewCardProps) => (
   <Card className="rounded-none border-border/70 shadow-none">
-    <CardContent className="flex h-full flex-col p-5 pt-5 text-left">
+    <CardContent className="flex h-full flex-col p-5 pt-5 md:p-5 md:pt-5 text-left">
       <p className={`text-3xl font-medium leading-none tracking-tight ${muted ? "text-muted-foreground" : "text-foreground"}`}>
         {value}
       </p>
