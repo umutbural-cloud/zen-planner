@@ -518,59 +518,6 @@ const AdminStatsPage = ({ stats, engagement }: AdminStatsPageProps) => {
         />
       </div>
 
-      <Card className="rounded-none border-border/70 shadow-none">
-        <CardHeader className="space-y-1 p-5">
-          <CardTitle className="text-base font-medium tracking-wide">Veri altyapısı gerektiren metrikler</CardTitle>
-          <p className="text-sm text-muted-foreground">Bu bölümdeki alanlar için güvenilir aggregate veri gerekiyor.</p>
-        </CardHeader>
-        <CardContent className="grid gap-3 px-5 pb-5 pt-0 md:grid-cols-2">
-          {[
-            "Modül kullanım oranları",
-            "Ortalama günlük kullanım süresi",
-            "Üye başı ortalama çalışma süresi",
-            "Üye başı ortalama tamamlanan task sayısı",
-            "Üye başı ortalama pomodoro seansı",
-            "Haftalık / aylık trendler",
-          ].map((metric) => (
-            <AdminStatsRequirementCard key={metric} title={metric} />
-          ))}
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="rounded-none border-border/70 shadow-none">
-          <CardHeader className="space-y-1 p-5">
-            <CardTitle className="text-base font-medium tracking-wide">Veri güvenilirliği notu</CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 pt-0">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Bu ekranda yalnızca aggregate ve operasyonel metrikler gösterilir. Kişisel günlük, kriz notu, relapse
-              analizi, check-in içeriği veya görev içeriği gösterilmez.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-none border-border/70 shadow-none">
-          <CardHeader className="space-y-1 p-5">
-            <CardTitle className="text-base font-medium tracking-wide">Sonraki veri gereksinimleri</CardTitle>
-            <p className="text-sm text-muted-foreground">Bu liste yalnızca altyapı planını görünür kılar.</p>
-          </CardHeader>
-          <CardContent className="space-y-2 px-5 pb-5 pt-0">
-            {[
-              "Günlük aktif kullanıcı aggregate sayacı",
-              "Haftalık aktif kullanıcı aggregate sayacı",
-              "Pasif kullanıcı aggregate sayacı",
-              "Yeni kayıt aggregate sayacı",
-              "Modül kullanım aggregate tablosu",
-            ].map((item) => (
-              <div key={item} className="border border-border/60 px-3 py-2 text-sm text-foreground">
-                {item}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
       <AdminEngagementSection
         latest={engagement.latest}
         series={engagement.series}
@@ -953,19 +900,6 @@ const AdminStatsMetricCard = ({
       <p className="mt-2 text-xs leading-5 text-muted-foreground">{description}</p>
     </CardContent>
   </Card>
-);
-
-const AdminStatsRequirementCard = ({ title }: { title: string }) => (
-  <div className="flex items-start justify-between gap-3 border border-border/60 px-3 py-2">
-    <span className="text-sm text-foreground">{title}</span>
-    <DataPendingBadge label="Veri altyapısı gerekiyor" />
-  </div>
-);
-
-const DataPendingBadge = ({ label }: { label: string }) => (
-  <span className="inline-flex shrink-0 items-center border border-border/60 px-2 py-1 text-xs text-muted-foreground">
-    {label}
-  </span>
 );
 
 const AdminMetricPlaceholderCard = ({ title, status }: { title: string; status: string }) => (
