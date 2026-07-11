@@ -12,33 +12,266 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          success: boolean
+          target_role: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          success?: boolean
+          target_role?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          success?: boolean
+          target_role?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      admin_daily_engagement_snapshots: {
+        Row: {
+          compute_mode: string
+          computed_at: string
+          computed_by: string | null
+          computed_lag_days: number
+          eligible_user_count: number
+          habit_completion_activity_30d: number
+          habit_completion_activity_7d: number
+          habit_completion_activity_day: number
+          manual_pomodoro_minutes_30d: number
+          manual_pomodoro_minutes_7d: number
+          manual_pomodoro_minutes_day: number
+          manual_pomodoro_sessions_30d: number
+          manual_pomodoro_sessions_7d: number
+          manual_pomodoro_sessions_day: number
+          meaningful_active_30d_count: number
+          meaningful_active_7d_count: number
+          meaningful_active_day_count: number
+          meaningful_streak_3d_count: number
+          meaningful_streak_5d_count: number
+          meaningful_streak_7d_count: number
+          metric_version: string
+          presence_active_30d_count: number
+          presence_active_7d_count: number
+          presence_active_day_count: number
+          settings_adoption_proxy_30d_count: number
+          settings_adoption_proxy_7d_count: number
+          snapshot_date: string
+          snapshot_kind: string
+          task_completion_activity_30d: number
+          task_completion_activity_7d: number
+          task_completion_activity_day: number
+          timezone: string
+          window_model: string
+        }
+        Insert: {
+          compute_mode?: string
+          computed_at?: string
+          computed_by?: string | null
+          computed_lag_days?: number
+          eligible_user_count?: number
+          habit_completion_activity_30d?: number
+          habit_completion_activity_7d?: number
+          habit_completion_activity_day?: number
+          manual_pomodoro_minutes_30d?: number
+          manual_pomodoro_minutes_7d?: number
+          manual_pomodoro_minutes_day?: number
+          manual_pomodoro_sessions_30d?: number
+          manual_pomodoro_sessions_7d?: number
+          manual_pomodoro_sessions_day?: number
+          meaningful_active_30d_count?: number
+          meaningful_active_7d_count?: number
+          meaningful_active_day_count?: number
+          meaningful_streak_3d_count?: number
+          meaningful_streak_5d_count?: number
+          meaningful_streak_7d_count?: number
+          metric_version?: string
+          presence_active_30d_count?: number
+          presence_active_7d_count?: number
+          presence_active_day_count?: number
+          settings_adoption_proxy_30d_count?: number
+          settings_adoption_proxy_7d_count?: number
+          snapshot_date: string
+          snapshot_kind?: string
+          task_completion_activity_30d?: number
+          task_completion_activity_7d?: number
+          task_completion_activity_day?: number
+          timezone?: string
+          window_model?: string
+        }
+        Update: {
+          compute_mode?: string
+          computed_at?: string
+          computed_by?: string | null
+          computed_lag_days?: number
+          eligible_user_count?: number
+          habit_completion_activity_30d?: number
+          habit_completion_activity_7d?: number
+          habit_completion_activity_day?: number
+          manual_pomodoro_minutes_30d?: number
+          manual_pomodoro_minutes_7d?: number
+          manual_pomodoro_minutes_day?: number
+          manual_pomodoro_sessions_30d?: number
+          manual_pomodoro_sessions_7d?: number
+          manual_pomodoro_sessions_day?: number
+          meaningful_active_30d_count?: number
+          meaningful_active_7d_count?: number
+          meaningful_active_day_count?: number
+          meaningful_streak_3d_count?: number
+          meaningful_streak_5d_count?: number
+          meaningful_streak_7d_count?: number
+          metric_version?: string
+          presence_active_30d_count?: number
+          presence_active_7d_count?: number
+          presence_active_day_count?: number
+          settings_adoption_proxy_30d_count?: number
+          settings_adoption_proxy_7d_count?: number
+          snapshot_date?: string
+          snapshot_kind?: string
+          task_completion_activity_30d?: number
+          task_completion_activity_7d?: number
+          task_completion_activity_day?: number
+          timezone?: string
+          window_model?: string
+        }
+        Relationships: []
+      }
+      admin_release_events: {
+        Row: {
+          commit_sha: string | null
+          created_at: string
+          created_by: string | null
+          deployed_at: string
+          id: string
+          pr_numbers: number[]
+          release_name: string
+          release_type: string
+        }
+        Insert: {
+          commit_sha?: string | null
+          created_at?: string
+          created_by?: string | null
+          deployed_at: string
+          id?: string
+          pr_numbers?: number[]
+          release_name: string
+          release_type?: string
+        }
+        Update: {
+          commit_sha?: string | null
+          created_at?: string
+          created_by?: string | null
+          deployed_at?: string
+          id?: string
+          pr_numbers?: number[]
+          release_name?: string
+          release_type?: string
+        }
+        Relationships: []
+      }
+      admin_role_assignments: {
+        Row: {
+          active: boolean
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          id: string
+          revoked_at: string | null
+          revoked_by: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_features: {
+        Row: {
+          backend_enforcement_required: boolean
+          category: string
+          content_risk: string
+          created_at: string
+          description: string | null
+          display_order: number
+          feature_key: string
+          is_active: boolean
+          is_core: boolean
+          label: string
+          route_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          backend_enforcement_required?: boolean
+          category: string
+          content_risk?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          feature_key: string
+          is_active?: boolean
+          is_core?: boolean
+          label: string
+          route_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          backend_enforcement_required?: boolean
+          category?: string
+          content_risk?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          feature_key?: string
+          is_active?: boolean
+          is_core?: boolean
+          label?: string
+          route_path?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       backlog_tasks: {
         Row: {
           color: string
@@ -257,35 +490,35 @@ export type Database = {
         }
         Relationships: []
       }
-      user_off_days: {
+      membership_feature_access: {
         Row: {
-          created_at: string
-          day: string
-          id: string
+          feature_key: string
+          is_enabled: boolean
+          membership: string
           updated_at: string
-          user_id: string
+          updated_by: string | null
         }
         Insert: {
-          created_at?: string
-          day: string
-          id?: string
+          feature_key: string
+          is_enabled?: boolean
+          membership: string
           updated_at?: string
-          user_id: string
+          updated_by?: string | null
         }
         Update: {
-          created_at?: string
-          day?: string
-          id?: string
+          feature_key?: string
+          is_enabled?: boolean
+          membership?: string
           updated_at?: string
-          user_id?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "user_off_days_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "membership_feature_access_feature_key_fkey"
+            columns: ["feature_key"]
             isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedRelation: "app_features"
+            referencedColumns: ["feature_key"]
           },
         ]
       }
@@ -449,42 +682,6 @@ export type Database = {
           },
         ]
       }
-      pomodoro_categories: {
-        Row: {
-          color: string
-          created_at: string
-          id: string
-          name: string
-          position: number
-          normalized_name: string
-          stable_export_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string
-          id?: string
-          name: string
-          position?: number
-          normalized_name?: never
-          stable_export_id?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          color?: string
-          created_at?: string
-          id?: string
-          name?: string
-          position?: number
-          normalized_name?: never
-          stable_export_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       pomodoro_active_state: {
         Row: {
           accumulated_elapsed_seconds: number
@@ -495,7 +692,9 @@ export type Database = {
           kind: Database["public"]["Enums"]["pomodoro_kind"]
           paused_remaining_seconds: number | null
           phase: string
+          session_started_at: string | null
           started_at: string | null
+          timer_mode: string
           updated_at: string
           user_id: string
           work_duration_seconds: number
@@ -509,7 +708,9 @@ export type Database = {
           kind?: Database["public"]["Enums"]["pomodoro_kind"]
           paused_remaining_seconds?: number | null
           phase?: string
+          session_started_at?: string | null
           started_at?: string | null
+          timer_mode?: string
           updated_at?: string
           user_id: string
           work_duration_seconds?: number
@@ -523,20 +724,50 @@ export type Database = {
           kind?: Database["public"]["Enums"]["pomodoro_kind"]
           paused_remaining_seconds?: number | null
           phase?: string
+          session_started_at?: string | null
           started_at?: string | null
+          timer_mode?: string
           updated_at?: string
           user_id?: string
           work_duration_seconds?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "pomodoro_active_state_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      pomodoro_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          normalized_name: string | null
+          position: number
+          stable_export_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          normalized_name?: string | null
+          position?: number
+          stable_export_id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          normalized_name?: string | null
+          position?: number
+          stable_export_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       pomodoro_sessions: {
         Row: {
@@ -549,9 +780,11 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["pomodoro_kind"]
           note: string | null
+          session_source: string
           stable_export_id: string
           started_at: string
           task_id: string | null
+          timer_mode: string | null
           updated_at: string
           user_id: string
         }
@@ -565,9 +798,11 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["pomodoro_kind"]
           note?: string | null
+          session_source?: string
           stable_export_id?: string
           started_at: string
           task_id?: string | null
+          timer_mode?: string | null
           updated_at?: string
           user_id: string
         }
@@ -581,9 +816,11 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["pomodoro_kind"]
           note?: string | null
+          session_source?: string
           stable_export_id?: string
           started_at?: string
           task_id?: string | null
+          timer_mode?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -603,6 +840,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          account_status: string
+          created_at: string
+          email: string | null
+          full_name: string | null
+          last_seen_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_status?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          last_seen_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_status?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          last_seen_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       projects: {
         Row: {
@@ -902,6 +1169,54 @@ export type Database = {
           },
         ]
       }
+      user_memberships: {
+        Row: {
+          membership: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          membership?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          membership?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_off_days: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           auto_prayer_times: boolean
@@ -921,6 +1236,7 @@ export type Database = {
           notify_habits: boolean
           notify_pomodoro: boolean
           notify_tasks: boolean
+          preferred_timer_mode: string
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           startup_page: Json
@@ -947,6 +1263,7 @@ export type Database = {
           notify_habits?: boolean
           notify_pomodoro?: boolean
           notify_tasks?: boolean
+          preferred_timer_mode?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           startup_page?: Json
@@ -973,6 +1290,7 @@ export type Database = {
           notify_habits?: boolean
           notify_pomodoro?: boolean
           notify_tasks?: boolean
+          preferred_timer_mode?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           startup_page?: Json
@@ -981,15 +1299,143 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_default_pomodoro_project_id_fkey"
+            columns: ["default_pomodoro_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      admin_archive_member: {
+        Args: {
+          reason_code: string
+          reason_note?: string
+          target_user_id: string
+        }
+        Returns: Json
+      }
+      admin_change_membership: {
+        Args: {
+          reason_code?: string
+          target_membership: string
+          target_user_id: string
+        }
+        Returns: Json
+      }
+      admin_create_release_event: {
+        Args: {
+          commit_sha?: string
+          deployed_at?: string
+          pr_numbers?: number[]
+          release_name: string
+          release_type?: string
+        }
+        Returns: Json
+      }
+      admin_get_engagement_dashboard: {
+        Args: { days_back?: number }
+        Returns: Json
+      }
+      admin_get_feature_access_matrix: { Args: never; Returns: Json }
+      admin_get_member_detail: {
+        Args: { target_user_id: string }
+        Returns: Json
+      }
+      admin_get_release_engagement_comparison: {
+        Args: { release_id: string }
+        Returns: Json
+      }
+      admin_ops_compute_engagement_snapshot: {
+        Args: { reason_code: string; target_snapshot_date: string }
+        Returns: Json
+      }
+      admin_restore_member: {
+        Args: {
+          reason_code: string
+          reason_note?: string
+          target_user_id: string
+        }
+        Returns: Json
+      }
+      admin_search_audit_logs: {
+        Args: {
+          action_filter?: string
+          actor_query?: string
+          created_from?: string
+          created_to?: string
+          limit_count?: number
+          offset_count?: number
+          success_filter?: boolean
+          target_query?: string
+        }
+        Returns: Json
+      }
+      admin_search_members: {
+        Args: {
+          account_status?: string
+          limit_count?: number
+          membership?: string
+          membership_status?: string
+          offset_count?: number
+          query?: string
+          sort_column?: string
+          sort_direction?: string
+        }
+        Returns: Json
+      }
+      admin_set_user_status: {
+        Args: {
+          reason_code?: string
+          target_account_status: string
+          target_user_id: string
+        }
+        Returns: Json
+      }
+      can_access_feature: {
+        Args: { target_feature_key: string }
+        Returns: boolean
+      }
+      can_export_own_data: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      can_use_app: { Args: { target_user_id: string }; Returns: boolean }
+      compute_engagement_snapshot_internal: {
+        Args: {
+          actor_user_id?: string
+          requested_compute_mode?: string
+          target_snapshot_date?: string
+        }
+        Returns: Json
+      }
+      get_current_account_gate: { Args: never; Returns: Json }
+      get_current_admin_context: { Args: never; Returns: Json }
+      get_current_feature_access: { Args: never; Returns: Json }
       get_server_time: { Args: never; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
+      is_super_manager: { Args: never; Returns: boolean }
+      istanbul_day_start_utc: { Args: { value: string }; Returns: string }
+      istanbul_local_date: { Args: { value: string }; Returns: string }
+      max_true_streak: { Args: { flags: number[] }; Returns: number }
       purge_soft_deleted: { Args: never; Returns: undefined }
+      touch_last_seen: { Args: never; Returns: string }
+      write_admin_audit_log: {
+        Args: {
+          action: string
+          metadata?: Json
+          target_role?: string
+          target_user_id?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       pomodoro_kind: "work" | "break"
@@ -1121,9 +1567,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       pomodoro_kind: ["work", "break"],
