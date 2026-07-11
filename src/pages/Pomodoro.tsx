@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon } from "lucide-react";
+import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon, ArrowLeftRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
-import { usePomodoro, formatMMSS } from "@/hooks/usePomodoro";
+import { usePomodoro, formatMMSS, formatTimerDisplay } from "@/hooks/usePomodoro";
 import { useTheme } from "@/hooks/useTheme";
 import { useAppShellProjects } from "@/components/AppShell";
 import { usePomodoroCategories, PomodoroCategory } from "@/hooks/usePomodoroCategories";
@@ -342,7 +342,22 @@ const Pomodoro = () => {
   const { user } = useAuth();
   const { projects } = useAppShellProjects();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak, isLoading } = usePomodoro();
+  const {
+    timerMode,
+    displaySec,
+    remainingSec,
+    phase,
+    kind,
+    setTimerMode,
+    setDuration,
+    start,
+    pause,
+    resume,
+    complete,
+    skipBreak,
+    isLoading,
+    isSyncing,
+  } = usePomodoro();
   const { categories, create: createCategory, update: updateCategory, remove: removeCategory } = usePomodoroCategories();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingTime, setEditingTime] = useState(false);
@@ -461,11 +476,26 @@ const Pomodoro = () => {
   const isPaused = phase === "paused";
   const isIdle = phase === "idle";
   const isBreak = kind === "break";
+  const isStopwatch = timerMode === "stopwatch";
+  const canSwitchTimerMode = isIdle && !isSyncing;
+  const timerTitle = isStopwatch ? "Kronometre" : isBreak ? "Dinlenme" : "Çalışma";
+  const timerDisplayValue = isStopwatch ? formatTimerDisplay(displaySec) : formatMMSS(remainingSec);
+  const switchLabel = isStopwatch ? "Pomodoro’ya geç" : "Kronometreye geç";
+  const finishLabel = isStopwatch ? "Bitir" : "Tamamla";
 
   const updateNote = async (id: string, note: string) => {
     if (!user) return;
     await supabase.from("pomodoro_sessions").update({ note }).eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, note } : s)));
+  };
+
+  const handleTimerModeSwitch = async () => {
+    if (!canSwitchTimerMode) return;
+    const nextMode = isStopwatch ? "pomodoro" : "stopwatch";
+    const success = await setTimerMode(nextMode);
+    if (!success) {
+      toast.error("Mod değiştirilemedi.");
+    }
   };
 
   const updateDuration = async (id: string, totalSeconds: number) => {
@@ -676,12 +706,26 @@ const Pomodoro = () => {
                   isRunning ? "py-24" : "py-12"
                 }`}
               >
+                <div className="mb-4 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleTimerModeSwitch}
+                    disabled={!canSwitchTimerMode}
+                    title={canSwitchTimerMode ? switchLabel : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                    aria-label={switchLabel}
+                    className="hidden items-center gap-2 rounded-sm border border-border/60 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 md:inline-flex"
+                  >
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                    <span>{switchLabel}</span>
+                  </button>
+                </div>
+
                 <div
                   className={`text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-light mb-4 transition-opacity duration-500 ${
                     isRunning ? "opacity-40" : "opacity-100"
                   }`}
                 >
-                  {isBreak ? "Dinlenme" : "Çalışma"}
+                  {timerTitle}
                 </div>
 
                 {isLoading ? (
@@ -701,20 +745,34 @@ const Pomodoro = () => {
                     className="mx-auto mb-8 block w-full max-w-full border-b border-border/60 bg-transparent text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums outline-none focus:border-foreground/40 sm:w-[28rem] sm:text-8xl sm:tracking-widest"
                   />
                 ) : (
-                  <button
-                    onClick={() => { if (isIdle) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
-                    disabled={!isIdle}
-                    title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
-                    className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
-                      isRunning
-                        ? "scale-110 text-foreground"
-                        : isIdle
-                        ? "hover:text-foreground/80 cursor-text"
-                        : ""
-                    }`}
-                  >
-                    {formatMMSS(remainingSec)}
-                  </button>
+                  isStopwatch ? (
+                    <div
+                      className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
+                        isRunning
+                          ? "scale-110 text-foreground"
+                          : isIdle
+                          ? "text-foreground/90"
+                          : ""
+                      }`}
+                    >
+                      {timerDisplayValue}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { if (isIdle && !isStopwatch) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
+                      disabled={!isIdle || isStopwatch}
+                      title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
+                      className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
+                        isRunning
+                          ? "scale-110 text-foreground"
+                          : isIdle
+                          ? "hover:text-foreground/80 cursor-text"
+                          : ""
+                      }`}
+                    >
+                      {timerDisplayValue}
+                    </button>
+                  )
                 )}
 
                 <div
@@ -731,13 +789,13 @@ const Pomodoro = () => {
                       <button onClick={pause} className="flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 py-2 text-sm transition-colors hover:bg-accent/80 md:rounded-sm">
                         <Pause className="h-4 w-4" /> Duraklat
                       </button>
-                      {isBreak ? (
+                      {isBreak && !isStopwatch ? (
                         <button onClick={skipBreak} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <SkipForward className="h-4 w-4" /> Atla
                         </button>
                       ) : (
                         <button onClick={complete} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
-                          <Check className="h-4 w-4" /> Tamamla
+                          <Check className="h-4 w-4" /> {finishLabel}
                         </button>
                       )}
                     </>
@@ -747,7 +805,7 @@ const Pomodoro = () => {
                         <Play className="h-4 w-4" /> Devam
                       </button>
                       <button onClick={complete} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
-                        <Check className="h-4 w-4" /> Tamamla
+                        <Check className="h-4 w-4" /> {finishLabel}
                       </button>
                     </>
                   ) : (
@@ -755,7 +813,7 @@ const Pomodoro = () => {
                       <button onClick={start} className="flex min-h-12 items-center gap-2 rounded-xl bg-foreground px-7 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 md:min-h-0 md:rounded-sm md:px-6 md:py-2">
                         <Play className="h-4 w-4" /> Başlat
                       </button>
-                      {isBreak && (
+                      {isBreak && !isStopwatch && (
                         <button onClick={skipBreak} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <SkipForward className="h-4 w-4" /> Atla
                         </button>
@@ -763,6 +821,12 @@ const Pomodoro = () => {
                     </>
                   )}
                 </div>
+
+                {isStopwatch && (isRunning || isPaused) && (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {isRunning ? "Çalışıyor" : "Duraklatıldı"}
+                  </div>
+                )}
               </div>
 
               <div
