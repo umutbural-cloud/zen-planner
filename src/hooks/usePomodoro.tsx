@@ -219,6 +219,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const [phase, setPhase] = useState<PomodoroPhase>("idle");
   const [kind, setKind] = useState<PomodoroKind>("work");
   const [startedAt, setStartedAt] = useState<Date | null>(null);
+  const [sessionStartedAt, setSessionStartedAt] = useState<Date | null>(null);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [pausedRemainingSec, setPausedRemainingSec] = useState<number | null>(null);
   const [accumulatedElapsedSec, setAccumulatedElapsedSec] = useState(0);
@@ -245,6 +246,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   const kindRef = useRef(kind);
   const timerModeRef = useRef<TimerMode>(timerMode);
   const startedAtRef = useRef<Date | null>(startedAt);
+  const sessionStartedAtRef = useRef<Date | null>(sessionStartedAt);
   const durationRef = useRef(durationSec);
   const workDurRef = useRef(workDurationSec);
   const breakDurRef = useRef(breakDurationSec);
@@ -260,6 +262,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { kindRef.current = kind; }, [kind]);
   useEffect(() => { timerModeRef.current = timerMode; }, [timerMode]);
   useEffect(() => { startedAtRef.current = startedAt; }, [startedAt]);
+  useEffect(() => { sessionStartedAtRef.current = sessionStartedAt; }, [sessionStartedAt]);
   useEffect(() => { durationRef.current = durationSec; }, [durationSec]);
   useEffect(() => { workDurRef.current = workDurationSec; }, [workDurationSec]);
   useEffect(() => { breakDurRef.current = breakDurationSec; }, [breakDurationSec]);
@@ -334,7 +337,12 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
 
   const currentRunElapsed = useCallback((row: ActiveStateRow, nowMs: number) => {
     if (row.phase !== "running" || !row.started_at) return 0;
-    return Math.max(0, Math.round((nowMs - new Date(row.started_at).getTime()) / 1000));
+    return Math.max(0, Math.floor((nowMs - new Date(row.started_at).getTime()) / 1000));
+  }, []);
+
+  const currentSegmentElapsed = useCallback((started: Date | null, nowMs: number) => {
+    if (!started) return 0;
+    return Math.max(0, Math.floor((nowMs - started.getTime()) / 1000));
   }, []);
 
   const computeElapsedSeconds = useCallback((
@@ -429,6 +437,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     setWorkDurationSec(defaultWork);
     setBreakDurationSec(defaultBreak);
     setStartedAt(null);
+    setSessionStartedAt(null);
     setEndsAt(null);
     endsAtRef.current = null;
     setPausedRemainingSec(null);
@@ -488,6 +497,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     setDurationSec(row.duration_seconds);
     setRemainingSec(nextRemaining);
     setStartedAt(row.started_at ? new Date(row.started_at) : null);
+    setSessionStartedAt(row.session_started_at ? new Date(row.session_started_at) : null);
     setEndsAt(nextEndsAt);
     endsAtRef.current = nextEndsAt;
     setPausedRemainingSec(row.paused_remaining_seconds);
@@ -514,8 +524,9 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     ended: Date,
     durationS: number,
     token: string | null,
+    timerModeValue: TimerMode,
   ) => {
-    if (!user || durationS < 1) return;
+    if (!user || durationS < 1) return "skipped" as const;
     const payload: PomodoroSessionInsert = {
       user_id: user.id,
       started_at: started.toISOString(),
@@ -523,28 +534,32 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       duration_seconds: durationS,
       kind: k,
       active_session_token: token,
+      session_source: "manual_timer",
+      timer_mode: timerModeValue,
     };
     const { error } = await supabase.from("pomodoro_sessions").insert(payload);
     if (error) {
       if (!isDuplicateError(error)) throw error;
       console.info("[pomodoro] Session was already saved for this active token");
+      return "duplicate" as const;
     }
     window.dispatchEvent(new CustomEvent("pomodoro:session-saved"));
+    return "saved" as const;
   }, [user]);
 
-  const nextIdlePayload = useCallback((
+  const buildIdlePayload = useCallback((
     userId: string,
-    finishedKind: PomodoroKind,
+    timerModeValue: TimerMode,
     workDuration: number,
     breakDuration: number,
+    nextKind: PomodoroKind,
   ): ActiveStateInsert => {
-    const nextKind: PomodoroKind = finishedKind === "work" ? "break" : "work";
     const nextDuration = nextKind === "break" ? breakDuration : workDuration;
     return {
       user_id: userId,
       phase: "idle",
       kind: nextKind,
-      duration_seconds: nextDuration,
+      duration_seconds: timerModeValue === "stopwatch" ? 0 : nextDuration,
       work_duration_seconds: workDuration,
       break_duration_seconds: breakDuration,
       started_at: null,
@@ -552,34 +567,54 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       paused_remaining_seconds: null,
       accumulated_elapsed_seconds: 0,
       active_session_token: null,
-      timer_mode: timerModeRef.current,
+      timer_mode: timerModeValue,
+      session_started_at: null,
     };
   }, []);
 
   const finalizeRow = useCallback(async (row: ActiveStateRow, options: { notifyUser: boolean; endedAt?: Date }) => {
-    if (!user || finishingRef.current) return;
+    if (!user || finishingRef.current) return false;
     finishingRef.current = true;
     try {
       const nowMs = adjustedNow();
+      const timerModeValue = normalizeTimerMode(row.timer_mode);
       const runElapsed = row.phase === "running" ? currentRunElapsed(row, nowMs) : 0;
-      const elapsed = Math.min(Math.max(row.accumulated_elapsed_seconds + runElapsed, 0), row.duration_seconds);
+      const elapsed = timerModeValue === "stopwatch"
+        ? Math.max(0, row.accumulated_elapsed_seconds + runElapsed)
+        : Math.min(Math.max(row.accumulated_elapsed_seconds + runElapsed, 0), row.duration_seconds);
       const ended = options.endedAt ?? new Date(row.phase === "running" && row.ends_at ? new Date(row.ends_at).getTime() : nowMs);
-      const started = row.started_at
-        ? new Date(row.started_at)
-        : new Date(ended.getTime() - elapsed * 1000);
+      const started = row.session_started_at
+        ? new Date(row.session_started_at)
+        : row.started_at
+          ? new Date(row.started_at)
+          : new Date(ended.getTime() - elapsed * 1000);
 
       if (elapsed >= 1) {
-        await persistSession(row.kind, started, ended, elapsed, row.active_session_token);
+        await persistSession(row.kind, started, ended, elapsed, row.active_session_token, timerModeValue);
       }
 
-      await writeActiveState(nextIdlePayload(user.id, row.kind, row.work_duration_seconds, row.break_duration_seconds));
+      const nextKind: PomodoroKind = timerModeValue === "stopwatch"
+        ? "work"
+        : row.kind === "work"
+          ? "break"
+          : "work";
+      await writeActiveState(buildIdlePayload(
+        user.id,
+        timerModeValue,
+        row.work_duration_seconds,
+        row.break_duration_seconds,
+        nextKind,
+      ));
 
       if (options.notifyUser) {
-        playChime();
-        if (row.kind === "work") {
+        if (timerModeValue === "stopwatch") {
+          toast.success("Çalışma kaydedildi.");
+        } else if (row.kind === "work") {
+          playChime();
           toast.success("Pomodoro tamamlandı! Mola için başlat'a basın.");
           notify("Pomodoro tamamlandı 🍵", "Mola zamanı. Başlat'a basın.");
         } else {
+          playChime();
           toast.success("Mola bitti! Çalışma için başlat'a basın.");
           notify("Mola bitti ⛩", "Çalışma zamanı. Başlat'a basın.");
         }
@@ -588,11 +623,13 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       console.warn("[pomodoro] Finish sync failed", error);
       setSyncError("Pomodoro tamamlanamadı. Bağlantınızı kontrol edin.");
       toast.error("Pomodoro tamamlanamadı. Bağlantınızı kontrol edin.");
+      throw error;
     } finally {
       releaseWakeLock();
       setTimeout(() => { finishingRef.current = false; }, 50);
     }
-  }, [adjustedNow, currentRunElapsed, nextIdlePayload, persistSession, releaseWakeLock, user, writeActiveState]);
+    return true;
+  }, [adjustedNow, buildIdlePayload, currentRunElapsed, persistSession, releaseWakeLock, user, writeActiveState]);
 
   const fetchActiveState = useCallback(async (source: "load" | "revalidate" = "revalidate") => {
     if (!user || hydratingRef.current) return;
@@ -755,13 +792,14 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const original = document.title;
     if (phase === "idle") return;
-    const label = kind === "break" ? "Mola" : "Zen";
+    const label = timerMode === "stopwatch" ? "Kronometre" : kind === "break" ? "Mola" : "Zen";
     const prefix = phase === "paused" ? "⏸ " : "";
-    document.title = `${prefix}${label} ${formatTimerDisplay(remainingSec)} — Zen Planner`;
+    const titleSeconds = timerMode === "stopwatch" ? derivedDisplaySec : remainingSec;
+    document.title = `${prefix}${label} ${formatTimerDisplay(titleSeconds)} — Zen Planner`;
     return () => {
       document.title = original;
     };
-  }, [phase, kind, remainingSec]);
+  }, [derivedDisplaySec, kind, phase, remainingSec, timerMode]);
 
   const blockIfBusy = useCallback(() => {
     if (isLoading || isSyncing) {
@@ -808,6 +846,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         work_duration_seconds: workDurRef.current,
         break_duration_seconds: breakDurRef.current,
         started_at: null,
+        session_started_at: null,
         ends_at: null,
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: 0,
@@ -856,6 +895,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         work_duration_seconds: nextWorkDuration,
         break_duration_seconds: breakDurationSec,
         started_at: null,
+        session_started_at: null,
         ends_at: null,
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: 0,
@@ -871,20 +911,22 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     void withSync(async () => {
       if (!user) return;
       const now = adjustedNow();
-      const dur = kind === "break" ? breakDurationSec : workDurationSec;
+      const mode = timerModeRef.current;
+      const dur = mode === "stopwatch" ? 0 : (kind === "break" ? breakDurationSec : workDurationSec);
       await writeActiveState({
         user_id: user.id,
         phase: "running",
-        kind,
+        kind: mode === "stopwatch" ? "work" : kind,
         duration_seconds: dur,
         work_duration_seconds: workDurationSec,
         break_duration_seconds: breakDurationSec,
         started_at: new Date(now).toISOString(),
-        ends_at: new Date(now + dur * 1000).toISOString(),
+        session_started_at: new Date(now).toISOString(),
+        ends_at: mode === "stopwatch" ? null : new Date(now + dur * 1000).toISOString(),
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: 0,
         active_session_token: createPomodoroSessionToken(),
-        timer_mode: timerModeRef.current,
+        timer_mode: mode,
       });
       activeSessionIdRef.current += 1;
       completedSessionIdRef.current = null;
@@ -897,23 +939,33 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     void withSync(async () => {
       if (!user || !startedAt) return;
       const now = adjustedNow();
-      const runElapsed = Math.max(0, Math.round((now - startedAt.getTime()) / 1000));
-      const nextAccumulated = Math.min(durationSec, accumulatedElapsedSec + runElapsed);
-      const pausedRemaining = Math.max(0, durationSec - nextAccumulated);
+      const mode = timerModeRef.current;
+      const runElapsed = mode === "stopwatch"
+        ? currentSegmentElapsed(startedAt, now)
+        : Math.max(0, Math.round((now - startedAt.getTime()) / 1000));
+      const nextAccumulated = mode === "stopwatch"
+        ? accumulatedElapsedSec + runElapsed
+        : Math.min(durationSec, accumulatedElapsedSec + runElapsed);
+      const pausedRemaining = mode === "stopwatch" ? null : Math.max(0, durationSec - nextAccumulated);
       await writeActiveState({
         user_id: user.id,
         phase: "paused",
-        kind,
-        duration_seconds: durationSec,
+        kind: mode === "stopwatch" ? "work" : kind,
+        duration_seconds: mode === "stopwatch" ? 0 : durationSec,
         work_duration_seconds: workDurationSec,
         break_duration_seconds: breakDurationSec,
-        started_at: startedAt.toISOString(),
+        started_at: mode === "stopwatch" ? null : startedAt.toISOString(),
+        session_started_at: sessionStartedAtRef.current?.toISOString() || startedAt.toISOString(),
         ends_at: null,
         paused_remaining_seconds: pausedRemaining,
         accumulated_elapsed_seconds: nextAccumulated,
         active_session_token: activeSessionToken,
-        timer_mode: timerModeRef.current,
+        timer_mode: mode,
       });
+      if (mode === "stopwatch") {
+        setAccumulatedElapsedSec(nextAccumulated);
+        setStartedAt(null);
+      }
       clearFinishScheduler();
       releaseWakeLock();
     });
@@ -925,19 +977,22 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     void withSync(async () => {
       if (!user) return;
       const now = adjustedNow();
+      const mode = timerModeRef.current;
+      const currentSessionStart = sessionStartedAtRef.current ?? startedAtRef.current ?? new Date(now);
       await writeActiveState({
         user_id: user.id,
         phase: "running",
-        kind,
-        duration_seconds: durationSec,
+        kind: mode === "stopwatch" ? "work" : kind,
+        duration_seconds: mode === "stopwatch" ? 0 : durationSec,
         work_duration_seconds: workDurationSec,
         break_duration_seconds: breakDurationSec,
         started_at: new Date(now).toISOString(),
-        ends_at: new Date(now + pausedRemainingSec * 1000).toISOString(),
+        session_started_at: currentSessionStart.toISOString(),
+        ends_at: mode === "stopwatch" ? null : new Date(now + pausedRemainingSec * 1000).toISOString(),
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: accumulatedElapsedSec,
         active_session_token: activeSessionToken,
-        timer_mode: timerModeRef.current,
+        timer_mode: mode,
       });
       requestWakeLock();
     });
@@ -948,28 +1003,29 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     primeChimeFromUserGesture();
     void withSync(async () => {
       if (!user) return;
+      const now = adjustedNow();
+      const mode = timerModeRef.current;
       const row: ActiveStateRow = {
         user_id: user.id,
         phase,
-        kind,
-        duration_seconds: durationSec,
+        kind: mode === "stopwatch" ? "work" : kind,
+        duration_seconds: mode === "stopwatch" ? 0 : durationSec,
         work_duration_seconds: workDurationSec,
         break_duration_seconds: breakDurationSec,
         started_at: startedAt?.toISOString() || null,
+        session_started_at: sessionStartedAtRef.current?.toISOString() || startedAt?.toISOString() || null,
         ends_at: endsAt ? new Date(endsAt).toISOString() : null,
         paused_remaining_seconds: pausedRemainingSec,
         accumulated_elapsed_seconds: accumulatedElapsedSec,
         active_session_token: activeSessionToken,
-        timer_mode: timerModeRef.current,
+        timer_mode: mode,
         updated_at: new Date().toISOString(),
       };
-      await finalizeRow(row, { notifyUser: false, endedAt: new Date(adjustedNow()) });
+      await finalizeRow(row, { notifyUser: true, endedAt: new Date(now) });
       clearTimer();
       clearFinishScheduler();
       completedSessionIdRef.current = activeSessionIdRef.current;
       releaseWakeLock();
-      playChime();
-      toast.success(kind === "work" ? "Çalışma kaydedildi. Mola için başlat'a basın." : "Mola bitti.");
     });
   };
 
@@ -987,6 +1043,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         work_duration_seconds: defaultWork,
         break_duration_seconds: defaultBreak,
         started_at: null,
+        session_started_at: null,
         ends_at: null,
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: 0,
@@ -1016,6 +1073,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         work_duration_seconds: defaultWork,
         break_duration_seconds: defaultBreak,
         started_at: null,
+        session_started_at: null,
         ends_at: null,
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: 0,
@@ -1031,16 +1089,25 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const derivedElapsedSec = computeElapsedSeconds(
+    timerMode,
+    phase,
+    durationSec,
+    remainingSec,
+    accumulatedElapsedSec,
+    startedAt,
+    renderNowMs,
+  );
+  const derivedDisplaySec = timerMode === "stopwatch" ? derivedElapsedSec : remainingSec;
+
   return (
     <PomodoroContext.Provider
       value={{
         timerMode,
         durationSec,
         remainingSec,
-        displaySec: timerMode === "stopwatch"
-          ? computeElapsedSeconds(timerMode, phase, durationSec, remainingSec, accumulatedElapsedSec, startedAt, renderNowMs)
-          : remainingSec,
-        elapsedSec: computeElapsedSeconds(timerMode, phase, durationSec, remainingSec, accumulatedElapsedSec, startedAt, renderNowMs),
+        displaySec: derivedDisplaySec,
+        elapsedSec: derivedElapsedSec,
         phase,
         kind,
         startedAt,
