@@ -22,6 +22,7 @@ export type UserSettings = {
   default_pomodoro_project_id: string | null;
   default_pomodoro_work_minutes: number;
   default_pomodoro_break_minutes: number;
+  preferred_timer_mode: "pomodoro" | "stopwatch";
   home_focus_options: DailyFocusOption[];
   home_task_project_ids: string[] | null;
 };
@@ -39,13 +40,14 @@ const DEFAULTS: UserSettings = {
   default_pomodoro_project_id: null,
   default_pomodoro_work_minutes: 25,
   default_pomodoro_break_minutes: 5,
+  preferred_timer_mode: "pomodoro",
   home_focus_options: DEFAULT_HOME_FOCUS_OPTIONS,
   home_task_project_ids: null,
 };
 
 const CACHE_KEY = "keikaku.userSettings.v1";
 const EVENT = "keikaku:userSettings";
-const SELECT_COLUMNS = "auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,default_pomodoro_work_minutes,default_pomodoro_break_minutes,home_focus_options,home_task_project_ids";
+const SELECT_COLUMNS = "auto_prayer_times,location_permission,country,city,latitude,longitude,calculation_method,module_labels,startup_page,default_pomodoro_project_id,default_pomodoro_work_minutes,default_pomodoro_break_minutes,preferred_timer_mode,home_focus_options,home_task_project_ids";
 const CACHE_FRESH_MS = 60_000;
 
 type StoredUserSettings = UserSettings & { __user_id?: string; __fetched_at?: number };
@@ -63,6 +65,7 @@ type UserSettingsRow = Pick<
   | "default_pomodoro_project_id"
   | "default_pomodoro_work_minutes"
   | "default_pomodoro_break_minutes"
+  | "preferred_timer_mode"
   | "home_focus_options"
   | "home_task_project_ids"
 >;
@@ -84,6 +87,7 @@ const normalizeSettingsRow = (data: UserSettingsRow): UserSettings => ({
   default_pomodoro_project_id: data.default_pomodoro_project_id,
   default_pomodoro_work_minutes: normalizePomodoroMinutes(data.default_pomodoro_work_minutes, 25, 1, 180),
   default_pomodoro_break_minutes: normalizePomodoroMinutes(data.default_pomodoro_break_minutes, 5, 1, 60),
+  preferred_timer_mode: data.preferred_timer_mode === "stopwatch" ? "stopwatch" : "pomodoro",
   home_focus_options: normalizeFocusOptions(data.home_focus_options),
   home_task_project_ids: normalizeProjectIds(data.home_task_project_ids),
 });
