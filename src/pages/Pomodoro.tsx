@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon, ArrowLeftRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
@@ -382,6 +382,9 @@ const Pomodoro = () => {
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
+  const [gesturePreview, setGesturePreview] = useState<"left" | "right" | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const swipeCancelledRef = useRef(false);
 
   const requestNotif = async () => {
     if (typeof Notification === "undefined") {
@@ -496,6 +499,60 @@ const Pomodoro = () => {
     if (!success) {
       toast.error("Mod değiştirilemedi.");
     }
+  };
+
+  const clearSwipeGesture = () => {
+    swipeStartRef.current = null;
+    swipeCancelledRef.current = false;
+    setGesturePreview(null);
+  };
+
+  const isSwipeExcludedTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest("button, input, textarea, select, a, [role='button']"));
+  };
+
+  const handleSwipePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!isIdle || isSyncing) return;
+    if (isSwipeExcludedTarget(event.target)) return;
+    swipeStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    };
+    swipeCancelledRef.current = false;
+    setGesturePreview(null);
+  };
+
+  const handleSwipePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = swipeStartRef.current;
+    if (!start || start.pointerId !== event.pointerId || swipeCancelledRef.current) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dy) > Math.abs(dx)) {
+      swipeCancelledRef.current = true;
+      setGesturePreview(null);
+      return;
+    }
+    if (!isStopwatch && dx <= -24) setGesturePreview("left");
+    else if (isStopwatch && dx >= 24) setGesturePreview("right");
+    else setGesturePreview(null);
+  };
+
+  const handleSwipePointerEnd = async (event: ReactPointerEvent<HTMLElement>) => {
+    const start = swipeStartRef.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    const nextMode = !isStopwatch && dx <= -50
+      ? "stopwatch"
+      : isStopwatch && dx >= 50
+        ? "pomodoro"
+        : null;
+    clearSwipeGesture();
+    if (!nextMode || swipeCancelledRef.current || !isIdle || isSyncing) return;
+    const success = await setTimerMode(nextMode);
+    if (!success) toast.error("Mod değiştirilemedi.");
   };
 
   const updateDuration = async (id: string, totalSeconds: number) => {
@@ -706,7 +763,7 @@ const Pomodoro = () => {
                   isRunning ? "py-24" : "py-12"
                 }`}
               >
-                <div className="mb-4 flex justify-center">
+                <div className="mb-4 flex justify-center md:flex">
                   <button
                     type="button"
                     onClick={handleTimerModeSwitch}
@@ -720,6 +777,46 @@ const Pomodoro = () => {
                   </button>
                 </div>
 
+                <div className="mb-4 flex justify-center md:hidden">
+                  <div className="inline-flex items-center gap-2 rounded-sm border border-border/60 bg-background/70 px-2 py-1">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!isIdle || isSyncing || isStopwatch) return;
+                        const success = await setTimerMode("stopwatch");
+                        if (!success) toast.error("Mod değiştirilemedi.");
+                      }}
+                      disabled={!isIdle || isSyncing || isStopwatch}
+                      aria-label="Kronometreye geç"
+                      title={isIdle ? "Kronometreye geç" : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span aria-hidden="true">‹</span>
+                    </button>
+                    <span
+                      className={`min-w-[6rem] truncate text-center text-[10px] tracking-[0.3em] uppercase text-muted-foreground transition-opacity duration-200 ${
+                        gesturePreview ? "opacity-100" : "opacity-90"
+                      }`}
+                    >
+                      {timerTitle}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!isIdle || isSyncing || !isStopwatch) return;
+                        const success = await setTimerMode("pomodoro");
+                        if (!success) toast.error("Mod değiştirilemedi.");
+                      }}
+                      disabled={!isIdle || isSyncing || !isStopwatch}
+                      aria-label="Pomodoro'ya geç"
+                      title={isIdle ? "Pomodoro'ya geç" : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div
                   className={`text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-light mb-4 transition-opacity duration-500 ${
                     isRunning ? "opacity-40" : "opacity-100"
@@ -728,41 +825,37 @@ const Pomodoro = () => {
                   {timerTitle}
                 </div>
 
-                {isLoading ? (
-                  <div className="mb-8 w-full max-w-full select-none whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] text-muted-foreground/50 tabular-nums sm:text-8xl sm:tracking-widest">
-                    --:--
-                  </div>
-                ) : editingTime && isIdle ? (
-                  <input
-                    value={editVal}
-                    onChange={(e) => setEditVal(e.target.value)}
-                    onBlur={commitTime}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitTime();
-                      if (e.key === "Escape") { setEditVal(formatMMSS(remainingSec)); setEditingTime(false); }
-                    }}
-                    autoFocus
-                    className="mx-auto mb-8 block w-full max-w-full border-b border-border/60 bg-transparent text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums outline-none focus:border-foreground/40 sm:w-[28rem] sm:text-8xl sm:tracking-widest"
-                  />
-                ) : (
-                  isStopwatch ? (
-                    <div
-                      className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
-                        isRunning
-                          ? "scale-110 text-foreground"
-                          : isIdle
-                          ? "text-foreground/90"
-                          : ""
-                      }`}
-                    >
-                      {timerDisplayValue}
+                <div
+                  className="mb-8 touch-pan-y"
+                  style={{ touchAction: "pan-y" }}
+                  onPointerDown={handleSwipePointerDown}
+                  onPointerMove={handleSwipePointerMove}
+                  onPointerUp={handleSwipePointerEnd}
+                  onPointerCancel={clearSwipeGesture}
+                  onLostPointerCapture={clearSwipeGesture}
+                >
+                  {isLoading ? (
+                    <div className="w-full max-w-full select-none whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] text-muted-foreground/50 tabular-nums sm:text-8xl sm:tracking-widest">
+                      --:--
                     </div>
+                  ) : editingTime && isIdle && !isStopwatch ? (
+                    <input
+                      value={editVal}
+                      onChange={(e) => setEditVal(e.target.value)}
+                      onBlur={commitTime}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitTime();
+                        if (e.key === "Escape") { setEditVal(formatMMSS(remainingSec)); setEditingTime(false); }
+                      }}
+                      autoFocus
+                      className="mx-auto block w-full max-w-full border-b border-border/60 bg-transparent text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums outline-none focus:border-foreground/40 sm:w-[28rem] sm:text-8xl sm:tracking-widest"
+                    />
                   ) : (
                     <button
                       onClick={() => { if (isIdle && !isStopwatch) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
                       disabled={!isIdle || isStopwatch}
                       title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
-                      className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
+                      className={`mx-auto block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
                         isRunning
                           ? "scale-110 text-foreground"
                           : isIdle
@@ -772,8 +865,8 @@ const Pomodoro = () => {
                     >
                       {timerDisplayValue}
                     </button>
-                  )
-                )}
+                  )}
+                </div>
 
                 <div
                   className={`flex items-center justify-center gap-3 transition-all duration-700 ease-out ${
