@@ -482,6 +482,7 @@ const Pomodoro = () => {
   const isStopwatch = timerMode === "stopwatch";
   const canSwitchTimerMode = isIdle && !isSyncing;
   const timerTitle = isStopwatch ? "Kronometre" : isBreak ? "Dinlenme" : "Çalışma";
+  const mobileModeLabel = isStopwatch ? "Kronometre" : "Pomodoro";
   const timerDisplayValue = isStopwatch ? formatTimerDisplay(displaySec) : formatMMSS(remainingSec);
   const switchLabel = isStopwatch ? "Pomodoro’ya geç" : "Kronometreye geç";
   const finishLabel = isStopwatch ? "Bitir" : "Tamamla";
@@ -764,7 +765,7 @@ const Pomodoro = () => {
                 }`}
               >
                 <div className="mb-4 flex justify-center md:hidden">
-                  <div className="inline-flex items-center gap-2 rounded-sm border border-border/60 bg-background/70 px-2 py-1">
+                  <div className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-2 py-1">
                     <button
                       type="button"
                       onClick={async () => {
@@ -784,7 +785,7 @@ const Pomodoro = () => {
                         gesturePreview ? "opacity-100" : "opacity-90"
                       }`}
                     >
-                      {timerTitle}
+                      {mobileModeLabel}
                     </span>
                     <button
                       type="button"
@@ -812,7 +813,7 @@ const Pomodoro = () => {
                     aria-label={switchLabel}
                     className="inline-flex items-center gap-1.5 border-0 bg-transparent px-0 py-0 text-xs font-light text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    <span>{timerTitle}</span>
+                    <span>{mobileModeLabel}</span>
                     <ArrowLeftRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
