@@ -16,7 +16,10 @@ type PwaUpdateContextValue = {
 
 const PwaUpdateContext = createContext<PwaUpdateContextValue | null>(null);
 
-const waitForServiceWorkerEvents = () => new Promise((resolve) => window.setTimeout(resolve, 1000));
+const UPDATE_CHECK_TIMEOUT_MS = 15000;
+
+const isServiceWorkerReadyForUpdate = (registration: ServiceWorkerRegistration) =>
+  Boolean(registration.waiting);
 
 export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
@@ -67,16 +70,102 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
     try {
       const registration = registrationRef.current ?? await navigator.serviceWorker.getRegistration();
       if (!registration) {
-        setStatus("up-to-date");
+        setStatus("error");
         setLastCheckedAt(new Date());
         return;
       }
 
       registrationRef.current = registration;
-      await registration.update();
-      await waitForServiceWorkerEvents();
-      setLastCheckedAt(new Date());
-      setStatus(needRefreshRef.current ? "update-available" : "up-to-date");
+      if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+        setStatus("update-available");
+        setLastCheckedAt(new Date());
+        return;
+      }
+
+      let settled = false;
+      let timeoutId: number | null = null;
+      let updateFound = Boolean(registration.installing);
+      const cleanup: Array<() => void> = [];
+      const finish = (nextStatus: PwaUpdateStatus) => {
+        if (settled) return;
+        settled = true;
+        while (cleanup.length > 0) {
+          const fn = cleanup.pop();
+          try {
+            fn?.();
+          } catch {
+            // noop
+          }
+        }
+        if (timeoutId !== null) window.clearTimeout(timeoutId);
+        setLastCheckedAt(new Date());
+        setStatus(nextStatus);
+      };
+
+      const evaluateAvailability = () => {
+        if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+          finish("update-available");
+          return true;
+        }
+        return false;
+      };
+
+      const watchWorker = (worker: ServiceWorker) => {
+        updateFound = true;
+        const onStateChange = () => {
+          if (settled) return;
+          if (worker.state === "installed") {
+            if (evaluateAvailability()) return;
+            if (registration.waiting || needRefreshRef.current) {
+              finish("update-available");
+              return;
+            }
+          } else if (worker.state === "redundant") {
+            finish("error");
+          }
+        };
+        worker.addEventListener("statechange", onStateChange);
+        cleanup.push(() => worker.removeEventListener("statechange", onStateChange));
+      };
+
+      const onUpdateFound = () => {
+        const worker = registration.installing;
+        if (!worker) return;
+        watchWorker(worker);
+      };
+
+      if (registration.installing) {
+        watchWorker(registration.installing);
+      }
+
+      registration.addEventListener("updatefound", onUpdateFound);
+      cleanup.push(() => registration.removeEventListener("updatefound", onUpdateFound));
+
+      timeoutId = window.setTimeout(() => {
+        if (settled) return;
+        if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+          finish("update-available");
+          return;
+        }
+        finish("error");
+      }, UPDATE_CHECK_TIMEOUT_MS);
+
+      try {
+        await registration.update();
+      } catch (error) {
+        console.error("[PWA] Update check failed", error);
+        finish("error");
+        return;
+      }
+
+      if (evaluateAvailability()) return;
+      if (settled) return;
+      if (registration.installing || updateFound) return;
+      if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+        finish("update-available");
+        return;
+      }
+      finish("up-to-date");
     } catch (error) {
       console.error("[PWA] Update check failed", error);
       setStatus("error");
