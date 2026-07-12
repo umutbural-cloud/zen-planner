@@ -84,6 +84,7 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
 
       let settled = false;
       let timeoutId: number | null = null;
+      let updateFound = Boolean(registration.installing);
       const cleanup: Array<() => void> = [];
       const finish = (nextStatus: PwaUpdateStatus) => {
         if (settled) return;
@@ -109,13 +110,16 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
         return false;
       };
 
-      const onUpdateFound = () => {
-        const worker = registration.installing;
-        if (!worker) return;
+      const watchWorker = (worker: ServiceWorker) => {
+        updateFound = true;
         const onStateChange = () => {
           if (settled) return;
           if (worker.state === "installed") {
-            evaluateAvailability();
+            if (evaluateAvailability()) return;
+            if (registration.waiting || needRefreshRef.current) {
+              finish("update-available");
+              return;
+            }
           } else if (worker.state === "redundant") {
             finish("error");
           }
@@ -123,6 +127,16 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
         worker.addEventListener("statechange", onStateChange);
         cleanup.push(() => worker.removeEventListener("statechange", onStateChange));
       };
+
+      const onUpdateFound = () => {
+        const worker = registration.installing;
+        if (!worker) return;
+        watchWorker(worker);
+      };
+
+      if (registration.installing) {
+        watchWorker(registration.installing);
+      }
 
       registration.addEventListener("updatefound", onUpdateFound);
       cleanup.push(() => registration.removeEventListener("updatefound", onUpdateFound));
@@ -146,22 +160,12 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
 
       if (evaluateAvailability()) return;
       if (settled) return;
-      if (registration.installing) {
-        const worker = registration.installing;
-        if (worker.state === "installed") {
-          evaluateAvailability();
-        }
-      } else if (!settled) {
-        const pendingCheck = window.setTimeout(() => {
-          if (settled) return;
-          if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
-            finish("update-available");
-          } else {
-            finish("up-to-date");
-          }
-        }, 0);
-        cleanup.push(() => window.clearTimeout(pendingCheck));
+      if (registration.installing || updateFound) return;
+      if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+        finish("update-available");
+        return;
       }
+      finish("up-to-date");
     } catch (error) {
       console.error("[PWA] Update check failed", error);
       setStatus("error");
