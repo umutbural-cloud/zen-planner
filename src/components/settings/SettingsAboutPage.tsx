@@ -76,7 +76,7 @@ export const SettingsAboutPage = () => {
           {[
             { label: "Uygulama", value: "Zen Planner", icon: Info },
             { label: "Sürüm", value: APP_VERSION, icon: Layers3 },
-            { label: "Durum", value: "Kapalı test / 1.0.0 yayına hazırlık", icon: FileClock },
+            { label: "Durum", value: `Kapalı test / ${APP_VERSION} yayına hazırlık`, icon: FileClock },
             { label: "Platform", value: "Web / PWA", icon: MonitorSmartphone },
           ].map((item) => {
             const Icon = item.icon;
