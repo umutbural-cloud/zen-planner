@@ -983,13 +983,18 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resume = () => {
-    if (phase !== "paused" || pausedRemainingSec == null) return;
+    if (phase !== "paused") return;
     primeChimeFromUserGesture();
     void withSync(async () => {
       if (!user) return;
       const now = adjustedNow();
       const mode = timerModeRef.current;
       const currentSessionStart = sessionStartedAtRef.current ?? startedAtRef.current ?? new Date(now);
+      let nextEndsAt: string | null = null;
+      if (mode === "pomodoro") {
+        if (pausedRemainingSec == null) return;
+        nextEndsAt = new Date(now + pausedRemainingSec * 1000).toISOString();
+      }
       await writeActiveState({
         user_id: user.id,
         phase: "running",
@@ -999,7 +1004,7 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
         break_duration_seconds: breakDurationSec,
         started_at: new Date(now).toISOString(),
         session_started_at: currentSessionStart.toISOString(),
-        ends_at: mode === "stopwatch" ? null : new Date(now + pausedRemainingSec * 1000).toISOString(),
+        ends_at: nextEndsAt,
         paused_remaining_seconds: null,
         accumulated_elapsed_seconds: accumulatedElapsedSec,
         active_session_token: activeSessionToken,
