@@ -385,6 +385,7 @@ const Pomodoro = () => {
   const [gesturePreview, setGesturePreview] = useState<"left" | "right" | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const swipeCancelledRef = useRef(false);
+  const didSwipeRef = useRef(false);
 
   const requestNotif = async () => {
     if (typeof Notification === "undefined") {
@@ -510,10 +511,12 @@ const Pomodoro = () => {
 
   const isSwipeExcludedTarget = (target: EventTarget | null) => {
     if (!(target instanceof Element)) return false;
+    if (target.closest("[data-timer-swipe-surface='true']")) return false;
     return Boolean(target.closest("button, input, textarea, select, a, [role='button']"));
   };
 
   const handleSwipePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
     if (!isIdle || isSyncing) return;
     if (isSwipeExcludedTarget(event.target)) return;
     swipeStartRef.current = {
@@ -552,6 +555,10 @@ const Pomodoro = () => {
         : null;
     clearSwipeGesture();
     if (!nextMode || swipeCancelledRef.current || !isIdle || isSyncing) return;
+    didSwipeRef.current = true;
+    window.setTimeout(() => {
+      didSwipeRef.current = false;
+    }, 0);
     const success = await setTimerMode(nextMode);
     if (!success) toast.error("Mod değiştirilemedi.");
   };
@@ -848,6 +855,24 @@ const Pomodoro = () => {
                       onClick={() => { if (isIdle && !isStopwatch) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
                       disabled={!isIdle || isStopwatch}
                       title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
+                      data-timer-swipe-surface="true"
+                      onPointerDown={handleSwipePointerDown}
+                      onPointerMove={handleSwipePointerMove}
+                      onPointerUp={handleSwipePointerEnd}
+                      onPointerCancel={clearSwipeGesture}
+                      onLostPointerCapture={clearSwipeGesture}
+                      onClick={(event) => {
+                        if (didSwipeRef.current) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          didSwipeRef.current = false;
+                          return;
+                        }
+                        if (isIdle && !isStopwatch) {
+                          setEditVal(formatMMSS(remainingSec));
+                          setEditingTime(true);
+                        }
+                      }}
                       className={`mx-auto block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
                         isRunning
                           ? "scale-110 text-foreground"
