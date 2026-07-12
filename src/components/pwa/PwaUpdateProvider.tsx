@@ -16,7 +16,10 @@ type PwaUpdateContextValue = {
 
 const PwaUpdateContext = createContext<PwaUpdateContextValue | null>(null);
 
-const waitForServiceWorkerEvents = () => new Promise((resolve) => window.setTimeout(resolve, 1000));
+const UPDATE_CHECK_TIMEOUT_MS = 15000;
+
+const isServiceWorkerReadyForUpdate = (registration: ServiceWorkerRegistration) =>
+  Boolean(registration.waiting);
 
 export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
@@ -67,16 +70,98 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
     try {
       const registration = registrationRef.current ?? await navigator.serviceWorker.getRegistration();
       if (!registration) {
-        setStatus("up-to-date");
+        setStatus("error");
         setLastCheckedAt(new Date());
         return;
       }
 
       registrationRef.current = registration;
-      await registration.update();
-      await waitForServiceWorkerEvents();
-      setLastCheckedAt(new Date());
-      setStatus(needRefreshRef.current ? "update-available" : "up-to-date");
+      if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+        setStatus("update-available");
+        setLastCheckedAt(new Date());
+        return;
+      }
+
+      let settled = false;
+      let timeoutId: number | null = null;
+      const cleanup: Array<() => void> = [];
+      const finish = (nextStatus: PwaUpdateStatus) => {
+        if (settled) return;
+        settled = true;
+        while (cleanup.length > 0) {
+          const fn = cleanup.pop();
+          try {
+            fn?.();
+          } catch {
+            // noop
+          }
+        }
+        if (timeoutId !== null) window.clearTimeout(timeoutId);
+        setLastCheckedAt(new Date());
+        setStatus(nextStatus);
+      };
+
+      const evaluateAvailability = () => {
+        if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+          finish("update-available");
+          return true;
+        }
+        return false;
+      };
+
+      const onUpdateFound = () => {
+        const worker = registration.installing;
+        if (!worker) return;
+        const onStateChange = () => {
+          if (settled) return;
+          if (worker.state === "installed") {
+            evaluateAvailability();
+          } else if (worker.state === "redundant") {
+            finish("error");
+          }
+        };
+        worker.addEventListener("statechange", onStateChange);
+        cleanup.push(() => worker.removeEventListener("statechange", onStateChange));
+      };
+
+      registration.addEventListener("updatefound", onUpdateFound);
+      cleanup.push(() => registration.removeEventListener("updatefound", onUpdateFound));
+
+      timeoutId = window.setTimeout(() => {
+        if (settled) return;
+        if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+          finish("update-available");
+          return;
+        }
+        finish("error");
+      }, UPDATE_CHECK_TIMEOUT_MS);
+
+      try {
+        await registration.update();
+      } catch (error) {
+        console.error("[PWA] Update check failed", error);
+        finish("error");
+        return;
+      }
+
+      if (evaluateAvailability()) return;
+      if (settled) return;
+      if (registration.installing) {
+        const worker = registration.installing;
+        if (worker.state === "installed") {
+          evaluateAvailability();
+        }
+      } else if (!settled) {
+        const pendingCheck = window.setTimeout(() => {
+          if (settled) return;
+          if (needRefreshRef.current || isServiceWorkerReadyForUpdate(registration)) {
+            finish("update-available");
+          } else {
+            finish("up-to-date");
+          }
+        }, 0);
+        cleanup.push(() => window.clearTimeout(pendingCheck));
+      }
     } catch (error) {
       console.error("[PWA] Update check failed", error);
       setStatus("error");
