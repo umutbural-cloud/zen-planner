@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { Play, Pause, Check, SkipForward, Clock, Trash2, Bell, BellOff, Moon, Sun, Plus, X, Filter, ArrowUpDown, Tags, Pencil, Calendar as CalendarIcon, ArrowLeftRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfDay, subDays } from "date-fns";
 import { tr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
-import { usePomodoro, formatMMSS } from "@/hooks/usePomodoro";
+import { usePomodoro, formatMMSS, formatTimerDisplay } from "@/hooks/usePomodoro";
 import { useTheme } from "@/hooks/useTheme";
 import { useAppShellProjects } from "@/components/AppShell";
 import { usePomodoroCategories, PomodoroCategory } from "@/hooks/usePomodoroCategories";
@@ -342,7 +342,22 @@ const Pomodoro = () => {
   const { user } = useAuth();
   const { projects } = useAppShellProjects();
   const { theme, toggle: toggleTheme } = useTheme();
-  const { remainingSec, phase, kind, setDuration, start, pause, resume, complete, skipBreak, isLoading } = usePomodoro();
+  const {
+    timerMode,
+    displaySec,
+    remainingSec,
+    phase,
+    kind,
+    setTimerMode,
+    setDuration,
+    start,
+    pause,
+    resume,
+    complete,
+    skipBreak,
+    isLoading,
+    isSyncing,
+  } = usePomodoro();
   const { categories, create: createCategory, update: updateCategory, remove: removeCategory } = usePomodoroCategories();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [editingTime, setEditingTime] = useState(false);
@@ -367,6 +382,12 @@ const Pomodoro = () => {
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
+  const [gesturePreview, setGesturePreview] = useState<"left" | "right" | null>(null);
+  const [mobileTransitionDirection, setMobileTransitionDirection] = useState<"left" | "right" | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const swipeCancelledRef = useRef(false);
+  const didSwipeRef = useRef(false);
+  const mobileTransitionTimeoutRef = useRef<number | null>(null);
 
   const requestNotif = async () => {
     if (typeof Notification === "undefined") {
@@ -461,11 +482,108 @@ const Pomodoro = () => {
   const isPaused = phase === "paused";
   const isIdle = phase === "idle";
   const isBreak = kind === "break";
+  const isStopwatch = timerMode === "stopwatch";
+  const canSwitchTimerMode = isIdle && !isSyncing;
+  const timerTitle = isStopwatch ? "Kronometre" : isBreak ? "Dinlenme" : "Çalışma";
+  const mobileModeLabel = isStopwatch ? "Kronometre" : "Pomodoro";
+  const timerDisplayValue = isStopwatch ? formatTimerDisplay(displaySec) : formatMMSS(remainingSec);
+  const switchLabel = isStopwatch ? "Pomodoro’ya geç" : "Kronometreye geç";
+  const finishLabel = isStopwatch ? "Bitir" : "Tamamla";
 
   const updateNote = async (id: string, note: string) => {
     if (!user) return;
     await supabase.from("pomodoro_sessions").update({ note }).eq("id", id).eq("user_id", user.id);
     setSessions((arr) => arr.map((s) => (s.id === id ? { ...s, note } : s)));
+  };
+
+  const handleTimerModeSwitch = async () => {
+    if (!canSwitchTimerMode) return;
+    const nextMode = isStopwatch ? "pomodoro" : "stopwatch";
+    const success = await setTimerMode(nextMode);
+    if (!success) {
+      toast.error("Mod değiştirilemedi.");
+      return;
+    }
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setMobileTransitionDirection(isStopwatch ? "right" : "left");
+      if (mobileTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(mobileTransitionTimeoutRef.current);
+      }
+      mobileTransitionTimeoutRef.current = window.setTimeout(() => {
+        mobileTransitionTimeoutRef.current = null;
+        setMobileTransitionDirection(null);
+      }, 220);
+    }
+  };
+
+  const clearSwipeGesture = () => {
+    swipeStartRef.current = null;
+    swipeCancelledRef.current = false;
+    setGesturePreview(null);
+  };
+
+  const isSwipeExcludedTarget = (target: EventTarget | null) => {
+    if (!(target instanceof Element)) return false;
+    if (target.closest("[data-timer-swipe-surface='true']")) return false;
+    return Boolean(target.closest("button, input, textarea, select, a, [role='button']"));
+  };
+
+  const handleSwipePointerDown = (event: ReactPointerEvent<HTMLElement>) => {
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+    if (!isIdle || isSyncing) return;
+    if (isSwipeExcludedTarget(event.target)) return;
+    swipeStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+    };
+    swipeCancelledRef.current = false;
+    setGesturePreview(null);
+  };
+
+  const handleSwipePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const start = swipeStartRef.current;
+    if (!start || start.pointerId !== event.pointerId || swipeCancelledRef.current) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dy) > Math.abs(dx)) {
+      swipeCancelledRef.current = true;
+      setGesturePreview(null);
+      return;
+    }
+    if (!isStopwatch && dx <= -24) setGesturePreview("left");
+    else if (isStopwatch && dx >= 24) setGesturePreview("right");
+    else setGesturePreview(null);
+  };
+
+  const handleSwipePointerEnd = async (event: ReactPointerEvent<HTMLElement>) => {
+    const start = swipeStartRef.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    const nextMode = !isStopwatch && dx <= -50
+      ? "stopwatch"
+      : isStopwatch && dx >= 50
+        ? "pomodoro"
+        : null;
+    clearSwipeGesture();
+    if (!nextMode || swipeCancelledRef.current || !isIdle || isSyncing) return;
+    didSwipeRef.current = true;
+    window.setTimeout(() => {
+      didSwipeRef.current = false;
+    }, 0);
+    const success = await setTimerMode(nextMode);
+    if (!success) toast.error("Mod değiştirilemedi.");
+    else if (window.matchMedia("(max-width: 767px)").matches) {
+      setMobileTransitionDirection(nextMode === "stopwatch" ? "left" : "right");
+      if (mobileTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(mobileTransitionTimeoutRef.current);
+      }
+      mobileTransitionTimeoutRef.current = window.setTimeout(() => {
+        mobileTransitionTimeoutRef.current = null;
+        setMobileTransitionDirection(null);
+      }, 220);
+    }
   };
 
   const updateDuration = async (id: string, totalSeconds: number) => {
@@ -676,46 +794,142 @@ const Pomodoro = () => {
                   isRunning ? "py-24" : "py-12"
                 }`}
               >
-                <div
-                  className={`text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-light mb-4 transition-opacity duration-500 ${
-                    isRunning ? "opacity-40" : "opacity-100"
-                  }`}
-                >
-                  {isBreak ? "Dinlenme" : "Çalışma"}
-                </div>
-
-                {isLoading ? (
-                  <div className="mb-8 w-full max-w-full select-none whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] text-muted-foreground/50 tabular-nums sm:text-8xl sm:tracking-widest">
-                    --:--
-                  </div>
-                ) : editingTime && isIdle ? (
-                  <input
-                    value={editVal}
-                    onChange={(e) => setEditVal(e.target.value)}
-                    onBlur={commitTime}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitTime();
-                      if (e.key === "Escape") { setEditVal(formatMMSS(remainingSec)); setEditingTime(false); }
-                    }}
-                    autoFocus
-                    className="mx-auto mb-8 block w-full max-w-full border-b border-border/60 bg-transparent text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums outline-none focus:border-foreground/40 sm:w-[28rem] sm:text-8xl sm:tracking-widest"
-                  />
-                ) : (
-                  <button
-                    onClick={() => { if (isIdle) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
-                    disabled={!isIdle}
-                    title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
-                    className={`mx-auto mb-8 block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
-                      isRunning
-                        ? "scale-110 text-foreground"
-                        : isIdle
-                        ? "hover:text-foreground/80 cursor-text"
-                        : ""
+                <div className="mb-4 flex justify-center md:hidden">
+                  <div
+                    className={`inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-2 py-1 motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-safe:ease-out ${
+                      mobileTransitionDirection === "left"
+                        ? "translate-x-[-0.4rem] opacity-95"
+                        : mobileTransitionDirection === "right"
+                          ? "translate-x-[0.4rem] opacity-95"
+                          : "translate-x-0 opacity-100"
                     }`}
                   >
-                    {formatMMSS(remainingSec)}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!isIdle || isSyncing || isStopwatch) return;
+                        const success = await setTimerMode("stopwatch");
+                        if (!success) toast.error("Mod değiştirilemedi.");
+                        else triggerMobileTransition("left");
+                      }}
+                      disabled={!isIdle || isSyncing || isStopwatch}
+                      aria-label="Kronometreye geç"
+                      title={isIdle ? "Kronometreye geç" : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span aria-hidden="true">‹</span>
+                    </button>
+                    <span
+                      className={`min-w-[6rem] truncate text-center text-[10px] tracking-[0.3em] uppercase text-muted-foreground transition-opacity duration-200 ${
+                        gesturePreview ? "opacity-100" : "opacity-90"
+                      }`}
+                    >
+                      {mobileModeLabel}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!isIdle || isSyncing || !isStopwatch) return;
+                        const success = await setTimerMode("pomodoro");
+                        if (!success) toast.error("Mod değiştirilemedi.");
+                        else triggerMobileTransition("right");
+                      }}
+                      disabled={!isIdle || isSyncing || !isStopwatch}
+                      aria-label="Pomodoro'ya geç"
+                      title={isIdle ? "Pomodoro'ya geç" : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-4 hidden justify-center md:flex">
+                  <button
+                    type="button"
+                    onClick={handleTimerModeSwitch}
+                    disabled={!canSwitchTimerMode}
+                    title={canSwitchTimerMode ? switchLabel : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                    aria-label={switchLabel}
+                    className="inline-flex items-center gap-1.5 border-0 bg-transparent px-0 py-0 text-xs font-light text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <span>{mobileModeLabel}</span>
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
                   </button>
-                )}
+                </div>
+
+                <div
+                  className={`mb-8 touch-pan-y motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-safe:ease-out ${
+                    mobileTransitionDirection === "left"
+                      ? "translate-x-[-0.4rem] opacity-95"
+                      : mobileTransitionDirection === "right"
+                        ? "translate-x-[0.4rem] opacity-95"
+                        : "translate-x-0 opacity-100"
+                  }`}
+                  style={{ touchAction: "pan-y" }}
+                  onPointerDown={handleSwipePointerDown}
+                  onPointerMove={handleSwipePointerMove}
+                  onPointerUp={handleSwipePointerEnd}
+                  onPointerCancel={clearSwipeGesture}
+                  onLostPointerCapture={clearSwipeGesture}
+                >
+                  {isLoading ? (
+                    <div className="w-full max-w-full select-none whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] text-muted-foreground/50 tabular-nums sm:text-8xl sm:tracking-widest">
+                      --:--
+                    </div>
+                  ) : editingTime && isIdle && !isStopwatch ? (
+                    <input
+                      value={editVal}
+                      onChange={(e) => setEditVal(e.target.value)}
+                      onBlur={commitTime}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitTime();
+                        if (e.key === "Escape") { setEditVal(formatMMSS(remainingSec)); setEditingTime(false); }
+                      }}
+                      autoFocus
+                      className="mx-auto block w-full max-w-full border-b border-border/60 bg-transparent text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums outline-none focus:border-foreground/40 sm:w-[28rem] sm:text-8xl sm:tracking-widest"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => { if (isIdle && !isStopwatch) { setEditVal(formatMMSS(remainingSec)); setEditingTime(true); } }}
+                      disabled={!isIdle || isStopwatch}
+                      title={isIdle ? "Süreyi düzenlemek için tıkla" : ""}
+                      data-timer-swipe-surface="true"
+                      onPointerDown={handleSwipePointerDown}
+                      onPointerMove={handleSwipePointerMove}
+                      onPointerUp={handleSwipePointerEnd}
+                      onPointerCancel={clearSwipeGesture}
+                      onLostPointerCapture={clearSwipeGesture}
+                      onClick={(event) => {
+                        if (didSwipeRef.current) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          didSwipeRef.current = false;
+                          return;
+                        }
+                        if (isIdle && !isStopwatch) {
+                          setEditVal(formatMMSS(remainingSec));
+                          setEditingTime(true);
+                        }
+                      }}
+                      className={`mx-auto block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-safe:ease-out sm:text-8xl sm:tracking-widest ${
+                        isRunning
+                          ? "scale-110 text-foreground"
+                          : isIdle
+                          ? "hover:text-foreground/80 cursor-text"
+                          : ""
+                      } ${
+                        mobileTransitionDirection === "left"
+                          ? "translate-x-[-0.4rem] opacity-95"
+                          : mobileTransitionDirection === "right"
+                            ? "translate-x-[0.4rem] opacity-95"
+                            : "translate-x-0 opacity-100"
+                      }`}
+                    >
+                      {timerDisplayValue}
+                    </button>
+                  )}
+                </div>
 
                 <div
                   className={`flex items-center justify-center gap-3 transition-all duration-700 ease-out ${
@@ -731,13 +945,13 @@ const Pomodoro = () => {
                       <button onClick={pause} className="flex min-h-11 items-center gap-2 rounded-lg bg-accent px-5 py-2 text-sm transition-colors hover:bg-accent/80 md:rounded-sm">
                         <Pause className="h-4 w-4" /> Duraklat
                       </button>
-                      {isBreak ? (
+                      {isBreak && !isStopwatch ? (
                         <button onClick={skipBreak} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <SkipForward className="h-4 w-4" /> Atla
                         </button>
                       ) : (
                         <button onClick={complete} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
-                          <Check className="h-4 w-4" /> Tamamla
+                          <Check className="h-4 w-4" /> {finishLabel}
                         </button>
                       )}
                     </>
@@ -747,7 +961,7 @@ const Pomodoro = () => {
                         <Play className="h-4 w-4" /> Devam
                       </button>
                       <button onClick={complete} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
-                        <Check className="h-4 w-4" /> Tamamla
+                        <Check className="h-4 w-4" /> {finishLabel}
                       </button>
                     </>
                   ) : (
@@ -755,7 +969,7 @@ const Pomodoro = () => {
                       <button onClick={start} className="flex min-h-12 items-center gap-2 rounded-xl bg-foreground px-7 py-2.5 text-sm text-background transition-colors hover:bg-foreground/90 md:min-h-0 md:rounded-sm md:px-6 md:py-2">
                         <Play className="h-4 w-4" /> Başlat
                       </button>
-                      {isBreak && (
+                      {isBreak && !isStopwatch && (
                         <button onClick={skipBreak} className="flex min-h-11 items-center gap-2 rounded-lg border border-border/60 px-5 py-2 text-sm transition-colors hover:bg-accent/50 md:rounded-sm">
                           <SkipForward className="h-4 w-4" /> Atla
                         </button>
@@ -763,6 +977,12 @@ const Pomodoro = () => {
                     </>
                   )}
                 </div>
+
+                {isStopwatch && (isRunning || isPaused) && (
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    {isRunning ? "Çalışıyor" : "Duraklatıldı"}
+                  </div>
+                )}
               </div>
 
               <div

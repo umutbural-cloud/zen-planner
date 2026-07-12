@@ -1,6 +1,11 @@
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "1.0.2";
 
 export const VERSION_HISTORY = [
+  {
+    version: "1.0.2",
+    label: "Kronometre",
+    description: "Pomodoro’ya ek olarak ileri sayan kronometre modu, masaüstü ve mobil mod geçişleri ile mobil kaydırma deneyimi eklendi.",
+  },
   {
     version: "1.0.0",
     label: "Ayarlar merkezi",
