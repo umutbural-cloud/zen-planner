@@ -383,9 +383,11 @@ const Pomodoro = () => {
     typeof Notification === "undefined" ? "unsupported" : Notification.permission
   );
   const [gesturePreview, setGesturePreview] = useState<"left" | "right" | null>(null);
+  const [mobileTransitionDirection, setMobileTransitionDirection] = useState<"left" | "right" | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const swipeCancelledRef = useRef(false);
   const didSwipeRef = useRef(false);
+  const mobileTransitionTimeoutRef = useRef<number | null>(null);
 
   const requestNotif = async () => {
     if (typeof Notification === "undefined") {
@@ -500,6 +502,17 @@ const Pomodoro = () => {
     const success = await setTimerMode(nextMode);
     if (!success) {
       toast.error("Mod değiştirilemedi.");
+      return;
+    }
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setMobileTransitionDirection(isStopwatch ? "right" : "left");
+      if (mobileTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(mobileTransitionTimeoutRef.current);
+      }
+      mobileTransitionTimeoutRef.current = window.setTimeout(() => {
+        mobileTransitionTimeoutRef.current = null;
+        setMobileTransitionDirection(null);
+      }, 220);
     }
   };
 
@@ -561,6 +574,16 @@ const Pomodoro = () => {
     }, 0);
     const success = await setTimerMode(nextMode);
     if (!success) toast.error("Mod değiştirilemedi.");
+    else if (window.matchMedia("(max-width: 767px)").matches) {
+      setMobileTransitionDirection(nextMode === "stopwatch" ? "left" : "right");
+      if (mobileTransitionTimeoutRef.current !== null) {
+        window.clearTimeout(mobileTransitionTimeoutRef.current);
+      }
+      mobileTransitionTimeoutRef.current = window.setTimeout(() => {
+        mobileTransitionTimeoutRef.current = null;
+        setMobileTransitionDirection(null);
+      }, 220);
+    }
   };
 
   const updateDuration = async (id: string, totalSeconds: number) => {
@@ -772,13 +795,22 @@ const Pomodoro = () => {
                 }`}
               >
                 <div className="mb-4 flex justify-center md:hidden">
-                  <div className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-2 py-1">
+                  <div
+                    className={`inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/70 px-2 py-1 motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-safe:ease-out ${
+                      mobileTransitionDirection === "left"
+                        ? "translate-x-[-0.4rem] opacity-95"
+                        : mobileTransitionDirection === "right"
+                          ? "translate-x-[0.4rem] opacity-95"
+                          : "translate-x-0 opacity-100"
+                    }`}
+                  >
                     <button
                       type="button"
                       onClick={async () => {
                         if (!isIdle || isSyncing || isStopwatch) return;
                         const success = await setTimerMode("stopwatch");
                         if (!success) toast.error("Mod değiştirilemedi.");
+                        else triggerMobileTransition("left");
                       }}
                       disabled={!isIdle || isSyncing || isStopwatch}
                       aria-label="Kronometreye geç"
@@ -800,6 +832,7 @@ const Pomodoro = () => {
                         if (!isIdle || isSyncing || !isStopwatch) return;
                         const success = await setTimerMode("pomodoro");
                         if (!success) toast.error("Mod değiştirilemedi.");
+                        else triggerMobileTransition("right");
                       }}
                       disabled={!isIdle || isSyncing || !isStopwatch}
                       aria-label="Pomodoro'ya geç"
@@ -826,7 +859,13 @@ const Pomodoro = () => {
                 </div>
 
                 <div
-                  className="mb-8 touch-pan-y"
+                  className={`mb-8 touch-pan-y motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-safe:ease-out ${
+                    mobileTransitionDirection === "left"
+                      ? "translate-x-[-0.4rem] opacity-95"
+                      : mobileTransitionDirection === "right"
+                        ? "translate-x-[0.4rem] opacity-95"
+                        : "translate-x-0 opacity-100"
+                  }`}
                   style={{ touchAction: "pan-y" }}
                   onPointerDown={handleSwipePointerDown}
                   onPointerMove={handleSwipePointerMove}
@@ -873,12 +912,18 @@ const Pomodoro = () => {
                           setEditingTime(true);
                         }
                       }}
-                      className={`mx-auto block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums transition-all duration-700 ease-out sm:text-8xl sm:tracking-widest ${
+                      className={`mx-auto block w-full max-w-full whitespace-nowrap text-center text-[clamp(5.75rem,26vw,7rem)] font-extralight leading-none tracking-[0.02em] tabular-nums motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-safe:ease-out sm:text-8xl sm:tracking-widest ${
                         isRunning
                           ? "scale-110 text-foreground"
                           : isIdle
                           ? "hover:text-foreground/80 cursor-text"
                           : ""
+                      } ${
+                        mobileTransitionDirection === "left"
+                          ? "translate-x-[-0.4rem] opacity-95"
+                          : mobileTransitionDirection === "right"
+                            ? "translate-x-[0.4rem] opacity-95"
+                            : "translate-x-0 opacity-100"
                       }`}
                     >
                       {timerDisplayValue}
