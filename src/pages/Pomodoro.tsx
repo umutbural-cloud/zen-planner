@@ -763,20 +763,6 @@ const Pomodoro = () => {
                   isRunning ? "py-24" : "py-12"
                 }`}
               >
-                <div className="mb-4 flex justify-center md:flex">
-                  <button
-                    type="button"
-                    onClick={handleTimerModeSwitch}
-                    disabled={!canSwitchTimerMode}
-                    title={canSwitchTimerMode ? switchLabel : "Mod değiştirmek için mevcut çalışmayı bitirin."}
-                    aria-label={switchLabel}
-                    className="hidden items-center gap-2 rounded-sm border border-border/60 bg-background/80 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 md:inline-flex"
-                  >
-                    <ArrowLeftRight className="h-3.5 w-3.5" />
-                    <span>{switchLabel}</span>
-                  </button>
-                </div>
-
                 <div className="mb-4 flex justify-center md:hidden">
                   <div className="inline-flex items-center gap-2 rounded-sm border border-border/60 bg-background/70 px-2 py-1">
                     <button
@@ -817,12 +803,18 @@ const Pomodoro = () => {
                   </div>
                 </div>
 
-                <div
-                  className={`text-[10px] tracking-[0.3em] uppercase text-muted-foreground font-light mb-4 transition-opacity duration-500 ${
-                    isRunning ? "opacity-40" : "opacity-100"
-                  }`}
-                >
-                  {timerTitle}
+                <div className="mb-4 hidden justify-center md:flex">
+                  <button
+                    type="button"
+                    onClick={handleTimerModeSwitch}
+                    disabled={!canSwitchTimerMode}
+                    title={canSwitchTimerMode ? switchLabel : "Mod değiştirmek için mevcut çalışmayı bitirin."}
+                    aria-label={switchLabel}
+                    className="inline-flex items-center gap-1.5 border-0 bg-transparent px-0 py-0 text-xs font-light text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <span>{timerTitle}</span>
+                    <ArrowLeftRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
 
                 <div
