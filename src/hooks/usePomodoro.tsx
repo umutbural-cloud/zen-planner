@@ -789,6 +789,17 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [phase, releaseWakeLock, requestWakeLock]);
 
+  const derivedElapsedSec = computeElapsedSeconds(
+    timerMode,
+    phase,
+    durationSec,
+    remainingSec,
+    accumulatedElapsedSec,
+    startedAt,
+    renderNowMs,
+  );
+  const derivedDisplaySec = timerMode === "stopwatch" ? derivedElapsedSec : remainingSec;
+
   useEffect(() => {
     const original = document.title;
     if (phase === "idle") return;
@@ -1088,17 +1099,6 @@ export const PomodoroProvider = ({ children }: { children: ReactNode }) => {
       toast("Mola atlandı. Çalışma için başlat'a basın.");
     });
   };
-
-  const derivedElapsedSec = computeElapsedSeconds(
-    timerMode,
-    phase,
-    durationSec,
-    remainingSec,
-    accumulatedElapsedSec,
-    startedAt,
-    renderNowMs,
-  );
-  const derivedDisplaySec = timerMode === "stopwatch" ? derivedElapsedSec : remainingSec;
 
   return (
     <PomodoroContext.Provider
