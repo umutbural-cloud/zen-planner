@@ -10,7 +10,15 @@ type PushSubscriptionRow = {
 
 type SendError = Error & { statusCode?: number };
 
+const corsHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers":
+    "authorization, x-client-info, apikey, content-type",
+  "access-control-allow-methods": "POST, OPTIONS",
+};
+
 const jsonHeaders = {
+  ...corsHeaders,
   "content-type": "application/json; charset=utf-8",
 };
 
@@ -49,13 +57,7 @@ function isUnsafeIpv4(hostname: string): boolean {
 
 function isUnsafeIpv6(hostname: string): boolean {
   const normalized = hostname.replace(/^\[|\]$/g, "").toLowerCase();
-  if (!normalized.includes(":")) return false;
-
-  if (normalized === "::" || normalized === "::1") return true;
-  if (/^f[cd]/.test(normalized) || /^fe[89ab]/.test(normalized)) return true;
-
-  const mappedIpv4 = normalized.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
-  return mappedIpv4 ? isUnsafeIpv4(mappedIpv4) : false;
+  return normalized.includes(":");
 }
 
 function isSafePushEndpoint(endpoint: string): boolean {
@@ -76,6 +78,10 @@ function isSafePushEndpoint(endpoint: string): boolean {
 }
 
 Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
