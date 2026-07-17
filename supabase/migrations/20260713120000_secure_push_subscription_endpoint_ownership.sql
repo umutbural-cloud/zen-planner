@@ -56,8 +56,45 @@ $$;
 
 DROP INDEX IF EXISTS public.push_subscriptions_user_endpoint_uidx;
 
-CREATE UNIQUE INDEX push_subscriptions_endpoint_uidx
-  ON public.push_subscriptions (endpoint);
+DO $$
+DECLARE
+  endpoint_index regclass := to_regclass('public.push_subscriptions_endpoint_uidx');
+  endpoint_attnum smallint;
+  index_is_expected boolean;
+BEGIN
+  IF endpoint_index IS NULL THEN
+    CREATE UNIQUE INDEX push_subscriptions_endpoint_uidx
+      ON public.push_subscriptions (endpoint);
+    RETURN;
+  END IF;
+
+  SELECT attnum
+  INTO endpoint_attnum
+  FROM pg_catalog.pg_attribute
+  WHERE attrelid = 'public.push_subscriptions'::regclass
+    AND attname = 'endpoint'
+    AND attnum > 0
+    AND NOT attisdropped;
+
+  SELECT indexes.indisunique
+      AND indexes.indisvalid
+      AND indexes.indisready
+      AND indexes.indrelid = 'public.push_subscriptions'::regclass
+      AND indexes.indnkeyatts = 1
+      AND indexes.indnatts = 1
+      AND indexes.indkey[0] = endpoint_attnum
+      AND indexes.indexprs IS NULL
+      AND indexes.indpred IS NULL
+  INTO index_is_expected
+  FROM pg_catalog.pg_index AS indexes
+  WHERE indexes.indexrelid = endpoint_index;
+
+  IF index_is_expected IS DISTINCT FROM true THEN
+    RAISE EXCEPTION
+      'Existing index public.push_subscriptions_endpoint_uidx does not match the required unique index on public.push_subscriptions(endpoint)';
+  END IF;
+END
+$$;
 
 CREATE OR REPLACE FUNCTION public.claim_push_subscription(
   p_endpoint text,
