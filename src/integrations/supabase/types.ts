@@ -1408,6 +1408,16 @@ export type Database = {
         Returns: boolean
       }
       can_use_app: { Args: { target_user_id: string }; Returns: boolean }
+      claim_push_subscription: {
+        Args: {
+          p_auth: string
+          p_device_label?: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: string
+      }
       compute_engagement_snapshot_internal: {
         Args: {
           actor_user_id?: string
