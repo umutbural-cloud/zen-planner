@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useRegisterSW } from "virtual:pwa-register/react";
+import { useRegisterSW } from "@/lib/pwaRegister";
+import { runPwaUpdateNow } from "./pwaUpdateCoordinator";
 
 export type PwaUpdateStatus = "idle" | "checking" | "update-available" | "up-to-date" | "unsupported" | "error";
 
@@ -17,6 +18,11 @@ type PwaUpdateContextValue = {
 const PwaUpdateContext = createContext<PwaUpdateContextValue | null>(null);
 
 const UPDATE_CHECK_TIMEOUT_MS = 15000;
+export const pwaUpdateRuntime = {
+  reloadPage: () => {
+    window.location.reload();
+  },
+};
 
 const isServiceWorkerReadyForUpdate = (registration: ServiceWorkerRegistration) =>
   Boolean(registration.waiting);
@@ -24,6 +30,8 @@ const isServiceWorkerReadyForUpdate = (registration: ServiceWorkerRegistration) 
 export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const needRefreshRef = useRef(false);
+  const updateInProgressRef = useRef(false);
+  const reloadTriggeredRef = useRef(false);
   const [status, setStatus] = useState<PwaUpdateStatus>("idle");
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const {
@@ -56,8 +64,25 @@ export const PwaUpdateProvider = ({ children }: { children: ReactNode }) => {
   }, [setNeedRefresh]);
 
   const updateNow = useCallback(async () => {
-    await updateServiceWorker(true);
-  }, [updateServiceWorker]);
+    reloadTriggeredRef.current = false;
+    await runPwaUpdateNow({
+      updateServiceWorker,
+      setStatus,
+      setNeedRefresh,
+      clearNeedRefreshRef: () => {
+        needRefreshRef.current = false;
+      },
+      isUpdateInProgress: () => updateInProgressRef.current,
+      setUpdateInProgress: (value) => {
+        updateInProgressRef.current = value;
+      },
+      onReload: () => {
+        if (reloadTriggeredRef.current) return;
+        reloadTriggeredRef.current = true;
+        pwaUpdateRuntime.reloadPage();
+      },
+    });
+  }, [setNeedRefresh, updateServiceWorker]);
 
   const checkForUpdate = useCallback(async () => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
