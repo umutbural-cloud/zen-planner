@@ -1,5 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 import webPush from "web-push";
+import {
+  classifyDeliveryStatus,
+  createDeliveryDiagnostics,
+  createDeliveryLog,
+  DiagnosticRequestError,
+  parseDiagnosticRequestBody,
+  recordDeliveryOutcome,
+  type DeliveryOutcome,
+} from "./deliveryDiagnostics.ts";
 
 type PushSubscriptionRow = {
   id: string;
@@ -8,6 +17,7 @@ type PushSubscriptionRow = {
   auth: string;
 };
 
+type SendResult = { statusCode?: number };
 type SendError = Error & { statusCode?: number };
 
 const corsHeaders = {
@@ -108,6 +118,17 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "Authentication required" }, 401);
   }
 
+  let currentSubscriptionId: string | null;
+  try {
+    currentSubscriptionId = parseDiagnosticRequestBody(await request.text());
+  } catch (error) {
+    if (error instanceof DiagnosticRequestError) {
+      return jsonResponse({ error: "Invalid diagnostic request" }, 400);
+    }
+    console.error({ event: "test_push_request_error", error_category: "RequestReadError" });
+    return jsonResponse({ error: "Unable to read request" }, 400);
+  }
+
   const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
   const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
   const vapidSubject = Deno.env.get("VAPID_SUBJECT");
@@ -132,25 +153,49 @@ Deno.serve(async (request) => {
   }
 
   const subscriptions = (data ?? []) as PushSubscriptionRow[];
-  let sent = 0;
   let expiredRemoved = 0;
   let failed = 0;
+  const diagnostics = createDeliveryDiagnostics(currentSubscriptionId);
 
   for (const subscription of subscriptions) {
+    const startedAt = performance.now();
+    const isCurrentSubscription = currentSubscriptionId === subscription.id;
+    let statusCode: number | undefined;
+    let outcome: DeliveryOutcome;
+    let errorCategory: string | undefined;
+
     if (!isSafePushEndpoint(subscription.endpoint)) {
+      outcome = "rejected";
+      errorCategory = "UnsafeEndpoint";
       failed += 1;
+      recordDeliveryOutcome(diagnostics, {
+        subscriptionId: subscription.id,
+        currentSubscriptionId,
+        outcome,
+      });
+      console.warn(createDeliveryLog({
+        endpoint: subscription.endpoint,
+        outcome,
+        durationMs: performance.now() - startedAt,
+        isCurrentSubscription,
+        errorCategory,
+      }));
       continue;
     }
 
     try {
-      await webPush.sendNotification({
+      const result = await webPush.sendNotification({
         endpoint: subscription.endpoint,
         keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-      }, payload, { TTL: 60 });
-      sent += 1;
+      }, payload, { TTL: 60 }) as SendResult;
+      statusCode = result.statusCode;
+      outcome = classifyDeliveryStatus(statusCode);
+      if (outcome !== "accepted") failed += 1;
     } catch (error) {
-      const statusCode = (error as SendError).statusCode;
-      if (statusCode === 404 || statusCode === 410) {
+      statusCode = (error as SendError).statusCode;
+      outcome = classifyDeliveryStatus(statusCode);
+      errorCategory = error instanceof Error ? error.name : "UnknownError";
+      if (outcome === "expired") {
         const { error: deleteError } = await supabase
           .from("push_subscriptions")
           .delete()
@@ -158,7 +203,8 @@ Deno.serve(async (request) => {
           .eq("user_id", userData.user.id);
 
         if (deleteError) {
-          console.error("test-push expired subscription cleanup failed", deleteError.message);
+          outcome = "cleanup-failure";
+          errorCategory = "CleanupError";
           failed += 1;
         } else {
           expiredRemoved += 1;
@@ -167,12 +213,33 @@ Deno.serve(async (request) => {
         failed += 1;
       }
     }
+
+    recordDeliveryOutcome(diagnostics, {
+      subscriptionId: subscription.id,
+      currentSubscriptionId,
+      outcome,
+      statusCode,
+    });
+    const log = createDeliveryLog({
+      endpoint: subscription.endpoint,
+      statusCode,
+      outcome,
+      durationMs: performance.now() - startedAt,
+      isCurrentSubscription,
+      errorCategory,
+    });
+    if (outcome === "accepted") console.info(log);
+    else console.warn(log);
   }
 
   return jsonResponse({
     subscriptions_found: subscriptions.length,
-    sent,
+    sent: diagnostics.sent,
     expired_removed: expiredRemoved,
     failed,
+    accepted: diagnostics.accepted,
+    outcomes: diagnostics.outcomes,
+    response_statuses: diagnostics.response_statuses,
+    current_subscription: diagnostics.current_subscription,
   }, 200);
 });
