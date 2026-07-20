@@ -21,6 +21,18 @@ export type DisconnectPushResult = {
   errors: Error[];
 };
 
+export type TestPushResult = {
+  subscriptions_found: number;
+  sent: number;
+  expired_removed: number;
+  failed: number;
+};
+
+export type PushLogoutCleanupResult =
+  | { status: "skipped"; reason: string }
+  | { status: "completed"; result: DisconnectPushResult }
+  | { status: "failed"; reason: string };
+
 type NavigatorWithStandalone = Navigator & { standalone?: boolean };
 
 export class PushNotificationError extends Error {
@@ -224,4 +236,71 @@ export const disconnectCurrentDevice = async (): Promise<DisconnectPushResult> =
   }
 
   return { browserUnsubscribed, serverRowDeleted, errors };
+};
+
+const isNonNegativeInteger = (value: unknown): value is number => (
+  typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value >= 0
+);
+
+export const sendTestPushNotification = async (): Promise<TestPushResult> => {
+  const { data, error } = await supabase.functions.invoke("test-push", { method: "POST" });
+  if (error) {
+    throw controlledError("test-push-failed", "Test bildirimi gönderilemedi.");
+  }
+  if (!data || typeof data !== "object") {
+    throw controlledError("invalid-test-push-response", "Test bildirimi sonucu doğrulanamadı.");
+  }
+
+  const candidate = data as Record<string, unknown>;
+  const result: TestPushResult = {
+    subscriptions_found: candidate.subscriptions_found as number,
+    sent: candidate.sent as number,
+    expired_removed: candidate.expired_removed as number,
+    failed: candidate.failed as number,
+  };
+  if (!Object.values(result).every(isNonNegativeInteger)) {
+    throw controlledError("invalid-test-push-response", "Test bildirimi sonucu doğrulanamadı.");
+  }
+  return result;
+};
+
+export const cleanupCurrentUserPushBeforeSignOut = async (
+  userId: string | null,
+  { timeoutMs = 4_000 }: { timeoutMs?: number } = {},
+): Promise<PushLogoutCleanupResult> => {
+  if (!userId) return { status: "skipped", reason: "no-user" };
+  if (getPushSupport().status !== "supported") {
+    return { status: "skipped", reason: "unsupported" };
+  }
+  if (Notification.permission !== "granted") {
+    return { status: "skipped", reason: "permission-not-granted" };
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const cleanup = async (): Promise<PushLogoutCleanupResult> => {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || authData.user?.id !== userId) {
+      return { status: "skipped", reason: "session-changed" };
+    }
+    const subscription = await getBrowserPushSubscription();
+    if (!subscription) return { status: "skipped", reason: "no-browser-subscription" };
+    const ownedRow = await getOwnedPushSubscription(subscription.endpoint);
+    if (!ownedRow) return { status: "skipped", reason: "not-owned" };
+
+    const result = await disconnectCurrentDevice();
+    return result.browserUnsubscribed && result.serverRowDeleted
+      ? { status: "completed", result }
+      : { status: "failed", reason: "disconnect-incomplete" };
+  };
+
+  try {
+    return await Promise.race([
+      cleanup().catch((): PushLogoutCleanupResult => ({ status: "failed", reason: "cleanup-failed" })),
+      new Promise<PushLogoutCleanupResult>((resolve) => {
+        timeoutId = setTimeout(() => resolve({ status: "failed", reason: "timeout" }), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 };

@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { cleanupCurrentUserPushBeforeSignOut } from "@/services/pushNotifications";
 
 type AuthContextValue = {
   user: User | null;
@@ -50,9 +51,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return data.session ?? null;
   };
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    const currentUserId = session?.user.id ?? null;
+    try {
+      await cleanupCurrentUserPushBeforeSignOut(currentUserId);
+    } catch {
+      // Push cleanup is best effort. Authentication logout must always continue.
+    }
     await supabase.auth.signOut();
-  };
+  }, [session?.user.id]);
 
   const value = useMemo<AuthContextValue>(() => ({
     user: session?.user ?? null,
@@ -62,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     hasHydrated: initialAuthResolved,
     signOut,
     refreshSession,
-  }), [initialAuthResolved, loading, session]);
+  }), [initialAuthResolved, loading, session, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
