@@ -1,178 +1,184 @@
-import { useMemo, useState } from "react";
-import { Bell, BellRing, Clock3, LayoutList, MonitorSmartphone, Timer } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  BellRing,
+  Clock3,
+  Loader2,
+  RefreshCcw,
+  Send,
+  Share2,
+  Smartphone,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { usePushNotifications, type PushNotificationStatus } from "@/hooks/usePushNotifications";
 import { cn } from "@/lib/utils";
+import type { DisconnectPushResult, TestPushResult } from "@/services/pushNotifications";
 import { SettingsSection } from "./SettingsSection";
 
-type NotificationPermissionState = NotificationPermission | "unsupported";
-
-const upcomingItems = [
-  {
-    title: "Görev hatırlatmaları",
-    description: "Zamanı yaklaşan görevler için yerel ve push tabanlı hatırlatma akışı.",
-    icon: LayoutList,
+const statusCopy: Record<PushNotificationStatus, { label: string; description: string }> = {
+  loading: {
+    label: "Kontrol ediliyor",
+    description: "Bildirim durumu kontrol ediliyor.",
   },
-  {
-    title: "Pomodoro bitiş bildirimi",
-    description: "Odak ve mola oturumları tamamlandığında cihaz bildirimleri.",
-    icon: Timer,
-  },
-  {
-    title: "Alışkanlık hatırlatmaları",
-    description: "Gün dilimlerine göre hatırlatma ve kaçırılan rutin özeti.",
-    icon: BellRing,
-  },
-  {
-    title: "Günlük plan bildirimi",
-    description: "Günün planını ve öncelikli alanları öne çıkaran sabah özeti.",
-    icon: Clock3,
-  },
-  {
-    title: "Cihazlar arası bildirim ayarları",
-    description: "Hangi cihazda hangi bildirimlerin görüneceğini yönetme alanı.",
-    icon: MonitorSmartphone,
-  },
-];
-
-const getPermissionState = (): NotificationPermissionState => (
-  typeof Notification === "undefined" ? "unsupported" : Notification.permission
-);
-
-const permissionCopy: Record<NotificationPermissionState, { label: string; description: string }> = {
   unsupported: {
     label: "Desteklenmiyor",
-    description: "Bu tarayıcı bildirimleri desteklemiyor.",
+    description: "Bu cihazda Web Push desteklenmiyor. Güncel ve güvenli bir tarayıcı veya kurulu PWA kullanmayı deneyin.",
   },
-  granted: {
-    label: "İzin verilmiş",
-    description: "Bu tarayıcı Zen Planner bildirimlerini gösterebilir.",
+  "ios-not-installed": {
+    label: "Ana ekrana eklenmeli",
+    description: "iPhone veya iPad'de bildirimleri kullanmak için Zen Planner'ı önce Ana Ekran'a ekleyin.",
   },
-  default: {
-    label: "İzin bekliyor",
-    description: "Bildirim göstermek için izin istenebilir.",
+  "permission-default": {
+    label: "Bildirimler kapalı",
+    description: "Bu cihaz henüz bildirim izni vermedi ve hesabınıza bağlı değil.",
   },
-  denied: {
-    label: "Engellenmiş",
-    description: "Bildirimler tarayıcı ayarlarından engellenmiş. İzni tarayıcı ayarlarından değiştirmen gerekir.",
+  "permission-denied": {
+    label: "İzin engellenmiş",
+    description: "Bildirim izni tarayıcı veya cihaz ayarlarından engellenmiş. İzni ayarlardan açtıktan sonra durumu yeniden kontrol edin.",
+  },
+  "granted-not-subscribed": {
+    label: "İzin var, cihaz bağlı değil",
+    description: "Tarayıcı izni açık. Bildirim almak için bu cihazı hesabınıza bağlayın.",
+  },
+  subscribed: {
+    label: "Bu cihaz bağlı",
+    description: "Bildirimler bu tarayıcı veya kurulu PWA üzerinden gösterilebilir.",
+  },
+  error: {
+    label: "Kontrol edilemedi",
+    description: "Bildirim durumu şu anda doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.",
   },
 };
 
-const statusBadgeClassName = (state: NotificationPermissionState) => cn(
-  "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium",
-  state === "granted" && "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  state === "default" && "bg-stone-100 text-stone-700 dark:bg-muted/40 dark:text-foreground",
-  state === "denied" && "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-  state === "unsupported" && "bg-stone-200 text-stone-700 dark:bg-muted/40 dark:text-muted-foreground",
+const statusBadgeClassName = (status: PushNotificationStatus) => cn(
+  "inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-medium",
+  status === "subscribed" && "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  (status === "permission-default" || status === "granted-not-subscribed" || status === "loading") &&
+    "bg-stone-100 text-stone-700 dark:bg-muted/40 dark:text-foreground",
+  (status === "permission-denied" || status === "error") &&
+    "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  (status === "unsupported" || status === "ios-not-installed") &&
+    "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-200",
 );
 
+const disconnectToast = (result: DisconnectPushResult | null) => {
+  if (!result) return;
+  if (result.browserUnsubscribed && result.serverRowDeleted) {
+    toast.success("Bu cihazda bildirimler kapatıldı.");
+  } else if (result.browserUnsubscribed) {
+    toast.warning("Tarayıcı aboneliği kapatıldı ancak sunucu kaydı tamamen temizlenemedi.");
+  } else if (result.serverRowDeleted) {
+    toast.warning("Hesap bağlantısı kaldırıldı ancak tarayıcı aboneliği kapatılamadı.");
+  } else {
+    toast.error("Bu cihazdaki bildirimler kapatılamadı.");
+  }
+};
+
+const testPushToast = (result: TestPushResult | null) => {
+  if (!result) {
+    toast.error("Test bildirimi gönderilemedi.");
+    return;
+  }
+  if (result.subscriptions_found === 0) {
+    toast.error("Hesabına bağlı aktif bildirim cihazı bulunamadı.");
+  } else if (result.expired_removed > 0 && result.sent === 0) {
+    toast.warning("Süresi dolan abonelik temizlendi. Bu cihazı yeniden bağla.");
+  } else if (result.sent > 0 && result.failed === 0) {
+    toast.success("Test bildirimi gönderildi.", {
+      description: "Bildirim hesabına bağlı cihazlara gönderildi.",
+    });
+  } else if (result.sent > 0 && result.failed > 0) {
+    toast.warning("Bildirim bazı cihazlara gönderildi, bazı cihazlarda başarısız oldu.");
+  } else {
+    toast.error("Test bildirimi gönderilemedi.");
+  }
+};
+
 export const SettingsNotificationsPage = () => {
-  const [permission, setPermission] = useState<NotificationPermissionState>(() => getPermissionState());
-  const copy = useMemo(() => permissionCopy[permission], [permission]);
+  const push = usePushNotifications();
+  const copy = statusCopy[push.status];
+  const busy = push.activeOperation !== null;
 
-  const permissionButton = useMemo(() => {
-    if (permission === "unsupported") {
-      return { label: "Bildirim desteği yok", disabled: true };
-    }
-    if (permission === "granted") {
-      return { label: "Bildirimler açık", disabled: true };
-    }
-    if (permission === "denied") {
-      return { label: "Tarayıcı ayarlarından aç", disabled: false };
-    }
-    return { label: "Bildirim izni iste", disabled: false };
-  }, [permission]);
-
-  const requestPermission = async () => {
-    if (typeof Notification === "undefined") {
-      setPermission("unsupported");
-      toast.error("Bu tarayıcı bildirimleri desteklemiyor.");
-      return;
-    }
-
-    if (Notification.permission === "granted") {
-      setPermission("granted");
-      toast("Bildirimler zaten açık.");
-      return;
-    }
-
-    if (Notification.permission === "denied") {
-      setPermission("denied");
-      toast.error("Bildirimler engellenmiş. Tarayıcı ayarlarından izin ver.");
-      return;
-    }
-
-    const result = await Notification.requestPermission();
-    setPermission(result);
-
-    if (result === "granted") {
-      toast.success("Bildirimler açıldı.");
-      return;
-    }
-
-    toast.error("Bildirim izni verilmedi.");
+  const handleSubscribe = async () => {
+    const success = await push.subscribe();
+    if (success) toast.success("Bu cihaz bildirimlere bağlandı.");
+    else toast.error("Bu cihaz bildirimlere bağlanamadı.");
   };
 
-  return (
-    <div className="space-y-6">
-      <SettingsSection title="Bildirim merkezi hazırlanıyor" description="Görev hatırlatmaları, Pomodoro bitiş bildirimleri, alışkanlık hatırlatmaları ve günlük plan bildirimleri bu alanda toplanacak.">
-        <div className="space-y-4">
-          <div className="inline-flex items-center rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">
-            Yakında
-          </div>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            Bu özellik cihaz desteği, tarayıcı izinleri ve güvenli push altyapısı gerektirir. Bu nedenle ayrı bir fazda geliştirilecek.
-          </p>
-        </div>
-      </SettingsSection>
+  const handleUnsubscribe = async () => {
+    disconnectToast(await push.unsubscribe());
+  };
 
-      <SettingsSection title="Tarayıcı bildirim izni" description="Bu cihazda bildirimlerin açılıp açılamayacağını kontrol et.">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-3">
-            <div className={statusBadgeClassName(permission)} aria-live="polite">
-              {copy.label}
+  const handleTestPush = async () => {
+    testPushToast(await push.testPush());
+  };
+
+  const action = (() => {
+    if (push.status === "permission-default") {
+      return <Button className="w-full sm:w-auto" disabled={busy} onClick={() => void handleSubscribe()}><Bell className="mr-2 h-4 w-4" />Bildirimleri aç</Button>;
+    }
+    if (push.status === "granted-not-subscribed") {
+      return <Button className="w-full sm:w-auto" disabled={busy} onClick={() => void handleSubscribe()}><Smartphone className="mr-2 h-4 w-4" />Bu cihazı bağla</Button>;
+    }
+    if (["permission-denied", "unsupported", "error"].includes(push.status)) {
+      return <Button variant="outline" className="w-full sm:w-auto" disabled={busy} onClick={() => void push.refresh()}><RefreshCcw className="mr-2 h-4 w-4" />{push.status === "permission-denied" ? "Durumu yeniden kontrol et" : "Tekrar dene"}</Button>;
+    }
+    return null;
+  })();
+
+  return (
+    <div className="space-y-6 pb-24 md:pb-0">
+      <SettingsSection title="Bu cihaz" description="Bu tarayıcı veya kurulu PWA'nın bildirim bağlantısını yönet.">
+        <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-3" aria-live="polite">
+            <div className={statusBadgeClassName(push.status)}>
+              {push.status === "loading" && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+              <span className="min-w-0 break-words">{copy.label}</span>
             </div>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            <p className="max-w-2xl break-words text-[1rem] leading-7 text-muted-foreground md:text-sm md:leading-6">
               {copy.description}
             </p>
+            {push.status === "ios-not-installed" && (
+              <div className="rounded-lg bg-muted/45 p-4 text-sm leading-6 text-muted-foreground">
+                <p className="flex min-w-0 items-start gap-2"><Share2 className="mt-1 h-4 w-4 shrink-0" /><span className="min-w-0">Safari'de Paylaş'a dokun, “Ana Ekrana Ekle”yi seç ve uygulamayı ana ekran ikonundan aç.</span></p>
+              </div>
+            )}
           </div>
-          <div className="shrink-0">
-            <Button
-              type="button"
-              variant="secondary"
-              className="h-10 rounded-md border-transparent bg-muted/55 px-4 text-sm font-medium text-foreground shadow-none hover:bg-muted dark:bg-muted/30"
-              onClick={() => void requestPermission()}
-              disabled={permissionButton.disabled}
-            >
-              <Bell className="mr-2 h-4 w-4" />
-              {permissionButton.label}
+          {action && <div className="min-w-0 shrink-0 sm:pt-0.5">{action}</div>}
+        </div>
+
+        {push.status === "subscribed" && (
+          <div className="mt-5 flex min-w-0 flex-col gap-2 border-t border-muted/60 pt-5 sm:flex-row">
+            <Button className="w-full sm:w-auto" disabled={busy} onClick={() => void handleTestPush()}>
+              {push.isSendingTest ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              {push.isSendingTest ? "Gönderiliyor" : "Test bildirimi gönder"}
             </Button>
+            <Button variant="outline" className="w-full sm:w-auto" disabled={busy} onClick={() => void handleUnsubscribe()}>
+              {push.activeOperation === "unsubscribe" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BellOff className="mr-2 h-4 w-4" />}
+              Bu cihazda kapat
+            </Button>
+          </div>
+        )}
+      </SettingsSection>
+
+      <SettingsSection title="Test bildirimi" description="Bildirim teslimatını hesabına bağlı cihazlarda doğrula.">
+        <div className="flex min-w-0 items-start gap-3 rounded-lg bg-muted/40 p-4">
+          <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Tüm bağlı cihazlar etkilenebilir</p>
+            <p className="mt-1 break-words text-sm leading-6 text-muted-foreground">Test bildirimi yalnız bu cihaza değil, hesabına bağlı bütün aktif bildirim cihazlarına gönderilir. Göndermek için önce bu cihazı bağla.</p>
           </div>
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Sonraki fazda gelecekler" description="Bildirim deneyimi tamamlandığında bu alanlardan yönetilecek başlıklar.">
-        <div className="divide-y divide-muted/60">
-          {upcomingItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <div key={item.title} className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0">
-                <div className="flex min-w-0 gap-3">
-                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/55 text-muted-foreground">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-foreground">{item.title}</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>
-                  </div>
-                </div>
-                <div className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">
-                  Yakında
-                </div>
-              </div>
-            );
-          })}
+      <SettingsSection title="Zamanlanmış bildirimler" description="Görev, alışkanlık ve odak hatırlatmaları sonraki fazda eklenecek.">
+        <div className="flex min-w-0 items-start gap-3 rounded-lg border border-dashed border-border/70 p-4">
+          <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <div className="inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 dark:bg-muted/40 dark:text-foreground">Yakında</div>
+            <p className="mt-2 break-words text-sm leading-6 text-muted-foreground">Bu alanda henüz çalışan bir zamanlayıcı, anahtar veya kaydetme aksiyonu yok.</p>
+          </div>
         </div>
       </SettingsSection>
     </div>

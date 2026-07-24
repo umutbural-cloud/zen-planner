@@ -4,11 +4,15 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   maybeSingle: vi.fn(),
   deleteEq: vi.fn(),
+  functionsInvoke: vi.fn(),
+  authGetUser: vi.fn(),
 }));
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: mocks.rpc,
+    functions: { invoke: mocks.functionsInvoke },
+    auth: { getUser: mocks.authGetUser },
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({ maybeSingle: mocks.maybeSingle })),
@@ -19,10 +23,12 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import {
+  cleanupCurrentUserPushBeforeSignOut,
   disconnectCurrentDevice,
   getPushSupport,
   normalizePushError,
   readPushSnapshot,
+  sendTestPushNotification,
   subscribeCurrentDevice,
   urlBase64ToUint8Array,
 } from "./pushNotifications";
@@ -72,6 +78,11 @@ describe("pushNotifications service", () => {
     mocks.rpc.mockResolvedValue({ data: "subscription-id", error: null });
     mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
     mocks.deleteEq.mockResolvedValue({ error: null });
+    mocks.functionsInvoke.mockResolvedValue({
+      data: { subscriptions_found: 1, sent: 1, expired_removed: 0, failed: 0 },
+      error: null,
+    });
+    mocks.authGetUser.mockResolvedValue({ data: { user: { id: "user-id" } }, error: null });
   });
 
   it("converts a valid padded base64url VAPID key", () => {
@@ -178,5 +189,108 @@ describe("pushNotifications service", () => {
       "message",
       "Bildirim işlemi tamamlanamadı. Lütfen tekrar deneyin.",
     );
+  });
+
+  it("invokes the authenticated test-push function and validates its aggregate response", async () => {
+    await expect(sendTestPushNotification()).resolves.toEqual({
+      subscriptions_found: 1,
+      sent: 1,
+      expired_removed: 0,
+      failed: 0,
+    });
+    expect(mocks.functionsInvoke).toHaveBeenCalledWith("test-push", { method: "POST" });
+  });
+
+  it.each([
+    null,
+    { subscriptions_found: -1, sent: 0, expired_removed: 0, failed: 0 },
+    { subscriptions_found: 1.5, sent: 1, expired_removed: 0, failed: 0 },
+    { subscriptions_found: 1, sent: Number.NaN, expired_removed: 0, failed: 0 },
+    { subscriptions_found: 1, sent: 1, expired_removed: 0 },
+  ])("rejects malformed test-push responses without exposing data: %s", async (data) => {
+    mocks.functionsInvoke.mockResolvedValue({ data, error: null });
+    await expect(sendTestPushNotification()).rejects.toThrow("Test bildirimi sonucu doğrulanamadı");
+  });
+
+  it("normalizes test-push function errors", async () => {
+    mocks.functionsInvoke.mockResolvedValue({ data: null, error: new Error("secret response") });
+    await expect(sendTestPushNotification()).rejects.toThrow("Test bildirimi gönderilemedi");
+  });
+
+  it.each([
+    [null, "no-user"],
+    ["user-id", "permission-not-granted"],
+  ] as const)("skips logout cleanup safely for %s", async (userId, reason) => {
+    if (userId) vi.stubGlobal("Notification", { permission: "default", requestPermission: vi.fn() });
+    await expect(cleanupCurrentUserPushBeforeSignOut(userId)).resolves.toEqual({ status: "skipped", reason });
+    expect(mocks.deleteEq).not.toHaveBeenCalled();
+    expect(Notification.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("skips logout cleanup when Web Push is unsupported", async () => {
+    Object.defineProperty(window, "isSecureContext", { configurable: true, value: false });
+    await expect(cleanupCurrentUserPushBeforeSignOut("user-id")).resolves.toEqual({
+      status: "skipped",
+      reason: "unsupported",
+    });
+    expect(mocks.authGetUser).not.toHaveBeenCalled();
+    expect(mocks.deleteEq).not.toHaveBeenCalled();
+  });
+
+  it("skips logout cleanup when there is no browser subscription", async () => {
+    installBrowserSupport(null);
+    await expect(cleanupCurrentUserPushBeforeSignOut("user-id")).resolves.toEqual({
+      status: "skipped",
+      reason: "no-browser-subscription",
+    });
+    expect(mocks.maybeSingle).not.toHaveBeenCalled();
+    expect(mocks.deleteEq).not.toHaveBeenCalled();
+  });
+
+  it("does not remove a browser subscription when the current user does not own its row", async () => {
+    const unsubscribe = vi.fn();
+    installBrowserSupport(makeSubscription({ unsubscribe }));
+    mocks.maybeSingle.mockResolvedValue({ data: null, error: null });
+    await expect(cleanupCurrentUserPushBeforeSignOut("user-id")).resolves.toEqual({
+      status: "skipped",
+      reason: "not-owned",
+    });
+    expect(unsubscribe).not.toHaveBeenCalled();
+    expect(mocks.deleteEq).not.toHaveBeenCalled();
+    expect(Notification.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("disconnects only the owned current-device subscription before logout", async () => {
+    const unsubscribe = vi.fn().mockResolvedValue(true);
+    installBrowserSupport(makeSubscription({ unsubscribe }));
+    mocks.maybeSingle.mockResolvedValue({
+      data: { id: "owned-row", endpoint: "https://push.example/subscription" },
+      error: null,
+    });
+    const result = await cleanupCurrentUserPushBeforeSignOut("user-id");
+    expect(result.status).toBe("completed");
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteEq).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteEq).toHaveBeenCalledWith("endpoint", "https://push.example/subscription");
+  });
+
+  it("skips cleanup when the authenticated user changed", async () => {
+    const unsubscribe = vi.fn();
+    installBrowserSupport(makeSubscription({ unsubscribe }));
+    mocks.authGetUser.mockResolvedValue({ data: { user: { id: "different-user" } }, error: null });
+    await expect(cleanupCurrentUserPushBeforeSignOut("user-id")).resolves.toEqual({
+      status: "skipped",
+      reason: "session-changed",
+    });
+    expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it("bounds logout cleanup with a timeout", async () => {
+    vi.useFakeTimers();
+    mocks.authGetUser.mockReturnValue(new Promise(() => {}));
+    const cleanup = cleanupCurrentUserPushBeforeSignOut("user-id", { timeoutMs: 25 });
+    await vi.advanceTimersByTimeAsync(25);
+    await expect(cleanup).resolves.toEqual({ status: "failed", reason: "timeout" });
+    vi.useRealTimers();
   });
 });
